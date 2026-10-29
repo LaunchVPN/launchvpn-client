@@ -302,6 +302,78 @@ void main() {
     },
   );
 
+  test('S3 completions stay within XDrive and leave values user-owned', () {
+    for (final (kind, wrapper) in [
+      (JsonEditorKind.outbound, '{"streamSettings":{BODY}}'),
+      (JsonEditorKind.outbound, '{"outbounds":[{"streamSettings":{BODY}}]}'),
+      (JsonEditorKind.raw, '{"inbounds":[{"streamSettings":{BODY}}]}'),
+      (JsonEditorKind.raw, '{"outbounds":[{"streamSettings":{BODY}}]}'),
+    ]) {
+      String source(String body) =>
+          wrapper.replaceFirst('BODY', '"xdriveSettings":{$body}');
+      expect(labels(source('"service":"s|"'), kind), ['s3']);
+      expect(labels(source('"s|"'), kind), contains('s3'));
+      expect(labels(source('"s3":{"|"}'), kind), [
+        'endpoint',
+        'region',
+        'bucket',
+        'pathStyle',
+      ]);
+      expect(
+        labels(source('"s3":{"endpoint":"https://s3.example","en|"}'), kind),
+        isEmpty,
+      );
+      for (final body in [
+        '"s3":{"endpoint":"https://|"}',
+        '"s3":{"region":"us-|"}',
+        '"s3":{"pathStyle":"t|"}',
+        '"secrets":["|"]',
+      ]) {
+        expect(labels(source(body), kind), isEmpty);
+      }
+    }
+    for (final kind in [
+      JsonEditorKind.customRouting,
+      JsonEditorKind.advancedRouting,
+    ]) {
+      expect(
+        labels(
+          '{"outbounds":[{}, {"streamSettings":{"xdriveSettings":{"service":"s|"}}}]}',
+          kind,
+        ),
+        isEmpty,
+      );
+      expect(
+        labels(
+          '{"outbounds":[{}, {"streamSettings":{"xdriveSettings":{"s3":{"en|"}}}}]}',
+          kind,
+        ),
+        isEmpty,
+      );
+    }
+    for (final marked in [
+      '{"future":{"xdriveSettings":{"s3":{"en|"}}}}',
+      '{"streamSettings":{"future":{"xdriveSettings":{"s3":{"en|"}}}}}',
+      '{"streamSettings":{"masqueSettings":{"s3":{"en|"}}}}',
+    ]) {
+      expect(labels(marked, JsonEditorKind.outbound), isEmpty);
+    }
+    const marked =
+        '{"protocol":"vless","settings":{"future":{"keep":true}},"streamSettings":{"xdriveSettings":{"service":"s|","secrets":["fixture-key","fixture-secret"],"s3":{"endpoint":"https://store.example:8443/prefix","bucket":"fixture","pathStyle":false},"future":{"keep":[1,2]}}}}';
+    final completion = completions(marked, JsonEditorKind.outbound).single;
+    final text = marked.replaceFirst('|', '');
+    final before = jsonDecode(text) as Map<String, dynamic>;
+    final after = jsonDecode(
+      text.replaceRange(
+        completion.start,
+        completion.end,
+        completion.insertText,
+      ),
+    ) as Map<String, dynamic>;
+    before['streamSettings']['xdriveSettings']['service'] = 's3';
+    expect(after, before);
+  });
+
   test('XMUX and XDrive timing hints follow their transport owner', () {
     for (final (kind, template) in [
       (JsonEditorKind.outbound, '{"streamSettings":{BODY}}'),
@@ -501,6 +573,214 @@ void main() {
         JsonEditorKind.outbound,
       ),
       ['maxConcurrency'],
+    );
+  });
+
+  test('TCP Fragment hints follow native mask paths in each JSON editor', () {
+    for (final (kind, wrapper) in [
+      (JsonEditorKind.outbound, '{"streamSettings":{BODY}}'),
+      (JsonEditorKind.outbound, '{"outbounds":[{"streamSettings":{BODY}}]}'),
+      (JsonEditorKind.raw, '{"inbounds":[{"streamSettings":{BODY}}]}'),
+      (JsonEditorKind.raw, '{"outbounds":[{"streamSettings":{BODY}}]}'),
+      (
+        JsonEditorKind.advancedRouting,
+        '{"outbounds":[{},{"protocol":"freedom","streamSettings":{BODY}}]}',
+      ),
+    ]) {
+      String source(String body) =>
+          wrapper.replaceFirst('BODY', '"finalmask":{"tcp":[{$body}]}');
+      expect(labels(source('"type":"fr|"'), kind), ['fragment']);
+      expect(labels(source('"type":"fragment","se|"'), kind), ['settings']);
+      expect(labels(source('"type":"fragment","settings":{"len|"}'), kind), [
+        'length',
+        'lengths',
+      ]);
+      expect(labels(source('"type":"fragment","settings":{"del|"}'), kind), [
+        'delay',
+        'delays',
+      ]);
+      expect(labels(source('"type":"fragment","settings":{"max|"}'), kind), [
+        'maxSplit',
+      ]);
+      expect(
+        labels(source('"type":"fragment","settings":{"packets":"tl|"}'), kind),
+        ['tlshello'],
+      );
+      expect(
+        labels(source('"type":"fragment","settings":{"in|"}'), kind),
+        isEmpty,
+      );
+      expect(
+        labels(
+          source('"type":"fragment","settings":{"length":100,"len|"}'),
+          kind,
+        ),
+        ['lengths'],
+      );
+      expect(
+        labels(source('"type":"future","settings":{"len|"}'), kind),
+        isEmpty,
+      );
+    }
+  });
+
+  test('advanced FinalMask hints stay on Freedom helpers', () {
+    String source(String body, {String protocol = 'freedom'}) =>
+        '{"outbounds":[{},{"protocol":"$protocol","streamSettings":{$body}}]}';
+    expect(labels(source('"fi|"'), JsonEditorKind.advancedRouting), [
+      'finalmask',
+    ]);
+    expect(
+      labels(
+        source(
+          '"finalmask":{"udp":[{"type":"noise","settings":{"noise":[{"type":"e|"}]}}]}',
+        ),
+        JsonEditorKind.advancedRouting,
+      ),
+      ['exp'],
+    );
+    for (final body in [
+      '"finalmask":{"future":{"wsSettings":{"pa|"}}}',
+      '"finalmask":{"future":{"grpcSettings":{"ser|"}}}',
+      '"finalmask":{"future":{"mux":{"ena|"}}}',
+    ]) {
+      expect(labels(source(body), JsonEditorKind.advancedRouting), isEmpty);
+    }
+    for (final kind in [
+      JsonEditorKind.customRouting,
+      JsonEditorKind.advancedRouting,
+    ]) {
+      for (final protocol in ['dns', 'blackhole']) {
+        expect(labels(source('"fi|"', protocol: protocol), kind), isEmpty);
+        expect(
+          labels(
+            source('"finalmask":{"tcp":[{"type":"fr|"}]}', protocol: protocol),
+            kind,
+          ),
+          isEmpty,
+        );
+      }
+    }
+    for (final marked in [
+      '{"future":{"streamSettings":{"finalmask":{"tcp":[{"type":"fr|"}]}}}}',
+      '{"streamSettings":{"future":{"finalmask":{"tcp":[{"type":"fr|"}]}}}}',
+      '{"streamSettings":{"finalmask":{"udp":[{"type":"fragment","settings":{"len|"}}]}}}',
+    ]) {
+      expect(labels(marked, JsonEditorKind.outbound), isEmpty);
+    }
+  });
+
+  test(
+    'keepalive hints cover both native values without extending templates',
+    () {
+      for (final (kind, wrapper) in [
+        (JsonEditorKind.outbound, '{"streamSettings":{"sockopt":{BODY}}}'),
+        (
+          JsonEditorKind.raw,
+          '{"outbounds":[{"streamSettings":{"sockopt":{BODY}}}]}',
+        ),
+        (
+          JsonEditorKind.raw,
+          '{"inbounds":[{"streamSettings":{"sockopt":{BODY}}}]}',
+        ),
+      ]) {
+        expect(labels(wrapper.replaceFirst('BODY', '"tcpKeepAlive|"'), kind), [
+          'tcpKeepAliveIdle',
+          'tcpKeepAliveInterval',
+        ]);
+        expect(
+          labels(
+            wrapper.replaceFirst(
+              'BODY',
+              '"tcpKeepAliveIdle":90,"tcpKeepAlive|"',
+            ),
+            kind,
+          ),
+          ['tcpKeepAliveInterval'],
+        );
+      }
+      expect(
+        labels(
+          '{"outbounds":[{},{"protocol":"freedom","streamSettings":{"sockopt":{"tcpKeepAlive|"}}}]}',
+          JsonEditorKind.advancedRouting,
+        ),
+        isEmpty,
+      );
+    },
+  );
+
+  test('Freedom final rules get owned fields and native action candidates', () {
+    for (final (kind, wrapper) in [
+      (JsonEditorKind.outbound, '{"protocol":"freedom","settings":{BODY}}'),
+      (
+        JsonEditorKind.outbound,
+        '{"outbounds":[{"protocol":"freedom","settings":{BODY}}]}',
+      ),
+      (
+        JsonEditorKind.raw,
+        '{"outbounds":[{"protocol":"freedom","settings":{BODY}}]}',
+      ),
+      (
+        JsonEditorKind.advancedRouting,
+        '{"outbounds":[{},{"protocol":"freedom","settings":{BODY}}]}',
+      ),
+    ]) {
+      String source(String body) => wrapper.replaceFirst('BODY', body);
+      expect(labels(source('"fi|"'), kind), ['finalRules']);
+      expect(labels(source('"finalRules":[{"|"}]'), kind), [
+        'action',
+        'network',
+        'port',
+        'ip',
+        'blockDelay',
+      ]);
+      expect(labels(source('"finalRules":[{"action":"|"}]'), kind), [
+        'allow',
+        'block',
+      ]);
+      expect(labels(source('"finalRules":[{"network":"|"}]'), kind), [
+        'tcp',
+        'udp',
+        'tcp,udp',
+      ]);
+      expect(
+        labels(source('"finalRules":[{"blockDelay":"|"}]'), kind),
+        isEmpty,
+      );
+      final suggestions = completions(
+        source('"finalRules":[{"ip":["private|"]}]'),
+        kind,
+        domains: ['geosite:PRIVATE'],
+        ips: ['geoip:PRIVATE', 'ext:fixture.dat:PRIVATE'],
+      );
+      expect(
+        suggestions.map((s) => s.label),
+        unorderedEquals(['geoip:PRIVATE', 'ext:fixture.dat:PRIVATE']),
+      );
+      expect(labels(source('"frag|"'), kind), ['fragment']);
+      expect(labels(source('"noi|"'), kind), ['noises']);
+    }
+    for (final marked in [
+      '{"protocol":"dns","settings":{"finalRules":[{"action":"|"}]}}',
+      '{"future":{"protocol":"freedom","settings":{"finalRules":[{"action":"|"}]}}}',
+      '{"inbounds":[{"protocol":"freedom","settings":{"finalRules":[{"action":"|"}]}}]}',
+    ]) {
+      expect(labels(marked, JsonEditorKind.raw), isEmpty);
+    }
+    expect(
+      labels(
+        '{"outbounds":[{},{"protocol":"freedom","settings":{"fi|"}}]}',
+        JsonEditorKind.customRouting,
+      ),
+      isEmpty,
+    );
+    expect(
+      completions(
+        '{"protocol":"socks","settings":{"finalRules":[{"ip":["private|"]}]}}',
+        JsonEditorKind.outbound,
+        ips: ['geoip:PRIVATE'],
+      ),
+      isEmpty,
     );
   });
 

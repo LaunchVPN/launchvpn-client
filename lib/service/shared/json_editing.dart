@@ -52,7 +52,7 @@ class JsonEditing {
         ? shape.keys[_pathKey(location.path)] ?? const <String>{}
         : const <String>{};
     final geodata =
-        !location.isKey && _geodataType(location.path, shape) != null;
+        !location.isKey && _geodataType(location.path, shape, kind) != null;
     final search = geodata ? prefix.trim().toLowerCase() : prefix.toLowerCase();
     final filtered = candidates
         .toSet()
@@ -155,7 +155,8 @@ class JsonEditing {
     if (advanced &&
         path.contains('streamSettings') &&
         !_matches(path, ['outbounds', '*', 'streamSettings']) &&
-        !_matches(path, ['outbounds', '*', 'streamSettings', 'sockopt'])) {
+        !_matches(path, ['outbounds', '*', 'streamSettings', 'sockopt']) &&
+        !_advancedFreedomMaskPath(path, shape)) {
       return const [];
     }
     if (_matches(path, ['outbounds', '*'])) {
@@ -284,7 +285,15 @@ class JsonEditing {
     final tail = path.last;
     if (_streamSettingsPath(path, kind)) {
       return advanced
-          ? const ['sockopt']
+          ? [
+              'sockopt',
+              if (shape.value([
+                    ...path.sublist(0, path.length - 1),
+                    'protocol',
+                  ]) ==
+                  'freedom')
+                'finalmask',
+            ]
           : const [
               'network',
               'security',
@@ -350,8 +359,17 @@ class JsonEditing {
           'eagerWindowMs',
           'holeTimeoutMs',
           'template',
+          's3',
           'xmux',
         ];
+      }
+      if (tail == 's3' &&
+          _streamSettingsChildPath(
+            path.sublist(0, path.length - 1),
+            kind,
+            'xdriveSettings',
+          )) {
+        return const ['endpoint', 'region', 'bucket', 'pathStyle'];
       }
       if (_xdriveTemplatePath(path, kind)) {
         return const [
@@ -404,12 +422,24 @@ class JsonEditing {
               ))) {
         return _xmuxFields;
       }
+    }
+    if (!custom && (!advanced || _advancedFreedomMaskPath(path, shape))) {
       if (_streamSettingsChildPath(path, kind, 'finalmask')) {
         return const ['tcp', 'udp', 'quicParams'];
       }
-      if (_endsWith(path, ['streamSettings', 'finalmask', 'udp', '*']) ||
-          _endsWith(path, ['streamSettings', 'finalmask', 'tcp', '*'])) {
+      if (_maskElementPath(path, kind, 'udp') ||
+          _maskElementPath(path, kind, 'tcp')) {
         return const ['type', 'settings'];
+      }
+      if (_maskType(path, shape, kind, 'tcp') == 'fragment') {
+        return const [
+          'packets',
+          'length',
+          'delay',
+          'lengths',
+          'delays',
+          'maxSplit',
+        ];
       }
       final maskType = _udpMaskType(path, shape, kind);
       if (maskType != null) {
@@ -441,6 +471,7 @@ class JsonEditing {
               'udphop') {
         return const [];
       }
+      if (advanced) return const [];
     }
     if (tail == 'happyEyeballs' &&
         !custom &&
@@ -461,6 +492,7 @@ class JsonEditing {
               'mark',
               'tcpFastOpen',
               'tcpKeepAliveIdle',
+              'tcpKeepAliveInterval',
               'tcpNoDelay',
               'domainStrategy',
               'happyEyeballs',
@@ -552,11 +584,12 @@ class JsonEditing {
       return switch (protocol) {
         'vless' || 'vmess' => const ['vnext'],
         'trojan' || 'shadowsocks' || 'socks' || 'http' => const ['servers'],
-        'freedom' => const [
+        'freedom' => [
           'domainStrategy',
           'targetStrategy',
           'redirect',
           'userLevel',
+          if (_freedomSettingsPath(path, shape, kind)) 'finalRules',
           'fragment',
           'noises',
         ],
@@ -592,6 +625,9 @@ class JsonEditing {
     }
     if (_isDnsRule(path, shape)) {
       return const ['action', 'qType', 'domain', 'rCode'];
+    }
+    if (_isFreedomRule(path, shape, kind)) {
+      return const ['action', 'network', 'port', 'ip', 'blockDelay'];
     }
     if (_endsWith(path, ['vnext', '*'])) {
       return const ['address', 'port', 'users'];
@@ -704,11 +740,13 @@ class JsonEditing {
               ];
       }
     }
-    final geodataType = _geodataType(path, shape);
+    final geodataType = _geodataType(path, shape, kind);
     if (geodataType == 'domain') return domains;
     if (geodataType == 'ip') return ips;
     if (field == 'network') {
-      if (rule) return const ['tcp', 'udp', 'tcp,udp'];
+      if (rule || _isFreedomRule(parent, shape, kind)) {
+        return const ['tcp', 'udp', 'tcp,udp'];
+      }
       if (_streamSettingsPath(parent, kind) && !managed) {
         return [
           'raw',
@@ -724,10 +762,30 @@ class JsonEditing {
         ];
       }
     }
+    if (kind != JsonEditorKind.customRouting &&
+        (kind != JsonEditorKind.advancedRouting ||
+            _advancedFreedomMaskPath(path, shape))) {
+      if (field == 'type' && _maskElementPath(parent, kind, 'tcp')) {
+        return const ['fragment'];
+      }
+      if (field == 'packets' &&
+          _maskType(parent, shape, kind, 'tcp') == 'fragment') {
+        return const ['tlshello'];
+      }
+      if (field == 'type' && _maskElementPath(parent, kind, 'udp')) {
+        return const ['noise', 'xdns', 'udphop'];
+      }
+      if (field == 'type' &&
+          _endsWith(parent, ['noise', '*']) &&
+          _udpMaskType(parent.sublist(0, parent.length - 2), shape, kind) ==
+              'noise') {
+        return const ['array', 'str', 'hex', 'base64', 'exp'];
+      }
+    }
     if (!managed) {
       if (field == 'service' &&
           _streamSettingsChildPath(parent, kind, 'xdriveSettings')) {
-        return const ['local', 'google-drive', 'template'];
+        return const ['local', 'google-drive', 'template', 's3'];
       }
       if (field == 'type' &&
           parent.lastOrNull == 'auth' &&
@@ -758,14 +816,6 @@ class JsonEditing {
         }
       }
       if (field == 'type') {
-        if (_endsWith(parent, ['streamSettings', 'finalmask', 'udp', '*'])) {
-          return const ['noise', 'xdns', 'udphop'];
-        }
-        if (_endsWith(parent, ['noise', '*']) &&
-            _udpMaskType(parent.sublist(0, parent.length - 2), shape, kind) ==
-                'noise') {
-          return const ['array', 'str', 'hex', 'base64', 'exp'];
-        }
         if (_endsWith(parent, ['hysteriaSettings', 'masquerade']) &&
             _streamSettingsPath(parent.sublist(0, parent.length - 2), kind)) {
           return const ['file', 'proxy', 'string'];
@@ -777,6 +827,9 @@ class JsonEditing {
         return parent.last == 0 ? const ['hijack'] : const ['direct', 'return'];
       }
       return const ['hijack', 'direct', 'drop', 'return'];
+    }
+    if (field == 'action' && _isFreedomRule(parent, shape, kind)) {
+      return const ['allow', 'block'];
     }
     if (field == 'rewriteNetwork' &&
         parent.lastOrNull == 'settings' &&
@@ -971,28 +1024,63 @@ bool _isDnsRule(List<Object> path, _Shape shape) =>
     _endsWith(path, ['settings', 'rules', '*']) &&
     shape.value([...path.sublist(0, path.length - 3), 'protocol']) == 'dns';
 
-String? _udpMaskType(
+bool _freedomSettingsPath(
+  List<Object> path,
+  _Shape shape,
+  JsonEditorKind kind,
+) {
+  if (kind == JsonEditorKind.customRouting || path.lastOrNull != 'settings') {
+    return false;
+  }
+  final owner = path.sublist(0, path.length - 1);
+  return (kind == JsonEditorKind.outbound && owner.isEmpty ||
+          _matches(owner, ['outbounds', '*'])) &&
+      shape.value([...owner, 'protocol']) == 'freedom';
+}
+
+bool _isFreedomRule(List<Object> path, _Shape shape, JsonEditorKind kind) =>
+    _endsWith(path, ['finalRules', '*']) &&
+    _freedomSettingsPath(path.sublist(0, path.length - 2), shape, kind);
+
+bool _advancedFreedomMaskPath(List<Object> path, _Shape shape) =>
+    path.length >= 4 &&
+    path[0] == 'outbounds' &&
+    path[1] is int &&
+    path[2] == 'streamSettings' &&
+    path[3] == 'finalmask' &&
+    shape.value(['outbounds', path[1], 'protocol']) == 'freedom';
+
+bool _maskElementPath(List<Object> path, JsonEditorKind kind, String network) =>
+    _endsWith(path, [network, '*']) &&
+    _streamSettingsChildPath(
+      path.sublist(0, path.length - 2),
+      kind,
+      'finalmask',
+    );
+
+String? _maskType(
   List<Object> settingsPath,
   _Shape shape,
   JsonEditorKind kind,
+  String network,
 ) =>
-    _endsWith(settingsPath, [
-          'streamSettings',
-          'finalmask',
-          'udp',
-          '*',
-          'settings',
-        ]) &&
-        _streamSettingsChildPath(
-          settingsPath.sublist(0, settingsPath.length - 3),
+    settingsPath.lastOrNull == 'settings' &&
+        _maskElementPath(
+          settingsPath.sublist(0, settingsPath.length - 1),
           kind,
-          'finalmask',
+          network,
         )
     ? shape.value([
         ...settingsPath.sublist(0, settingsPath.length - 1),
         'type',
       ])?.toLowerCase()
     : null;
+
+String? _udpMaskType(
+  List<Object> settingsPath,
+  _Shape shape,
+  JsonEditorKind kind,
+) => _maskType(settingsPath, shape, kind, 'udp');
 
 bool _xdnsResolverPath(List<Object> path, JsonEditorKind kind, _Shape shape) =>
     _endsWith(path, ['resolvers', '*']) &&
@@ -1022,7 +1110,7 @@ bool _quicSettingsPath(List<Object> path, JsonEditorKind kind, _Shape shape) =>
           'finalmask',
         );
 
-String? _geodataType(List<Object> path, _Shape shape) {
+String? _geodataType(List<Object> path, _Shape shape, JsonEditorKind kind) {
   if (path.isEmpty) return null;
   final fieldPath = path.last is int ? path.sublist(0, path.length - 1) : path;
   if (fieldPath.isEmpty) return null;
@@ -1035,7 +1123,7 @@ String? _geodataType(List<Object> path, _Shape shape) {
           _matches(parent, ['inbounds', '*', 'sniffing'])) {
     return 'domain';
   }
-  if (field == 'ip' && rule ||
+  if (field == 'ip' && (rule || _isFreedomRule(parent, shape, kind)) ||
       field == 'localIP' && rule ||
       field == 'sourceIP' && rule ||
       (field == 'expectIPs' ||
