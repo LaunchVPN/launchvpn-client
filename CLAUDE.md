@@ -1,26 +1,32 @@
-# OneXray App
+# LaunchVPN Client
 
-Cross-platform Flutter Xray-core client. [Current contracts](docs/README.md)
-describe shipped behavior; Git history holds retired plans and progress logs.
+Android and iOS Flutter Xray-core client, a fork of OneXray.
+[Current contracts](docs/README.md) describe shipped behavior; Git history holds
+retired plans and progress logs.
+
+Docs we write in this public repo are in English, including over the language
+rule in `docs/AGENTS.md`.
 
 ## Engineering rules
 
 - Dependencies flow `pages → service → core`. Services own business logic;
   custom page controllers extend `PageCubit` and expose Bloc state.
   Text, scroll, focus and third-party controllers remain UI resources.
-- Prefer shared `lib/pages/theme/` changes: `AppTheme.appBarTheme`,
-  `ThemeData.textTheme` / `AppTypography`, and `LucideIcons`. Keep typography
-  out of individual pages. UI-only changes preserve behavior and data contracts.
+- Our screens live in `lib/brand/`. Leave `lib/pages/` as upstream has it.
+- Keep `lib/service/`, `lib/core/`, `swift/` and the Android tunnel close to
+  upstream. Make the core changes we need as small, separate commits.
+- Keep typography and colors in the shared brand theme, out of individual
+  screens. UI-only changes preserve behavior and data contracts.
 - Verify dependency maintenance and SDK/platform compatibility before adoption:
   archive status, dated releases, substantive commits and maintainer responses.
-- Keep `LIBXRAY_REF` in `.github/workflows/build.yml` set to `main` unless the
-  user explicitly requests a different ref.
+- Pin `LIBXRAY_REF` in our CI to a commit, never `main`, and bump it only together
+  with an upstream merge.
 - Edit source models, ARB, Pigeon and FFI definitions, then regenerate outputs.
   Generated Dart, Kotlin, Swift, Drift, FFI and localization files are not sources.
 
 ## Read for the task
 
-- Startup, permissions, navigation, UI or desktop windows: [App behavior](docs/app.md).
+- Startup, permissions, navigation or UI: [App behavior](docs/app.md).
 - Configuration, validation, connection lifecycle, native VPN or traffic:
   [Xray configuration](docs/xray-configuration.md).
 - Database, Geodata, queues, updates or cleanup: [data management](docs/data-management.md).
@@ -30,16 +36,26 @@ describe shipped behavior; Git history holds retired plans and progress logs.
   [external interfaces](docs/external-interfaces.md).
 - Packaging, signing or CI releases: [build scripts](build_scripts/README.md).
   Apple/Android release commands may upload to stores; they are not local checks.
-- Visual parity: use the relevant [prototype source](../references/onexray-app-prototype/src/)
-  and approved translations. Current App contracts take precedence over the prototype.
-- Native bridge changes: inspect `pigeon/message.dart`, `lib/core/pigeon/`,
-  Swift/Kotlin consumers and the [libXray API](../libXray/README.md#api).
+- Native bridge changes: inspect `pigeon/message.dart`, `lib/core/pigeon/` and the
+  Swift/Kotlin consumers.
 
-## Skill configuration
+## Agent skills
 
-- Issue, PR or review work: [issue tracker](docs/agents/issue-tracker.md).
-- Triage: [canonical labels](docs/agents/triage-labels.md).
-- Codebase exploration or domain/ADR work: [domain guidance](docs/agents/domain.md).
+### Issue tracker
+
+Issues live in Jira, project `LVPN`, not GitHub. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary, as Jira labels: `needs-triage`, `needs-info`,
+`ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: read `CONTEXT.md` at the root and use its vocabulary. See
+`docs/agents/domain.md`, with one exception: ADRs are private and not part of
+this public repo. Never create `docs/adr/` or commit ADRs here; raise decisions
+worth recording with the user instead.
 
 ## Verification
 
@@ -48,9 +64,9 @@ All Flutter/Dart commands run serially across terminals and agents because
 for scenario selection, checks and platform-specific acceptance.
 
 - Android emulator validation may start VPN. On macOS, do not start VPN or take
-  screenshots; Windows/Linux builds and runs require their own hosts.
-- Keep demos, fixtures and evidence in workspace `references/`, with isolated
-  data and minimal setup; never validate against the developer's main database.
+  screenshots.
+- Keep demos, fixtures and evidence outside the repo, with isolated data and
+  minimal setup; never validate against the developer's main database.
 - Match checks to the change and run `git diff --check`. Documentation-only work
   needs path/link checks, not App tests. Report static, automated, device and
   release results separately. Commit, push and PR actions require user authority.
