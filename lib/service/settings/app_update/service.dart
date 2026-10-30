@@ -147,12 +147,6 @@ class AppUpdateService {
   Future<({Uri item1, AppUpdateDestination item2})> _resolveUpdateUri(
     Uri releaseUri,
   ) async {
-    if (AppPlatform.isIOS) {
-      return (
-        item1: Uri.parse(_appStoreUrl),
-        item2: AppUpdateDestination.appStore,
-      );
-    }
     if (AppPlatform.isAndroid) {
       return (
         item1: Uri.parse(_googlePlayUrl),
