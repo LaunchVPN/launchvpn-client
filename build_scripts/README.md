@@ -92,9 +92,14 @@ on pushes to `main` and on manual dispatch. The upstream workflows stay disabled
 | `ios` | An unsigned build that proves the app and extensions compile. It produces no IPA and no TestFlight upload. |
 
 [build_core.py](build_core.py) runs only the native core and Geodata step, because
-`main.py` also deploys to the stores.
+`main.py` also deploys to the stores. CI passes the run number as the build number
+without the configured base: nothing with this package ID has shipped yet.
 
-Pull request APKs use the debug key of the runner, which differs in every run:
+Unlike the rule above, this workflow pins third-party actions to commits, because the
+`android` job holds the signing key. The shared
+[Flutter Action](../.github/actions/setup-flutter/action.yml) keeps upstream's tag.
+
+APKs from other branches use the debug key of the runner, which differs in every run:
 uninstall the previous build before installing one. Runs on `main` use the signing
 key when the `ANDROID_KEY*` secrets from the workflow header are set. Create the key
 once and keep a copy outside GitHub, since losing it means existing installs can no
@@ -103,10 +108,11 @@ longer be updated:
 ```shell
 keytool -genkeypair -v -keystore upload.jks -alias launchvpn \
   -keyalg RSA -keysize 4096 -validity 10000
-base64 -w0 upload.jks | gh secret set ANDROID_KEYSTORE_BASE64
-gh secret set ANDROID_KEYSTORE_PASSWORD
-gh secret set ANDROID_KEY_PASSWORD
-gh secret set ANDROID_KEY_ALIAS --body launchvpn
+REPO=LaunchVPN/launchvpn-client
+base64 -w0 upload.jks | gh secret set ANDROID_KEYSTORE_BASE64 --repo "$REPO"
+gh secret set ANDROID_KEYSTORE_PASSWORD --repo "$REPO"
+gh secret set ANDROID_KEY_PASSWORD --repo "$REPO"
+gh secret set ANDROID_KEY_ALIAS --repo "$REPO" --body launchvpn
 ```
 
 ## Build

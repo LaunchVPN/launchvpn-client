@@ -2,7 +2,7 @@
 # Checks and builds LaunchVPN for Android and iOS. The upstream workflows stay
 # disabled, and main requires the three jobs below by name.
 #
-# Optional repository secrets, used outside pull requests:
+# Optional repository secrets, used only on main:
 #   ANDROID_KEYSTORE_BASE64    base64 of the signing keystore (.jks)
 #   ANDROID_KEYSTORE_PASSWORD  store password
 #   ANDROID_KEY_PASSWORD       key password
@@ -154,7 +154,7 @@ jobs:
       # Without this key Gradle signs with the debug key of the runner, which
       # differs in every run, so such an APK cannot update a previous install.
       - name: Restore the signing key
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
