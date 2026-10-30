@@ -1,0 +1,37 @@
+name: Build libXray
+description: Build a pinned libXray commit and copy it with Geodata into this checkout
+
+# build_scripts expects libXray next to the App, so the caller checks out this
+# repository to a subdirectory of the workspace.
+inputs:
+  ref:
+    description: libXray commit
+    required: true
+  system:
+    description: android or ios
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v7
+      with:
+        repository: XTLS/libXray
+        ref: ${{ inputs.ref }}
+        path: libXray
+
+    - uses: actions/setup-go@v7
+      with:
+        go-version-file: libXray/go.mod
+        cache-dependency-path: libXray/go.sum
+
+    - uses: actions/setup-python@v7
+      with:
+        python-version: "3.x"
+        check-latest: true
+
+    - name: Build the core
+      shell: bash
+      env:
+        SYSTEM: ${{ inputs.system }}
+      run: python "$GITHUB_ACTION_PATH/../../../build_scripts/build_core.py" "$SYSTEM"

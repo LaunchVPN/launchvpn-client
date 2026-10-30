@@ -1,0 +1,229 @@
+#
+# Checks and builds LaunchVPN for Android and iOS. The upstream workflows stay
+# disabled, and main requires the three jobs below by name.
+#
+# Optional repository secrets, used outside pull requests:
+#   ANDROID_KEYSTORE_BASE64    base64 of the signing keystore (.jks)
+#   ANDROID_KEYSTORE_PASSWORD  store password
+#   ANDROID_KEY_PASSWORD       key password
+#   ANDROID_KEY_ALIAS          key alias
+
+name: LaunchVPN Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: launchvpn-build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Bump only together with an upstream merge.
+  LIBXRAY_REF: 93af542c72ffad0d9c9c7b9a6975eb6d2a5f2d92 # Xray-core v26.10.29
+  BUILD_NUMBER: ${{ github.run_number }}
+
+jobs:
+  # The same checks as the upstream validate.yml.
+  validate:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+          check-latest: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.x"
+          enable-cache: false
+
+      - name: Test build scripts
+        working-directory: build_scripts
+        run: uv run python -m unittest discover -s tests -p 'test_*.py'
+
+      - name: Setup Flutter
+        uses: ./.github/actions/setup-flutter
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang pkg-config libgtk-3-dev libx11-dev libxi-dev
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Prepare generated asset paths
+        run: |
+          mkdir -p assets/dat
+          touch assets/dat/{geoip.dat,geoip.json,geosite.dat,geosite.json,timestamp.txt}
+
+      - name: Generate sources
+        run: |
+          flutter gen-l10n
+          dart run build_runner build
+          dart run tool/ffigen.dart
+
+      - name: Verify generated sources
+        run: git diff --exit-code
+
+      - name: Check format
+        run: |
+          find lib test tool -name '*.dart' \
+            ! -name '*.g.dart' \
+            ! -path 'lib/gen/*' \
+            ! -path 'lib/l10n/*' \
+            ! -path 'lib/core/pigeon/messages.g.dart' \
+            ! -path 'lib/core/ffi/generated_bindings.dart' \
+            -print0 | xargs -0 dart format --output=none --set-exit-if-changed
+
+      - name: Verify layer dependencies
+        run: dart run tool/check_layer_dependencies.dart
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Verify native JSON model contract
+        run: dart run tool/check_native_model_contract.dart
+
+      - name: Test
+        run: flutter test
+
+      - name: Check whitespace
+        run: git diff --check
+
+  android:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: launchvpn-client
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: launchvpn-client
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          # Gradle 9.7 supports Java up to 26; Java 27 requires Gradle 9.8.
+          java-version: "26"
+          check-latest: true
+
+      - name: Install native build dependencies
+        # FFI generation runs cnativeapi's Linux host hook before the Android build.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang pkg-config libgtk-3-dev libx11-dev libxi-dev
+
+      - name: Setup Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r30
+          add-to-path: true
+
+      - name: Build libXray
+        uses: ./launchvpn-client/.github/actions/build-libxray
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        with:
+          ref: ${{ env.LIBXRAY_REF }}
+          system: android
+
+      - name: Setup Flutter
+        uses: ./launchvpn-client/.github/actions/setup-flutter
+
+      - name: Generate sources
+        run: |
+          flutter pub get
+          dart run tool/ffigen.dart
+
+      # Without this key Gradle signs with the debug key of the runner, which
+      # differs in every run, so such an APK cannot update a previous install.
+      - name: Restore the signing key
+        if: github.event_name != 'pull_request'
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set, signing with a debug key"
+            exit 0
+          fi
+          mkdir -p android/keystore
+          echo "$KEYSTORE_B64" | base64 -d > android/keystore/upload.jks
+          cat > android/keystore/keystore.properties <<EOF
+          storeFile=../keystore/upload.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          EOF
+
+      - name: Build the APK
+        run: |
+          flutter build apk --release \
+            --target-platform android-arm64,android-x64 \
+            --build-number "$BUILD_NUMBER"
+          mv build/app/outputs/flutter-apk/app-release.apk \
+            build/LaunchVPN-android-universal.apk
+
+      - name: Test Android native code
+        working-directory: launchvpn-client/android
+        run: ./gradlew :app:testDebugUnitTest
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v7
+        with:
+          path: launchvpn-client/build/LaunchVPN-android-universal.apk
+          archive: false
+          if-no-files-found: error
+
+  # Proves the iOS app and its extensions compile. Signing and TestFlight need
+  # the Apple Developer account.
+  ios:
+    runs-on: xcode-27 # macOS 27 ARM64 (public preview)
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: launchvpn-client
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: launchvpn-client
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build libXray
+        uses: ./launchvpn-client/.github/actions/build-libxray
+        with:
+          ref: ${{ env.LIBXRAY_REF }}
+          system: ios
+
+      - name: Setup Flutter
+        uses: ./launchvpn-client/.github/actions/setup-flutter
+
+      - name: Generate sources
+        run: |
+          flutter pub get
+          dart run tool/ffigen.dart
+
+      - name: Build without signing
+        run: flutter build ios --release --no-codesign --build-number "$BUILD_NUMBER"
