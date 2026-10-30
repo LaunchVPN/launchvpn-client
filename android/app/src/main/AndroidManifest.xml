@@ -22,7 +22,7 @@
         android:name="${applicationName}"
         android:enableOnBackInvokedCallback="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="OneXray"
+        android:label="LaunchVPN"
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         tools:targetApi="tiramisu">
@@ -55,8 +55,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:host="onexray.com"
-                    android:scheme="onexray" />
+                    android:host="app"
+                    android:scheme="launchvpn" />
             </intent-filter>
         </activity>
         <receiver
@@ -64,8 +64,8 @@
             android:exported="true"
             android:process=":native">
             <intent-filter>
-                <action android:name="net.yuandev.onexray.action.START_VPN" />
-                <action android:name="net.yuandev.onexray.action.STOP_VPN" />
+                <action android:name="com.launchvpn.app.action.START_VPN" />
+                <action android:name="com.launchvpn.app.action.STOP_VPN" />
             </intent-filter>
         </receiver>
         <receiver

@@ -96,7 +96,7 @@ const _contracts = [
 void main() {
   final swift = File('swift/All/Model.swift').readAsStringSync();
   final kotlin = File(
-    'android/app/src/main/kotlin/net/yuandev/onexray/pigeon/Model.kt',
+    'android/app/src/main/kotlin/com/launchvpn/app/pigeon/Model.kt',
   ).readAsStringSync();
 
   if (!swift.contains('apiVersion: Int? = 3,') ||

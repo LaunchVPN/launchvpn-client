@@ -1,2 +1,2 @@
 json_key_file("./fastlane/playservice.json")
-package_name("net.yuandev.onexray")
+package_name("com.launchvpn.app")

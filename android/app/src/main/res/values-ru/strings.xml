@@ -1,9 +1,9 @@
 <resources>
     <string name="notification_vpn_stop_failed">Не удалось остановить VPN</string>
     <string name="automation_data_busy">Данные приложения очищаются или восстанавливаются. Повторите попытку после завершения.</string>
-    <string name="automation_configuration_required">Откройте OneXray и подключитесь, чтобы сформировать полную конфигурацию. %1$s</string>
-    <string name="automation_vpn_permission">Откройте OneXray и предоставьте разрешение на VPN.</string>
-    <string name="automation_lan_permission">Откройте OneXray и предоставьте доступ к локальной сети.</string>
+    <string name="automation_configuration_required">Откройте LaunchVPN и подключитесь, чтобы сформировать полную конфигурацию. %1$s</string>
+    <string name="automation_vpn_permission">Откройте LaunchVPN и предоставьте разрешение на VPN.</string>
+    <string name="automation_lan_permission">Откройте LaunchVPN и предоставьте доступ к локальной сети.</string>
     <string name="notification_vpn_start_failed">Не удалось подключиться</string>
     <string name="traffic_download">Загрузка</string>
     <string name="traffic_upload">Отправка</string>
@@ -12,10 +12,10 @@
     <string name="traffic_start_vpn">Старт VPN</string>
     <string name="traffic_stop_vpn">Стоп VPN</string>
     <string name="traffic_widget_disconnected">Не подключено</string>
-    <string name="traffic_widget_name">Трафик OneXray</string>
+    <string name="traffic_widget_name">Трафик LaunchVPN</string>
     <string name="traffic_widget_description">Состояние VPN, скорость и трафик текущего подключения</string>
     <string name="traffic_this_connection">Текущее подключение</string>
-    <string name="quick_settings_tile_label">OneXray</string>
+    <string name="quick_settings_tile_label">LaunchVPN</string>
     <string name="quick_settings_tile_status_connected">Подключено</string>
     <string name="quick_settings_tile_status_connecting">Подключение</string>
     <string name="quick_settings_tile_status_disconnected">Отключено</string>
