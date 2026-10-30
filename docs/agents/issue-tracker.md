@@ -4,9 +4,8 @@ Issues and specs live in Jira, project `LVPN` (https://launchvpn.atlassian.net).
 Use the Atlassian MCP tools. Code and PRs live on GitHub in
 `LaunchVPN/launchvpn-client`.
 
-This repository is a fork. Never file issues, PRs or comments into
-`YuanDevTeam/OneXray`. Pass `--repo LaunchVPN/launchvpn-client` to every `gh`
-command, because `gh` can resolve to the `upstream` remote.
+Never file issues, PRs or comments into `YuanDevTeam/OneXray`. In a fresh clone,
+run `gh repo set-default LaunchVPN/launchvpn-client` before using `gh`.
 
 ## Conventions
 
