@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/core/brand.dart';
 
 const _upstreamId = 'net.yuandev.onexray';
+const _upstreamTeam = '2CKAULFA9J';
 
 String _read(String path) => File(path).readAsStringSync();
 
@@ -85,6 +86,86 @@ void main() {
         final text = file.readAsStringSync();
         expect(text, isNot(contains('OneXray')), reason: file.path);
         expect(text, contains(Brand.name), reason: file.path);
+      }
+    });
+  });
+
+  group('iOS matches the brand config', () {
+    const appGroup = 'group.${Brand.iosId}';
+    const cloudContainer = 'iCloud.${Brand.iosId}';
+
+    test('every target builds under the iOS ID and the brand name', () {
+      final project = _read('ios/Runner.xcodeproj/project.pbxproj');
+
+      for (final suffix in const ['', '.tun', '.widget']) {
+        expect(
+          project,
+          contains('PRODUCT_BUNDLE_IDENTIFIER = ${Brand.iosId}$suffix;'),
+        );
+      }
+      expect(project, contains('CFBundleDisplayName = ${Brand.name};'));
+      expect(project, isNot(contains(_upstreamTeam)));
+    });
+
+    test('Info.plist declares the name, deep link and iCloud container', () {
+      final plist = _read('ios/Runner/Info.plist');
+
+      expect(plist, contains('<string>${Brand.name}</string>'));
+      expect(plist, contains('<string>${Brand.scheme}</string>'));
+      expect(plist, contains('<key>$cloudContainer</key>'));
+    });
+
+    test('entitlements share one app group and iCloud container', () {
+      for (final path in const [
+        'ios/Runner/Runner.entitlements',
+        'ios/tunnel/tunnel.entitlements',
+        'ios/widget/widgetExtension.entitlements',
+      ]) {
+        expect(_read(path), contains('<string>$appGroup</string>'));
+      }
+      expect(
+        _read('ios/Runner/Runner.entitlements'),
+        contains('<string>$cloudContainer</string>'),
+      );
+    });
+
+    test('Swift reaches the tunnel and app group of the iOS ID', () {
+      final constants = _read('swift/All/Constants.swift');
+
+      expect(constants, contains('groupAppGroupId = "$appGroup"'));
+      expect(constants, contains('tunId = "${Brand.iosId}.tun"'));
+      final widgetState = _read('swift/iOS/AppleWidgetState.swift');
+      expect(widgetState, contains('appGroup = "$appGroup"'));
+      expect(widgetState, contains('kind = "${Brand.iosId}.connection"'));
+    });
+
+    test('the widget opens the app through the brand scheme', () {
+      expect(
+        _read('ios/widget/widget.swift'),
+        contains('"${Brand.scheme}://widget/connect"'),
+      );
+    });
+
+    test('fastlane signs the iOS ID', () {
+      expect(
+        _read('ios/fastlane/Appfile'),
+        contains("app_identifier '${Brand.iosId}'"),
+      );
+      expect(_read('ios/fastlane/Fastfile'), contains("'${Brand.iosId}.tun'"));
+    });
+
+    test('no upstream identity is left in iOS sources', () {
+      for (final file in _textFiles('ios')) {
+        final text = file.readAsStringSync();
+        expect(text, isNot(contains(_upstreamId)), reason: file.path);
+        expect(text, isNot(contains('OneXray')), reason: file.path);
+      }
+      for (final file in _textFiles('swift/iOS')) {
+        expect(
+          file.readAsStringSync(),
+          isNot(contains(_upstreamId)),
+          reason: file.path,
+        );
       }
     });
   });

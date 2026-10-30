@@ -14,7 +14,7 @@ public enum Constants {
 }
 
 private let teamAppGroupId = "2CKAULFA9J.net.yuandev.onexray"
-private let groupAppGroupId = "group.net.yuandev.onexray"
+private let groupAppGroupId = "group.com.launchvpn.dev"
 private let seGroupAppGroupId = "group.net.yuandev.onexray.se"
 
 public func appGroupId() -> String {
@@ -29,7 +29,8 @@ public func appGroupId() -> String {
     #endif
 }
 
-private let tunId = "net.yuandev.onexray.tun"
+private let tunId = "com.launchvpn.dev.tun"
+private let macTunId = "net.yuandev.onexray.tun"
 private let seTunId = "net.yuandev.onexray.se.tun"
 
 public func packetTunnelId() -> String {
@@ -39,12 +40,12 @@ public func packetTunnelId() -> String {
         if Constants.useSystemExtension {
             return seTunId
         } else {
-            return tunId
+            return macTunId
         }
     #endif
 }
 
-private let serverAddress = "OneXray"
+private let serverAddress = "LaunchVPN"
 private let seServerAddress = "OneXraySE"
 
 public func vpnServerAddress() -> String {
