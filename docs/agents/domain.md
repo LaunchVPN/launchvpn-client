@@ -8,7 +8,7 @@ This repository uses a single-context layout: domain terminology lives in
 
 - Before exploring the codebase, read the root `CONTEXT.md` when it exists.
 - Before changing an implementation, read ADRs under `docs/adr/` that affect
-  the area being changed, alongside the current contracts linked from `AGENTS.md`.
+  the area being changed, alongside the current contracts linked from `CLAUDE.md`.
 - If these files do not exist, proceed silently without creating setup
   placeholders. The `/domain-modeling` skill creates them when terminology
   or decisions actually need recording.
