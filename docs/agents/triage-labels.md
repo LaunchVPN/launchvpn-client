@@ -1,6 +1,6 @@
 # Triage Labels
 
-| Canonical role | GitHub label | Meaning |
+| Canonical role | Jira label | Meaning |
 | --- | --- | --- |
 | `needs-triage` | `needs-triage` | Waiting for maintainer evaluation |
 | `needs-info` | `needs-info` | Waiting for the reporter to provide more information |
@@ -8,4 +8,4 @@
 | `ready-for-human` | `ready-for-human` | Requires human implementation |
 | `wontfix` | `wontfix` | Not planned |
 
-When a skill mentions a canonical role, use its corresponding GitHub label.
+When a skill mentions a canonical role, use its corresponding Jira label.
