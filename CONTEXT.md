@@ -4,6 +4,9 @@ Mobile proxy client (Android, iOS) for the Remnawave ecosystem under the LaunchV
 brand. It is a public GPL fork of [OneXray](https://github.com/YuanDevTeam/OneXray):
 the core, tunnel and CI come from upstream, while the interface and brand are our own.
 
+This glossary describes the target product. Until the fork is finished, the code may
+still behave like upstream, so check it before relying on a detail here.
+
 ## Language
 
 **Subscription**:
