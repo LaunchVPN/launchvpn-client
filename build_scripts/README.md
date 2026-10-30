@@ -33,7 +33,7 @@ uv sync --project build_scripts
 dart pub global activate fastforge
 ```
 
-Keep `LIBXRAY_REF=main` unless explicitly instructed otherwise. Run Flutter/Dart
+Keep `LIBXRAY_REF` pinned to a commit and bump it only with an upstream merge. Run Flutter/Dart
 commands serially.
 
 ## GitHub Actions
