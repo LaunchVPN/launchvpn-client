@@ -99,7 +99,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(sent, hasLength(2));
       final link = Uri.parse(sent.last.text!);
-      expect(link.scheme, 'onexray');
+      expect(link.scheme, 'launchvpn');
       expect(link.queryParameters['age'], 'x25519');
       expect(sent.last.text, isNot(contains('PRIVATE')));
       expect(sent.last.text, isNot(contains('age1public')));

@@ -25,12 +25,8 @@ void main() {
     final eventBus = AppEventBus();
     var importCount = 0;
     final received = <String>[];
-    final first = Uri.parse(
-      'onexray://onexray.com/sub/add?url=https://a.example',
-    );
-    final second = Uri.parse(
-      'onexray://onexray.com/sub/add?url=https://b.example',
-    );
+    final first = Uri.parse('launchvpn://app/sub/add?url=https://a.example');
+    final second = Uri.parse('launchvpn://app/sub/add?url=https://b.example');
     share.startAppLinks();
     links.add(first);
     final modalObserver = AppModalRouteObserver();

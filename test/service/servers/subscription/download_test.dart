@@ -20,7 +20,7 @@ void main() {
   setUp(() {
     PackageInfo.setMockInitialValues(
       appName: 'OneXray',
-      packageName: 'net.yuandev.onexray',
+      packageName: 'com.launchvpn.app',
       version: '26.10.3',
       buildNumber: '103',
       buildSignature: '',
@@ -65,8 +65,8 @@ void main() {
           ],
         };
         final defaultUserAgent =
-            'v2rayN/26.10.3 OneXray/26.10.3 '
-            '(net.yuandev.onexray; build:103; ${Platform.operatingSystem})';
+            'v2rayN/26.10.3 LaunchVPN/26.10.3 '
+            '(com.launchvpn.app; build:103; ${Platform.operatingSystem})';
         final expectedUserAgent = customUserAgent?.trim() ?? defaultUserAgent;
         final requests = <RequestOptions>[];
         final client =

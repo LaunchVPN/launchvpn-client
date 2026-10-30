@@ -1,3 +1,4 @@
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/constants/preferences.dart';
 import 'package:onexray/core/network/client.dart';
 import 'package:onexray/core/pigeon/host_api.dart';
@@ -55,13 +56,13 @@ class AppUpdateService {
   AppUpdateService._internal();
 
   static const _githubLatestReleaseApi =
-      "https://api.github.com/repos/YuanDevTeam/OneXray/releases/latest";
+      "https://api.github.com/repos/${Brand.githubRepository}/releases/latest";
   static const _githubLatestReleaseUrl =
-      "https://github.com/YuanDevTeam/OneXray/releases/latest";
+      "https://github.com/${Brand.githubRepository}/releases/latest";
   static const _appStoreUrl =
       "https://apps.apple.com/us/app/onexray/id6745748773";
   static const _googlePlayUrl =
-      "https://play.google.com/store/apps/details?id=net.yuandev.onexray";
+      "https://play.google.com/store/apps/details?id=${Brand.androidId}";
   static const _automaticCheckInterval = Duration(days: 1);
 
   Future<AppUpdateCheckResult> checkForUpdate() async {

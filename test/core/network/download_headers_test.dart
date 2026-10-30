@@ -12,7 +12,7 @@ void main() {
   setUpAll(() {
     PackageInfo.setMockInitialValues(
       appName: 'OneXray',
-      packageName: 'net.yuandev.onexray',
+      packageName: 'com.launchvpn.app',
       version: '1.0.0',
       buildNumber: '1',
       buildSignature: '',
@@ -37,8 +37,8 @@ void main() {
     expect(receivedAgeHeader, isNull);
     expect(
       receivedUserAgent,
-      'v2rayN/1.0.0 OneXray/1.0.0 '
-      '(net.yuandev.onexray; build:1; ${Platform.operatingSystem})',
+      'v2rayN/1.0.0 LaunchVPN/1.0.0 '
+      '(com.launchvpn.app; build:1; ${Platform.operatingSystem})',
     );
     expect(NetClient().downloadUserAgent, receivedUserAgent);
   });

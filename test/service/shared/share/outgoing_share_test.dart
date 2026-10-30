@@ -7,7 +7,7 @@ import 'package:share_plus_platform_interface/share_plus_platform_interface.dart
 void main() {
   const content = ShareText(
     title: '  Example  ',
-    text: 'onexray://example.test/first\nonexray://example.test/second\n',
+    text: 'launchvpn://example.test/first\nlaunchvpn://example.test/second\n',
   );
   const origin = Rect.fromLTWH(10, 20, 100, 40);
 

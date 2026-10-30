@@ -13,8 +13,8 @@
 
 名称、HTTPS URL、Age 成对输入由服务检查；重复 URL 在写入事务中拒绝，下载前快速检查不替代提交复核。
 每个来源可选填 `userAgent`，仅覆盖该订阅本次下载的 `User-Agent` 请求头，自定义值优先。
-App 下载统一默认使用 `v2rayN/<OneXray 版本> <完整 OneXray UA>`，包括订阅、Geodata 及其它下载；
-版本、包名、构建号和平台信息仍来自 OneXray。订阅未填写或清空 UA 时使用同一默认值，不提供全局 UA 选择。
+App 下载统一默认使用 `v2rayN/<LaunchVPN 版本> <完整 LaunchVPN UA>`，包括订阅、Geodata 及其它下载；
+版本、包名、构建号和平台信息仍来自 LaunchVPN。订阅未填写或清空 UA 时使用同一默认值，不提供全局 UA 选择。
 订阅表单默认填入同一兼容 UA，切换面板不清空 UA；手动输入、分享链接及已保存的显式 UA 保留。
 已有来源的 UA 为空时，编辑页只补充默认值展示，不自动写入数据库；保存仍需用户明确操作。
 添加、编辑和刷新共用此设置，URL 原样请求，不自动附加格式端点。
@@ -138,7 +138,7 @@ Setup 期间只暂存，已有导入或其它模态关闭后再继续。相同 U
 完成、取消、失败或页面销毁均结束本次领取，不自动重放，之后用户再次打开同一链接仍可导入。
 暂存只在内存中保留；Widget 导航链接仍由独立入口处理。
 
-规范 scheme/host 为 `onexray://onexray.com`：
+规范 scheme/host 为 `launchvpn://app`：
 
 ```text
 /config/add?type=outbound|raw|custom|custom-advanced&data=<base64>#<name>

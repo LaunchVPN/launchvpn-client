@@ -73,7 +73,7 @@ void main() {
     await tester.runAsync(() async {
       recoveredPackageInfo.complete({
         'appName': 'OneXray',
-        'packageName': 'net.yuandev.onexray',
+        'packageName': 'com.launchvpn.app',
         'version': '26.10.4',
         'buildNumber': '104',
         'buildSignature': '',
