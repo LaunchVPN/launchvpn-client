@@ -39,8 +39,9 @@ _Avoid_: device id, subscription UUID
 
 **Brand**:
 Everything that distinguishes the LaunchVPN build from upstream: name, package
-identifiers, icons, site colors and fonts, deeplink scheme, API address, subscription
-User-Agent. Collected in a single brand config.
+identifiers, icons, site colors and fonts, deeplink scheme, subscription User-Agent.
+Collected in a single brand config, `lib/core/brand.dart`. The API address stays out of
+this public repo.
 _Avoid_: flavor, theme, white-label
 
 **Upstream**:

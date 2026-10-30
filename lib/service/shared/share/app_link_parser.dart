@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/model/geo_data_type.dart';
 import 'package:onexray/core/network/model.dart';
 import 'package:onexray/core/db/database/enum.dart';
@@ -8,8 +9,8 @@ import 'package:onexray/service/shared/share/app_link_model.dart';
 import 'package:onexray/service/servers/subscription/model.dart';
 
 abstract final class OneXrayAppLinkParser {
-  static const scheme = 'onexray';
-  static const host = 'onexray.com';
+  static const scheme = Brand.scheme;
+  static const host = Brand.appLinkHost;
 
   static const configPath = '/config/add';
   static const subscriptionPath = '/sub/add';

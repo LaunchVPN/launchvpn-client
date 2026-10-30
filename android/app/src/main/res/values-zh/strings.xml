@@ -1,9 +1,9 @@
 <resources>
     <string name="notification_vpn_stop_failed">无法停止 VPN</string>
     <string name="automation_data_busy">正在清理或恢复 App 数据，请完成后重试。</string>
-    <string name="automation_configuration_required">请先打开 OneXray 并连接一次，生成完整配置。%1$s</string>
-    <string name="automation_vpn_permission">请打开 OneXray 授予 VPN 权限。</string>
-    <string name="automation_lan_permission">请打开 OneXray 授予局域网权限。</string>
+    <string name="automation_configuration_required">请先打开 LaunchVPN 并连接一次，生成完整配置。%1$s</string>
+    <string name="automation_vpn_permission">请打开 LaunchVPN 授予 VPN 权限。</string>
+    <string name="automation_lan_permission">请打开 LaunchVPN 授予局域网权限。</string>
     <string name="notification_vpn_start_failed">连接失败</string>
     <string name="traffic_download">下载</string>
     <string name="traffic_upload">上传</string>
@@ -12,10 +12,10 @@
     <string name="traffic_start_vpn">启动 VPN</string>
     <string name="traffic_stop_vpn">关闭 VPN</string>
     <string name="traffic_widget_disconnected">未连接</string>
-    <string name="traffic_widget_name">OneXray 流量</string>
+    <string name="traffic_widget_name">LaunchVPN 流量</string>
     <string name="traffic_widget_description">VPN 状态、本次连接的网速和流量</string>
     <string name="traffic_this_connection">本次连接</string>
-    <string name="quick_settings_tile_label">OneXray</string>
+    <string name="quick_settings_tile_label">LaunchVPN</string>
     <string name="quick_settings_tile_status_connected">已连接</string>
     <string name="quick_settings_tile_status_connecting">连接中</string>
     <string name="quick_settings_tile_status_disconnected">已断开</string>

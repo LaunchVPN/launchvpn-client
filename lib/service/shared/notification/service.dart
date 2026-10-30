@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/core/tools/platform.dart';
 
@@ -79,12 +80,12 @@ final class NotificationService {
     if (AppPlatform.isAndroid) {
       const details = NotificationDetails(
         android: AndroidNotificationDetails(
-          'net.yuandev.onexray',
-          'OneXray',
-          channelDescription: 'OneXray',
+          Brand.androidId,
+          Brand.name,
+          channelDescription: Brand.name,
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
-          ticker: 'OneXray',
+          ticker: Brand.name,
         ),
       );
       await _localNotification.show(

@@ -45,8 +45,8 @@ enum AppleWidgetLanguage {
 
 /// Separate files let the app change language without overwriting a tunnel event.
 struct AppleWidgetStore: Sendable {
-    static let appGroup = "group.net.yuandev.onexray"
-    static let kind = "net.yuandev.onexray.connection"
+    static let appGroup = "group.com.launchvpn.dev"
+    static let kind = "com.launchvpn.dev.connection"
     let directory: URL
 
     static var shared: AppleWidgetStore? {

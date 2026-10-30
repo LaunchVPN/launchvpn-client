@@ -16,8 +16,8 @@ void main() {
       test('parses ${entry.key}', () {
         const json = '{"name":"Example"}';
         final uri = Uri(
-          scheme: 'onexray',
-          host: 'onexray.com',
+          scheme: 'launchvpn',
+          host: 'app',
           path: '/config/add',
           queryParameters: {
             'type': entry.key,
@@ -47,7 +47,7 @@ void main() {
         base64Encode(utf8.encode('{"name":"Example"}')),
       );
       final duplicate = Uri.parse(
-        'onexray://onexray.com/config/add?type=raw&type=full&data=$data',
+        'launchvpn://app/config/add?type=raw&type=full&data=$data',
       );
       final unknown = _configUri(extra: const {'backup': 'true'});
 
@@ -118,8 +118,8 @@ void main() {
         expect(result.panel, SubscriptionPanel.remnawave);
         expect(result.mode, SubscriptionMode.providerManaged);
         final base = Uri(
-          scheme: 'onexray',
-          host: 'onexray.com',
+          scheme: 'launchvpn',
+          host: 'app',
           path: '/sub/add',
           queryParameters: {'url': 'https://example.com/sub'},
         ).toString();
@@ -173,7 +173,7 @@ void main() {
   test('requires the exact scheme, host, and supported path', () {
     final wrongScheme = _configUri(scheme: 'https');
     final wrongHost = _configUri(host: 'example.com');
-    final spoofedHost = _configUri(host: 'onexray.com.example.com');
+    final spoofedHost = _configUri(host: 'app.example.com');
     final wrongPath = _configUri(path: '/backup/add');
 
     expect(OneXrayAppLinkParser.parse(wrongScheme), isNull);
@@ -184,8 +184,8 @@ void main() {
 }
 
 Uri _configUri({
-  String scheme = 'onexray',
-  String host = 'onexray.com',
+  String scheme = 'launchvpn',
+  String host = 'app',
   String path = '/config/add',
   String type = 'raw',
   Map<String, String> extra = const {},
@@ -210,8 +210,8 @@ Uri _subscriptionUri({
   String? mode,
 }) {
   return Uri(
-    scheme: 'onexray',
-    host: 'onexray.com',
+    scheme: 'launchvpn',
+    host: 'app',
     path: '/sub/add',
     queryParameters: {'url': url, 'age': ?age, 'panel': ?panel, 'mode': ?mode},
     fragment: name,
@@ -224,8 +224,8 @@ Uri _geoDataUri({
   String name = '',
 }) {
   return Uri(
-    scheme: 'onexray',
-    host: 'onexray.com',
+    scheme: 'launchvpn',
+    host: 'app',
     path: '/dat/add',
     queryParameters: {'type': type, 'url': url},
     fragment: name,

@@ -80,7 +80,7 @@
 - 在隔离库验证 schema 1–8 升至 9、新安装和重复打开：ID、JSON、Age/HWID、订阅及旧 Raw 保留，
   旧地区列删除、panel/mode 缺省正确，未知选择统一回退，退休 full 不激活。
   旧来源 UA 为空；显式 UA 只覆盖当前订阅请求，添加、刷新、编辑清空、分享及备份往返保持原始 URL，
-  不影响其它来源、Geodata 或普通下载请求；所有下载默认统一使用带 OneXray 版本的 v2rayN 前缀及完整 OneXray UA。
+  不影响其它来源、Geodata 或普通下载请求；所有下载默认统一使用带 LaunchVPN 版本的 v2rayN 前缀及完整 LaunchVPN UA。
   新增及已有空 UA 的编辑表单显示同一默认值，展示与取消不保存；已有或异步输入的自定义值保留，
   切换面板不清空 UA；UA 变更使迟到请求失效，失败保留既有配置。
 - Remnawave 的 JSON（含仅 outbounds）进入完整解析；有效 JSON 的结构/内核错误不触发转换。
@@ -219,7 +219,7 @@ Pigeon、FFI、Drift 或本地化变更先生成对应输出；只改测试时�
 
 ## 平台验收
 
-Android 模拟器直接使用当前分支构建覆盖已经安装的 OneXray，保留已有数据，不另建测试包或 applicationId。
+Android 模拟器直接使用当前分支构建覆盖已经安装的 LaunchVPN，保留已有数据，不另建测试包或 applicationId。
 验证使用脱敏输入或临时响应替身，调用真实原生解析；完成后只清理本轮新增的测试数据。
 
 - Android UI 用模拟器验证；系统导入、导出和扫码可记录跳过。Widget 检查 4×2 最小尺寸、

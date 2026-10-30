@@ -84,10 +84,10 @@ API 不下载/导入/保存资产、不检查 DB 重名/数量、不选择节点
 | 字段 | 值 |
 | --- | --- |
 | 类型 | Broadcast Receiver |
-| Package | `net.yuandev.onexray` |
-| Class | `net.yuandev.onexray.automation.VpnAutomationReceiver` |
-| START | `net.yuandev.onexray.action.START_VPN` |
-| STOP | `net.yuandev.onexray.action.STOP_VPN` |
+| Package | `com.launchvpn.app` |
+| Class | `com.launchvpn.app.automation.VpnAutomationReceiver` |
+| START | `com.launchvpn.app.action.START_VPN` |
+| STOP | `com.launchvpn.app.action.STOP_VPN` |
 | Extra | `token`，精确 String |
 
 仅接受两个动作，不接受配置路径、节点选择、回调或调用者自报身份。
@@ -133,7 +133,7 @@ iOS 原生先排空配置准备写入再停止，不等待已提交启动的连�
 输入仅限启动/停止，不接受配置参数、节点选择或通用 invoke，也不形成跨进程持久命令队列。
 它使用当前 App 选择，不复用 Android Widget/Tile 或 Apple 按需连接的 saved-start 路径。
 
-Widget 唯一公开 URL 为 `onexray://widget/connect`，只打开连接页，不启停 VPN。
+Widget 唯一公开 URL 为 `launchvpn://widget/connect`，只打开连接页，不启停 VPN。
 带查询、fragment、端口、用户信息或其他路径的地址不进入 Widget 动作入口；启停不通过 URL 参数开放。
 冷启动导航同样抑制本次偏好自动连接。
 

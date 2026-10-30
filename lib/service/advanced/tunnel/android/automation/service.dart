@@ -1,3 +1,4 @@
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/platform.dart';
 
@@ -10,7 +11,7 @@ class AndroidAutomationService {
   final AndroidAutomationHostApi _api;
   final bool _supported;
 
-  static const packageName = 'net.yuandev.onexray';
+  static const packageName = Brand.androidId;
   static const receiver = '$packageName.automation.VpnAutomationReceiver';
   static const startAction = '$packageName.action.START_VPN';
   static const stopAction = '$packageName.action.STOP_VPN';

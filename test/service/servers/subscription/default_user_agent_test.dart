@@ -31,7 +31,7 @@ void main() {
         }
         return {
           'appName': 'OneXray',
-          'packageName': 'net.yuandev.onexray',
+          'packageName': 'com.launchvpn.app',
           'version': '26.10.4',
           'buildNumber': '104',
           'buildSignature': '',

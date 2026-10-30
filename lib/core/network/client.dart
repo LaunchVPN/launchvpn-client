@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/errors/failure.dart';
 import 'package:onexray/core/network/model.dart';
 import 'package:onexray/core/tools/logger.dart';
@@ -43,19 +44,19 @@ class NetClient {
 
   static Future<String> defaultUserAgent() async {
     var version = '0.0.0';
-    var userAgent = 'OneXray (${Platform.operatingSystem})';
+    var userAgent = '${Brand.name} (${Platform.operatingSystem})';
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       version = packageInfo.version;
       userAgent =
-          'OneXray/$version '
+          '${Brand.name}/$version '
           '(${packageInfo.packageName}; build:${packageInfo.buildNumber}; '
           '${Platform.operatingSystem})';
     } catch (error) {
-      ygLogger('Unable to build the OneXray User-Agent: $error');
+      ygLogger('Unable to build the ${Brand.name} User-Agent: $error');
     }
     // Providers can select an Xray JSON template by this leading product.
-    return 'v2rayN/$version $userAgent';
+    return '${Brand.subscriptionClient}/$version $userAgent';
   }
 
   static const _maxDownloadRedirects = 8;

@@ -6,13 +6,14 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:icloud_storage_plus/icloud_storage.dart';
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/backup/codec.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/atomic_file.dart';
 import 'package:path/path.dart' as p;
 import 'package:saf_stream/saf_stream.dart';
 
-const backupContainerId = 'iCloud.net.yuandev.onexray';
+const backupContainerId = 'iCloud.${Brand.iosId}';
 const backupCloudPath = 'Documents/$backupFileName';
 
 class BackupTarget {

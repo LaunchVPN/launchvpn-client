@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/pigeon/flutter_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
@@ -92,7 +93,7 @@ final class AppleWidgetService with WidgetsBindingObserver {
   }
 
   static bool isOpenUri(Uri uri) =>
-      uri.scheme == 'onexray' &&
+      uri.scheme == Brand.scheme &&
       uri.host == 'widget' &&
       uri.path == '/connect' &&
       !uri.hasPort &&

@@ -39,7 +39,7 @@ void main() {
     () async {
       PackageInfo.setMockInitialValues(
         appName: 'OneXray',
-        packageName: 'net.yuandev.onexray',
+        packageName: 'com.launchvpn.app',
         version: '26.10.4',
         buildNumber: '104',
         buildSignature: '',
@@ -52,8 +52,8 @@ void main() {
       await controller.setPanel(SubscriptionPanel.generic);
       expect(
         controller.userAgent.text,
-        'v2rayN/26.10.4 OneXray/26.10.4 '
-        '(net.yuandev.onexray; build:104; ${Platform.operatingSystem})',
+        'v2rayN/26.10.4 LaunchVPN/26.10.4 '
+        '(com.launchvpn.app; build:104; ${Platform.operatingSystem})',
       );
       expect(controller.state.userAgent, controller.userAgent.text);
       final generated = controller.userAgent.text;
@@ -94,14 +94,14 @@ void main() {
   ) async {
     PackageInfo.setMockInitialValues(
       appName: 'OneXray',
-      packageName: 'net.yuandev.onexray',
+      packageName: 'com.launchvpn.app',
       version: '26.10.4',
       buildNumber: '104',
       buildSignature: '',
     );
     final expectedUserAgent =
-        'v2rayN/26.10.4 OneXray/26.10.4 '
-        '(net.yuandev.onexray; build:104; ${Platform.operatingSystem})';
+        'v2rayN/26.10.4 LaunchVPN/26.10.4 '
+        '(com.launchvpn.app; build:104; ${Platform.operatingSystem})';
     final controller = ServerImportController(
       loadSubscription: (_) async => null,
     );
@@ -242,14 +242,14 @@ void main() {
         (tester) async {
           PackageInfo.setMockInitialValues(
             appName: 'OneXray',
-            packageName: 'net.yuandev.onexray',
+            packageName: 'com.launchvpn.app',
             version: '26.10.4',
             buildNumber: '104',
             buildSignature: '',
           );
           final expectedUserAgent =
-              'v2rayN/26.10.4 OneXray/26.10.4 '
-              '(net.yuandev.onexray; build:104; ${Platform.operatingSystem})';
+              'v2rayN/26.10.4 LaunchVPN/26.10.4 '
+              '(com.launchvpn.app; build:104; ${Platform.operatingSystem})';
           var saves = 0;
           final controller = ServerImportController(
             subscriptionId: 7,
@@ -1509,8 +1509,8 @@ void main() {
 }
 
 String _rawLink() => Uri(
-  scheme: 'onexray',
-  host: 'onexray.com',
+  scheme: 'launchvpn',
+  host: 'app',
   path: '/config/add',
   fragment: 'Expert',
   queryParameters: {

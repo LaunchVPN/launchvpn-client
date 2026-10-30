@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>OneXray</string>
+	<string>LaunchVPN</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>OneXray</string>
+	<string>LaunchVPN</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -28,10 +28,10 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>net.yuandev.onexray</string>
+			<string>com.launchvpn.dev</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>onexray</string>
+				<string>launchvpn</string>
 			</array>
 		</dict>
 	</array>
@@ -51,12 +51,12 @@
 	<string>This app needs photos access to get QR code from photo library</string>
 	<key>NSUbiquitousContainers</key>
 	<dict>
-		<key>iCloud.net.yuandev.onexray</key>
+		<key>iCloud.com.launchvpn.dev</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<true/>
 			<key>NSUbiquitousContainerName</key>
-			<string>OneXray</string>
+			<string>LaunchVPN</string>
 			<key>NSUbiquitousContainerSupportedFolderLevels</key>
 			<string>None</string>
 		</dict>
