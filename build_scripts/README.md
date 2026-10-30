@@ -79,6 +79,42 @@ the Pub executable directory, including Fastforge.
 release asset downloads and LLVM-MinGW extraction. Inno Setup remains on the
 latest stable 7.x release; its silent installation uses a short PowerShell step.
 
+## LaunchVPN CI
+
+[LaunchVPN Build](../.github/workflows/launchvpn-build.yml) runs on pull requests,
+on pushes to `main` and on manual dispatch. The upstream workflows stay disabled.
+`main` requires its `validate`, `android` and `ios` jobs.
+
+| Job | Result |
+| --- | --- |
+| `validate` | The checks of the upstream Validate workflow. |
+| `android` | `LaunchVPN-android-universal.apk` on the run page, and the Kotlin tests. |
+| `ios` | An unsigned build that proves the app and extensions compile. It produces no IPA and no TestFlight upload. |
+
+[build_core.py](build_core.py) runs only the native core and Geodata step, because
+`main.py` also deploys to the stores. CI passes the run number as the build number
+without the configured base: nothing with this package ID has shipped yet.
+
+Unlike the rule above, this workflow pins third-party actions to commits, because the
+`android` job holds the signing key. The shared
+[Flutter Action](../.github/actions/setup-flutter/action.yml) keeps upstream's tag.
+
+APKs from other branches use the debug key of the runner, which differs in every run:
+uninstall the previous build before installing one. Runs on `main` use the signing
+key when the `ANDROID_KEY*` secrets from the workflow header are set. Create the key
+once and keep a copy outside GitHub, since losing it means existing installs can no
+longer be updated:
+
+```shell
+keytool -genkeypair -v -keystore upload.jks -alias launchvpn \
+  -keyalg RSA -keysize 4096 -validity 10000
+REPO=LaunchVPN/launchvpn-client
+base64 -w0 upload.jks | gh secret set ANDROID_KEYSTORE_BASE64 --repo "$REPO"
+gh secret set ANDROID_KEYSTORE_PASSWORD --repo "$REPO"
+gh secret set ANDROID_KEY_PASSWORD --repo "$REPO"
+gh secret set ANDROID_KEY_ALIAS --repo "$REPO" --body launchvpn
+```
+
 ## Build
 
 Set a positive `BUILD_NUMBER`; the [configured base](app/config.py) is added to it.
