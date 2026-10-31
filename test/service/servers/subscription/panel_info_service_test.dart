@@ -47,12 +47,14 @@ void main() {
       );
 
   SubscriptionService service(
-    Future<SubscriptionLoadResult> Function(SubscriptionInput) load,
-  ) => SubscriptionService.forTesting(
+    Future<SubscriptionLoadResult> Function(SubscriptionInput) load, {
+    DateTime Function()? now,
+  }) => SubscriptionService.forTesting(
     database: database,
     loadRows: load,
     schedulePing: (_) {},
     readReferences: () => const SubscriptionNodeReferences(),
+    now: now,
   );
 
   Future<SubscriptionData> stored(int id) async =>
@@ -227,6 +229,104 @@ void main() {
         source.timestamp.difference(started),
         lessThan(const Duration(seconds: 1)),
       );
+    });
+
+    for (final refusal in [
+      SubscriptionUpdateResult.hwidRequired,
+      SubscriptionUpdateResult.hwidLimitReached,
+      SubscriptionUpdateResult.hwidRejected,
+    ]) {
+      test('$refusal waits a full interval before asking again', () async {
+        await addSource('source', const Duration(hours: 7), 6);
+        var time = DateTime.now();
+        var downloads = 0;
+        final subject = service((_) async {
+          downloads++;
+          return SubscriptionLoadResult(status: refusal);
+        }, now: () => time);
+
+        await subject.refreshOutdatedSubscription(autoUpdateState: settings);
+        time = time.add(const Duration(hours: 5));
+        await subject.refreshOutdatedSubscription(autoUpdateState: settings);
+        expect(downloads, 1);
+
+        time = time.add(const Duration(hours: 1));
+        await subject.refreshOutdatedSubscription(autoUpdateState: settings);
+        expect(downloads, 2);
+      });
+    }
+
+    test('a refused device can still refresh on request', () async {
+      await addSource('source', const Duration(hours: 7), 6);
+      var downloads = 0;
+      final subject = service((_) async {
+        downloads++;
+        return const SubscriptionLoadResult(
+          status: SubscriptionUpdateResult.hwidLimitReached,
+        );
+      });
+
+      await subject.refreshOutdatedSubscription(autoUpdateState: settings);
+      final source = (await database.subscriptionDao.allRows).single;
+      await subject.refreshSubscriptionResult(source);
+
+      expect(downloads, 2);
+    });
+
+    test('a refusal on request also delays automatic checks', () async {
+      await addSource('source', const Duration(hours: 7), 6);
+      var downloads = 0;
+      final subject = service((_) async {
+        downloads++;
+        return const SubscriptionLoadResult(
+          status: SubscriptionUpdateResult.hwidLimitReached,
+        );
+      });
+
+      final source = (await database.subscriptionDao.allRows).single;
+      await subject.refreshSubscriptionResult(source);
+      await subject.refreshOutdatedSubscription(autoUpdateState: settings);
+
+      expect(downloads, 1);
+    });
+
+    test('a new request source does not inherit a refusal', () async {
+      // Past the app setting, which applies once the source edit clears the
+      // panel's interval.
+      await addSource('source', const Duration(hours: 73), 6);
+      var downloads = 0;
+      final subject = service((_) async {
+        downloads++;
+        return const SubscriptionLoadResult(
+          status: SubscriptionUpdateResult.hwidLimitReached,
+        );
+      });
+
+      await subject.refreshOutdatedSubscription(autoUpdateState: settings);
+      final source = (await database.subscriptionDao.allRows).single;
+      await subject.saveSubscriptionInput(
+        source.id,
+        const SubscriptionInput(name: 'source', url: 'https://example.com/new'),
+      );
+      await subject.refreshOutdatedSubscription(autoUpdateState: settings);
+
+      expect(downloads, 2);
+    });
+
+    test('a failed download stays due on the next check', () async {
+      await addSource('source', const Duration(hours: 7), 6);
+      var downloads = 0;
+      final subject = service((_) async {
+        downloads++;
+        return const SubscriptionLoadResult(
+          status: SubscriptionUpdateResult.downloadFailed,
+        );
+      });
+
+      await subject.refreshOutdatedSubscription(autoUpdateState: settings);
+      await subject.refreshOutdatedSubscription(autoUpdateState: settings);
+
+      expect(downloads, 2);
     });
 
     test('a refresh restarts the panel interval', () async {
