@@ -1,4 +1,4 @@
-# OneXray App Icons
+# LaunchVPN App Icons
 
 Shared Icon Composer artwork for Apple platform app icons.
 
@@ -7,13 +7,14 @@ projects can use the same source artwork.
 
 ## Packages
 
-- `IconBlue.icon`: Icon Composer source document for the primary blue icon.
+- `IconBlue.icon`: Icon Composer source document for the primary icon, in the brand
+  accent color despite the upstream name.
 - `IconBlack.icon`, `IconGreen.icon`, `IconOrange.icon`, `IconPurple.icon`,
   `IconRed.icon`: Icon Composer source documents for the iOS alternate icons.
 
 ## Colors
 
-- Blue: `#007AFF`
+- Primary: `#9C5EEF`
 - Black: `#000000`
 - Green: `#4CAF50`
 - Orange: `#FF9800`

@@ -3,5 +3,5 @@
     android:height="432dp"
     android:viewportWidth="432"
     android:viewportHeight="432">
-  <path android:fillColor="#007AFF" android:pathData="M0,0h432v432h-432z"/>
+  <path android:fillColor="#9C5EEF" android:pathData="M0,0h432v432h-432z"/>
 </vector>
