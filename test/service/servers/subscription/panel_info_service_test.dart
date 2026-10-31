@@ -291,7 +291,9 @@ void main() {
     });
 
     test('a new request source does not inherit a refusal', () async {
-      await addSource('source', const Duration(hours: 7), 6);
+      // Past the app setting, which applies once the source edit clears the
+      // panel's interval.
+      await addSource('source', const Duration(hours: 73), 6);
       var downloads = 0;
       final subject = service((_) async {
         downloads++;
