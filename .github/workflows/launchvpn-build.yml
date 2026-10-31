@@ -137,7 +137,6 @@ jobs:
         with:
           ndk-version: r30
           add-to-path: true
-          local-cache: true
 
       - name: Build libXray
         uses: ./launchvpn-client/.github/actions/build-libxray
