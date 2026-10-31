@@ -129,6 +129,10 @@
 Deep link parsing and replacement are covered by `test/service/servers/subscription/deep_link_test.dart`,
 `test/service/servers/subscription/deep_link_service_test.dart` and `test/brand/subscription_link_flow_test.dart`.
 
+The brand entry is covered by `test/brand/home/` and `test/brand/shell_test.dart`: toggle states,
+large text, tabs, link delivery and upstream routes leading Home. On a device, also check the
+toggle against a real panel subscription, and on iOS the reconnect wording during a network change.
+
 目标测试分别位于 `test/core/db/subscription_migration_test.dart`、`test/service/servers/subscription/`、
 `test/service/shared/xray/remnawave_test.dart`、`test/service/connect/`、`test/pages/servers/`、
 `test/pages/connect/` 和 `test/service/shared/menu/tray/`，按负责层验证业务结果，不复制测试实现。

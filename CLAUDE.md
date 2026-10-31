@@ -5,8 +5,9 @@ Android and iOS Flutter Xray-core client, a fork of OneXray.
 retired plans and progress logs.
 
 The rules below describe the target setup. Until the fork is finished, the code
-and upstream docs may still differ: `lib/brand/` may not exist yet. Follow these
-rules for new work and do not rewrite upstream code just to match them.
+and upstream docs may still differ. The app runs from `lib/brand/`; upstream's
+`lib/pages/` screens stay for merging but are not routed. Follow these rules for
+new work and do not rewrite upstream code just to match them.
 
 Docs we write in this public repo are in English, including over the language
 rule in `docs/AGENTS.md`.
