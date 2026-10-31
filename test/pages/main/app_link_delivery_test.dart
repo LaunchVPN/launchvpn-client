@@ -23,10 +23,10 @@ void main() {
     );
     final ready = Completer<void>();
     final eventBus = AppEventBus();
-    var importCount = 0;
-    final received = <String>[];
-    final first = Uri.parse('launchvpn://app/sub/add?url=https://a.example');
-    final second = Uri.parse('launchvpn://app/sub/add?url=https://b.example');
+    final received = <Uri>[];
+    var finishLink = Completer<void>();
+    final first = Uri.parse('launchvpn://sub/add?url=https://a.launch.tel');
+    final second = Uri.parse('launchvpn://sub/add?url=https://b.launch.tel');
     share.startAppLinks();
     links.add(first);
     final modalObserver = AppModalRouteObserver();
@@ -40,6 +40,10 @@ void main() {
             hasActiveModal: (_) => modalObserver.hasPopupRoute,
             modalChanges: modalObserver,
             shareService: share,
+            openAppLink: (_, uri) {
+              received.add(uri);
+              return (finishLink = Completer<void>()).future;
+            },
             initializeServices: (_) async {
               await share.init();
               await ready.future;
@@ -55,11 +59,7 @@ void main() {
                     routes: [
                       GoRoute(
                         path: AppPageDestination.serversImport.segment,
-                        builder: (_, state) {
-                          importCount++;
-                          received.add(state.extra! as String);
-                          return Scaffold(body: Text(state.extra! as String));
-                        },
+                        builder: (_, _) => const Scaffold(body: Text('manual')),
                       ),
                     ],
                   ),
@@ -86,35 +86,36 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(importCount, 0);
+    expect(received, isEmpty);
     ready.complete();
     await tester.pumpAndSettle();
-    expect(received, [first.toString()]);
+    expect(received, [first]);
 
+    // A link already in progress is merged, and the next one waits for it.
     links.add(first);
     links.add(second);
     links.add(second);
     await tester.pumpAndSettle();
-    expect(importCount, 1);
-    router.pop();
+    expect(received, [first]);
+    finishLink.complete();
     await tester.pumpAndSettle();
-    expect(received, [first.toString(), second.toString()]);
-    router.pop();
+    expect(received, [first, second]);
+    finishLink.complete();
     await tester.pumpAndSettle();
-    expect(importCount, 2);
 
     // A manually opened import must finish before the cached link opens.
-    unawaited(router.push('/connect/servers-import', extra: 'manual'));
+    unawaited(router.push('/connect/servers-import'));
     await tester.pumpAndSettle();
     links.add(first);
     await tester.pumpAndSettle();
-    expect(received.last, 'manual');
+    expect(received, [first, second]);
     router.pop();
     await tester.pumpAndSettle();
-    expect(received.last, first.toString());
-    expect(importCount, 4);
-    router.pop();
+    expect(received, [first, second, first]);
+    finishLink.complete();
     await tester.pumpAndSettle();
+
+    // An open popup holds the link back until it closes.
     unawaited(
       showDialog<void>(
         context: tester.element(find.text('home').first),
@@ -124,12 +125,11 @@ void main() {
     await tester.pumpAndSettle();
     links.add(second);
     await tester.pumpAndSettle();
-    expect(importCount, 4);
+    expect(received, [first, second, first]);
     router.pop();
     await tester.pumpAndSettle();
-    expect(received.last, second.toString());
-    expect(importCount, 5);
-    router.pop();
+    expect(received, [first, second, first, second]);
+    finishLink.complete();
     await tester.pumpAndSettle();
     await tester.pumpWidget(const SizedBox.shrink());
   });

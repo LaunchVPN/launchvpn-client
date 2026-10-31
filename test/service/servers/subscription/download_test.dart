@@ -211,6 +211,63 @@ void main() {
       },
     );
   }
+
+  group('a subscription on our domain', () {
+    Future<(SubscriptionInsertResult, List<String>)> follow(
+      String location,
+    ) async {
+      final bus = AppEventBus();
+      addTearDown(bus.close);
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(database.close);
+      final hosts = <String>[];
+      final client = Dio()
+        ..httpClientAdapter = _SubscriptionResponse((options) {
+          hosts.add(options.uri.host);
+          return hosts.length == 1
+              ? ResponseBody.fromString(
+                  '',
+                  302,
+                  headers: {
+                    'location': [location],
+                  },
+                )
+              : ResponseBody.fromString('[]', 200);
+        });
+      addTearDown(client.close);
+      final service = SubscriptionService.forTesting(
+        database: database,
+        client: NetClient.forTesting(client),
+        configurationReader: SubscriptionConfigurationReader(
+          decode: (text, {ageSecretKey}) async => text,
+          validate: (_) async => '',
+          withFiles: (action) => action(),
+        ),
+        schedulePing: (_) {},
+      );
+      final result = await service.insertSubscription(
+        const SubscriptionInput(
+          name: 'LaunchVPN',
+          url: 'https://sub.launch.tel/token',
+          panel: SubscriptionPanel.remnawave,
+        ),
+      );
+      return (result, hosts);
+    }
+
+    test('cannot redirect to another domain', () async {
+      final (result, hosts) = await follow('https://provider.example/sub');
+
+      expect(result.status, SubscriptionUpdateResult.downloadFailed);
+      expect(hosts, ['sub.launch.tel']);
+    });
+
+    test('can redirect within our domain', () async {
+      final (_, hosts) = await follow('https://launch.tel/sub');
+
+      expect(hosts, ['sub.launch.tel', 'launch.tel']);
+    });
+  });
 }
 
 class _SubscriptionResponse implements HttpClientAdapter {

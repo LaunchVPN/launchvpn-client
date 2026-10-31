@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:onexray/brand/subscription_link_flow.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
@@ -32,6 +33,7 @@ class AdaptiveMainShell extends StatefulWidget {
     this.settingsMenuService,
     this.shareService,
     this.modalChanges,
+    this.openAppLink,
   });
 
   final StatefulNavigationShell navigationShell;
@@ -40,6 +42,7 @@ class AdaptiveMainShell extends StatefulWidget {
   final MacOSSettingsMenuService? settingsMenuService;
   final ShareService? shareService;
   final Listenable? modalChanges;
+  final Future<void> Function(BuildContext, Uri)? openAppLink;
 
   @override
   State<AdaptiveMainShell> createState() => _AdaptiveMainShellState();
@@ -85,10 +88,7 @@ class _AdaptiveMainShellState extends State<AdaptiveMainShell> {
     if (event == null) return;
     _activeAppLink = event;
     try {
-      await context.pushScoped(
-        AppPageDestination.serversImport,
-        extra: event.uri.toString(),
-      );
+      await (widget.openAppLink ?? openSubscriptionLink)(context, event.uri);
     } catch (_) {
       ygLogger('open incoming share failed');
     } finally {

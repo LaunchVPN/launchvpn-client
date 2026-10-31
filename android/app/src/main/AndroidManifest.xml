@@ -55,7 +55,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:host="app"
+                    android:host="sub"
                     android:scheme="launchvpn" />
             </intent-filter>
         </activity>

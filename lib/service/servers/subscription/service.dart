@@ -672,6 +672,10 @@ class SubscriptionService {
       final response = await _client.getTextResponse(
         input.url,
         httpsOnly: true,
+        // Our own subscription must not leave our domain through a redirect.
+        allowRedirect: SubscriptionUrl.isOwn(Uri.parse(input.url))
+            ? SubscriptionUrl.isOwn
+            : null,
         requestHeaders: DownloadRequestHeaders(
           userAgent: input.normalizedUserAgent,
           agePublicKey: ageContext?.publicKey,

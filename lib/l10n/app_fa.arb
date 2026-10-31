@@ -965,5 +965,11 @@
   "jsonEditorDiscardChanges": "کنار گذاشتن تغییرات",
   "tunnelDnsIpv4Invalid": "یک نشانی معتبر IPv4 وارد کنید.",
   "tunnelDnsIpv6Invalid": "یک نشانی معتبر IPv6 وارد کنید.",
-  "tunnelDnsServerNameRequired": "نام سرور DNS over TLS را وارد کنید."
+  "tunnelDnsServerNameRequired": "نام سرور DNS over TLS را وارد کنید.",
+  "subscriptionLinkInvalid": "این پیوند برای LaunchVPN مناسب نیست",
+  "subscriptionLinkReplaceTitle": "اشتراک جایگزین شود؟",
+  "subscriptionLinkReplaceMessage": "اشتراک جدید جای اشتراک فعلی را می‌گیرد. اگر VPN روشن باشد، دوباره وصل می‌شود.",
+  "subscriptionLinkReplaceConfirm": "جایگزین کردن",
+  "subscriptionLinkAdding": "در حال افزودن اشتراک…",
+  "subscriptionLinkAdded": "اشتراک اضافه شد"
 }

@@ -84,6 +84,7 @@ class NetClient {
     String url, {
     DownloadRequestHeaders? requestHeaders,
     bool httpsOnly = false,
+    bool Function(Uri)? allowRedirect,
   }) async {
     try {
       var uri = Uri.parse(url);
@@ -140,6 +141,13 @@ class NetClient {
             FailureCategory.network,
             'redirect',
             cause: 'Download redirected to a non-HTTPS URL',
+          );
+        }
+        if (allowRedirect?.call(uri) == false) {
+          throw const AppFailure(
+            FailureCategory.network,
+            'redirect',
+            cause: 'Download redirected to a disallowed host',
           );
         }
       }

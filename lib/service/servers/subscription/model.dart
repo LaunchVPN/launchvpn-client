@@ -1,3 +1,4 @@
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/db/database/enum.dart';
 
 typedef SubscriptionFormatConfirmation = Future<bool> Function(String name);
@@ -173,6 +174,13 @@ enum SubscriptionUpdateResult {
 }
 
 abstract final class SubscriptionUrl {
+  /// Whether a URL is on our own subscription domain or one of its subdomains.
+  static bool isOwn(Uri url) {
+    final host = url.host.toLowerCase();
+    return host == Brand.subscriptionDomain ||
+        host.endsWith('.${Brand.subscriptionDomain}');
+  }
+
   static bool sameOrigin(String first, String second) {
     final a = Uri.tryParse(normalize(first));
     final b = Uri.tryParse(normalize(second));
