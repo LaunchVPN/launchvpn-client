@@ -345,6 +345,59 @@ data class BackupLocation (
   }
 }
 
+/**
+ * What the app tells a subscription panel about this device.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class DeviceIdentity (
+  val hwid: String,
+  val os: String,
+  val osVersion: String,
+  val model: String
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): DeviceIdentity {
+      val hwid = pigeonVar_list[0] as String
+      val os = pigeonVar_list[1] as String
+      val osVersion = pigeonVar_list[2] as String
+      val model = pigeonVar_list[3] as String
+      return DeviceIdentity(hwid, os, osVersion, model)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      hwid,
+      os,
+      osVersion,
+      model,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as DeviceIdentity
+    return MessagesPigeonUtils.deepEquals(this.hwid, other.hwid) && MessagesPigeonUtils.deepEquals(this.os, other.os) && MessagesPigeonUtils.deepEquals(this.osVersion, other.osVersion) && MessagesPigeonUtils.deepEquals(this.model, other.model)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.hwid)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.os)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.osVersion)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.model)
+    return result
+  }
+  override fun toString(): String {
+    return "DeviceIdentity(hwid=$hwid, os=$os, osVersion=$osVersion, model=$model)"
+  }
+}
+
 /** Generated class from Pigeon that represents data sent in messages. */
 data class AppleVpnCapabilities (
   val serviceExclusions: Boolean,
@@ -601,25 +654,30 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       136.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          AppleVpnCapabilities.fromList(it)
+          DeviceIdentity.fromList(it)
         }
       }
       137.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          NativeLaunchAtLoginResult.fromList(it)
+          AppleVpnCapabilities.fromList(it)
         }
       }
       138.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          PlatformPermissionResult.fromList(it)
+          NativeLaunchAtLoginResult.fromList(it)
         }
       }
       139.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          NativeVpnCommandResult.fromList(it)
+          PlatformPermissionResult.fromList(it)
         }
       }
       140.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          NativeVpnCommandResult.fromList(it)
+        }
+      }
+      141.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           AndroidAppInfo.fromList(it)
         }
@@ -657,24 +715,28 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is AppleVpnCapabilities -> {
+      is DeviceIdentity -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is NativeLaunchAtLoginResult -> {
+      is AppleVpnCapabilities -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is PlatformPermissionResult -> {
+      is NativeLaunchAtLoginResult -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is NativeVpnCommandResult -> {
+      is PlatformPermissionResult -> {
         stream.write(139)
         writeValue(stream, value.toList())
       }
-      is AndroidAppInfo -> {
+      is NativeVpnCommandResult -> {
         stream.write(140)
+        writeValue(stream, value.toList())
+      }
+      is AndroidAppInfo -> {
+        stream.write(141)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -690,6 +752,7 @@ interface BridgeHostApi {
   fun startVpn(callback: (Result<NativeVpnCommandResult>) -> Unit)
   fun stopVpn(callback: (Result<NativeVpnCommandResult>) -> Unit)
   fun invoke(requestJson: String, callback: (Result<String>) -> Unit)
+  fun getDeviceIdentity(callback: (Result<DeviceIdentity>) -> Unit)
   fun queryPlatformPermission(callback: (Result<PlatformPermissionResult>) -> Unit)
   fun requestPlatformPermission(callback: (Result<PlatformPermissionResult>) -> Unit)
   fun getInstalledApps(callback: (Result<List<AndroidAppInfo>>) -> Unit)
@@ -790,6 +853,24 @@ interface BridgeHostApi {
             val args = message as List<Any?>
             val requestJsonArg = args[0] as String
             api.invoke(requestJsonArg) { result: Result<String> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.onexray.BridgeHostApi.getDeviceIdentity$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.getDeviceIdentity{ result: Result<DeviceIdentity> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(MessagesPigeonUtils.wrapError(error))
@@ -1352,7 +1433,7 @@ class BridgeFlutterApi(private val binaryMessenger: BinaryMessenger, private val
         }
       } else {
         callback(Result.failure(MessagesPigeonUtils.createConnectionError(channelName)))
-      }
+      } 
     }
   }
   fun vpnStatusChanged(statusArg: VpnStatus, callback: (Result<Unit>) -> Unit)
@@ -1369,7 +1450,7 @@ class BridgeFlutterApi(private val binaryMessenger: BinaryMessenger, private val
         }
       } else {
         callback(Result.failure(MessagesPigeonUtils.createConnectionError(channelName)))
-      }
+      } 
     }
   }
   fun openSettings(callback: (Result<Unit>) -> Unit)
@@ -1386,7 +1467,7 @@ class BridgeFlutterApi(private val binaryMessenger: BinaryMessenger, private val
         }
       } else {
         callback(Result.failure(MessagesPigeonUtils.createConnectionError(channelName)))
-      }
+      } 
     }
   }
 }

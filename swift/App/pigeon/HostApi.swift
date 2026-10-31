@@ -1,4 +1,5 @@
 import Foundation
+import Security
 #if os(iOS)
 import Flutter
 #elseif os(macOS)
@@ -76,6 +77,23 @@ final class AppHostApi: @preconcurrency BridgeHostApi {
         }
     }
     
+    func getDeviceIdentity(completion: @escaping (Result<DeviceIdentity, any Error>) -> Void) {
+        completion(Result {
+            let version = ProcessInfo.processInfo.operatingSystemVersion
+            #if os(iOS)
+            let os = "iOS"
+            #else
+            let os = "macOS"
+            #endif
+            return DeviceIdentity(
+                hwid: try DeviceHwid.readOrCreate(),
+                os: os,
+                osVersion: "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)",
+                model: DeviceHwid.machineModel()
+            )
+        })
+    }
+
     func queryPlatformPermission(completion: @escaping (Result<PlatformPermissionResult, any Error>) -> Void) {
         Task {
             completion(.success(await VPNManager.shared.queryPlatformPermission()))
@@ -192,5 +210,53 @@ final class AppHostApi: @preconcurrency BridgeHostApi {
 #elseif os(macOS)
         completion(.success(DockIconService.currentIconName))
 #endif
+    }
+}
+
+/// A UUID kept in the Keychain, which outlives the app across reinstalls.
+/// `ThisDeviceOnly` keeps it out of backups: a restored phone is a new device.
+private enum DeviceHwid {
+    private static var query: [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "hwid",
+            kSecAttrAccount as String: "device",
+        ]
+    }
+
+    static func readOrCreate() throws -> String {
+        if let saved = try read() { return saved }
+        let created = UUID().uuidString
+        var item = query
+        item[kSecValueData as String] = Data(created.utf8)
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        let status = SecItemAdd(item as CFDictionary, nil)
+        if status == errSecDuplicateItem, let saved = try read() { return saved }
+        guard status == errSecSuccess else { throw failure(status) }
+        return created
+    }
+
+    // Only a missing item may create a new ID. A locked Keychain must fail, or
+    // the panel would count this phone as another device.
+    private static func read() throws -> String? {
+        var search = query
+        search[kSecReturnData as String] = true
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(search as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = result as? Data else { throw failure(status) }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private static func failure(_ status: OSStatus) -> NSError {
+        NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+    }
+
+    static func machineModel() -> String {
+        var info = utsname()
+        uname(&info)
+        return withUnsafeBytes(of: &info.machine) { bytes in
+            String(decoding: bytes.prefix { $0 != 0 }, as: UTF8.self)
+        }
     }
 }

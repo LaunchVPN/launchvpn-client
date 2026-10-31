@@ -29,6 +29,9 @@ abstract class BridgeHostApi {
   @asyncCallback
   String invoke(String requestJson);
 
+  @asyncCallback
+  DeviceIdentity getDeviceIdentity();
+
   //platform======================
   @asyncCallback
   PlatformPermissionResult queryPlatformPermission();
@@ -131,6 +134,20 @@ abstract class AppleBackupHostApi {
 
   @asyncCallback
   void writeBackupFile(String identifier, Uint8List bytes);
+}
+
+/// What the app tells a subscription panel about this device.
+class DeviceIdentity {
+  DeviceIdentity({
+    required this.hwid,
+    required this.os,
+    required this.osVersion,
+    required this.model,
+  });
+  final String hwid;
+  final String os;
+  final String osVersion;
+  final String model;
 }
 
 class AppleVpnCapabilities {
