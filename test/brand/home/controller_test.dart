@@ -46,6 +46,7 @@ void main() {
   late ConnectionRuntime runtime;
   late List<Object> failures;
   var status = VpnStatus.disconnected;
+  var stopCalls = 0;
 
   Future<void> settle() => pumpEventQueue(times: 50);
 
@@ -59,6 +60,7 @@ void main() {
     stop = Completer();
     prepareFailure = () async {};
     failures = [];
+    stopCalls = 0;
     runtime = _runtime();
     statusEvents = StreamController<VpnStatus>.broadcast(sync: true);
     addTearDown(statusEvents.close);
@@ -76,7 +78,10 @@ void main() {
         return runtime;
       },
       start: (_) => start.future,
-      stop: () => stop.future,
+      stop: () {
+        stopCalls++;
+        return stop.future;
+      },
     );
     addTearDown(coordinator.dispose);
     await coordinator.initialize(registerReferences: false);
@@ -252,6 +257,21 @@ void main() {
       await controller.toggle(run);
       await settle();
 
+      expect(controller.state.status, HomeStatus.off);
+    });
+
+    test('a tap stops a native start with no session data', () async {
+      await addSubscription();
+      coordinator.state.value = const ConnectionView(
+        phase: ConnectionPhase.connecting,
+      );
+      expect(controller.state.status, HomeStatus.connecting);
+
+      stop.complete(const HostConnection(VpnStatus.disconnected));
+      await controller.toggle(run);
+      await settle();
+
+      expect(stopCalls, 1);
       expect(controller.state.status, HomeStatus.off);
     });
 

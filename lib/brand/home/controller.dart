@@ -65,11 +65,6 @@ class HomeState {
     };
   }
 
-  /// Our own start publishes no runtime and can be cancelled. With a runtime no
-  /// command is running here, so only a disconnect can stop it.
-  bool get _cancellable =>
-      request == HomeRequest.connect || view.runtime == null;
-
   bool get _attemptFailed =>
       view.failed &&
       !const {'cancelled', 'permissionRequired'}.contains(view.issue);
@@ -171,7 +166,9 @@ class HomeController extends PageCubit<HomeState> {
   Future<void> toggle(ConnectionActionRunner run) async {
     if (!state.canToggle) return;
     switch (state.status) {
-      case HomeStatus.connecting when state._cancellable:
+      // Only this screen's own command is known to be cancellable. Whatever
+      // else is connecting may be native, so a disconnect is what stops it.
+      case HomeStatus.connecting when state.request == HomeRequest.connect:
         coordinator.cancel();
       case HomeStatus.off || HomeStatus.failed:
         await _perform(HomeRequest.connect, run, _connect);
