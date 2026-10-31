@@ -22,6 +22,7 @@ import 'package:onexray/service/shared/in_flight_operations.dart';
 import 'package:onexray/service/shared/ping/service.dart';
 import 'package:onexray/service/servers/subscription/reader.dart';
 import 'package:onexray/service/servers/subscription/model.dart';
+import 'package:onexray/service/servers/subscription/panel_info.dart';
 import 'package:onexray/service/servers/subscription/user_info.dart';
 import 'package:onexray/service/servers/subscription/validator.dart';
 import 'package:onexray/service/servers/catalog.dart';
@@ -33,6 +34,7 @@ final class SubscriptionLoadResult {
     this.rows = const [],
     this.error,
     this.userInfo,
+    this.panelInfo,
     this.mode = SubscriptionMode.appManaged,
     this.convertedToOrdinary = false,
   });
@@ -41,6 +43,7 @@ final class SubscriptionLoadResult {
   final List<CoreConfigCompanion> rows;
   final Object? error;
   final SubscriptionUserInfo? userInfo;
+  final SubscriptionPanelInfo? panelInfo;
   final SubscriptionMode mode;
   final bool convertedToOrdinary;
 
@@ -273,6 +276,9 @@ class SubscriptionService {
           totalBytes: Value(loaded.userInfo?.totalBytes),
           expireTimestamp: Value(loaded.userInfo?.expireTimestamp),
           userInfoUpdatedAt: Value(loaded.userInfo?.updatedAt),
+          profileTitle: Value(loaded.panelInfo?.title),
+          supportUrl: Value(loaded.panelInfo?.supportUrl),
+          updateIntervalHours: Value(loaded.panelInfo?.updateIntervalHours),
         );
         final nextSubId = await db.subscriptionDao.insertRow(row);
         if (nextSubId <= DBConstants.defaultId) {
@@ -337,6 +343,9 @@ class SubscriptionService {
             totalBytes: const Value(null),
             expireTimestamp: const Value(null),
             userInfoUpdatedAt: const Value(null),
+            profileTitle: const Value(null),
+            supportUrl: const Value(null),
+            updateIntervalHours: const Value(null),
           );
         }
         final updated = await _database.subscriptionDao.updateRow(next);
@@ -612,6 +621,9 @@ class SubscriptionService {
         totalBytes: Value(loaded.userInfo?.totalBytes),
         expireTimestamp: Value(loaded.userInfo?.expireTimestamp),
         userInfoUpdatedAt: Value(loaded.userInfo?.updatedAt),
+        profileTitle: Value(loaded.panelInfo?.title),
+        supportUrl: Value(loaded.panelInfo?.supportUrl),
+        updateIntervalHours: Value(loaded.panelInfo?.updateIntervalHours),
       );
       _ensureCurrent(expected.id, generation);
       if (!await db.subscriptionDao.updateRow(updated)) {
@@ -668,6 +680,7 @@ class SubscriptionService {
 
     final String text;
     final SubscriptionUserInfo? userInfo;
+    final SubscriptionPanelInfo panelInfo;
     try {
       final response = await _client.getTextResponse(
         input.url,
@@ -691,6 +704,7 @@ class SubscriptionService {
         response.headers['subscription-userinfo']?.join(';'),
         updatedAt: DateTime.now(),
       );
+      panelInfo = SubscriptionPanelInfo.fromHeaders(response.headers);
     } catch (error) {
       if (error is DioException) {
         final denied = _hwidErrorStatus(error.response?.headers);
@@ -717,6 +731,7 @@ class SubscriptionService {
         mode: result.mode,
         convertedToOrdinary: result.convertedToOrdinary,
         userInfo: userInfo,
+        panelInfo: panelInfo,
       );
     } on RemnawaveResponseFormatException {
       return const SubscriptionLoadResult(
@@ -772,6 +787,10 @@ class SubscriptionService {
     };
   }
 
+  /// Hourly checks arrive just under an hour after the refresh they started,
+  /// so an exact comparison would stretch an hourly interval to two hours.
+  static const _dueTolerance = Duration(minutes: 5);
+
   Future<void> refreshOutdatedSubscription({
     AutoUpdateState? autoUpdateState,
     bool Function()? isCancelled,
@@ -783,12 +802,13 @@ class SubscriptionService {
     if (!updateState.subscriptionEnabled) {
       return;
     }
-    final interval = updateState.subscriptionInterval.value;
+    final fallbackInterval = updateState.subscriptionInterval.value;
     final subs = await _database.subscriptionDao.allRows;
     final now = DateTime.now();
     for (final sub in subs) {
       if (_downloads.isPaused || (isCancelled?.call() ?? false)) break;
-      if (now.difference(sub.timestamp).inHours >= interval) {
+      final interval = sub.updateIntervalHours ?? fallbackInterval;
+      if ((now.difference(sub.timestamp) + _dueTolerance).inHours >= interval) {
         await refreshSubscriptionResult(sub);
       }
     }

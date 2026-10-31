@@ -86,6 +86,23 @@ panel/mode 变化同样使旧导入失效，迟到响应不得覆盖编辑、切
 列表摘要和分组详情明确“提供方信息、非实时”，无数据隐藏区域，缺字段显示未提供。
 套餐不是 App 流量，不增加请求、定时器或周期，不进入分享和备份；恢复后由正常更新重新获取。
 
+### Panel info
+
+Every successful download also saves three response headers on the subscription, committed
+with its servers:
+
+| Header | Accepted values |
+|---|---|
+| `Profile-Update-Interval` | Whole hours above zero. See [automatic updates](data-management.md#自动更新). |
+| `Profile-Title` | Plain text or `base64:` followed by UTF-8 text. |
+| `Support-Url` | An `https` URL with a host. |
+
+A missing, repeated or invalid header is unknown and does not affect the others or the import.
+A successful download without a header clears its saved value, and a failed one keeps all three.
+Renaming keeps them, while a change to the URL, Age keys, HWID or User-Agent clears them.
+The title and support link are stored only: no screen shows them yet. The values stay out of
+shares and backups, and the next download after a restore fetches them again.
+
 ### Device identity (HWID)
 
 Panels return a placeholder instead of servers when a request has no `x-hwid`, so
