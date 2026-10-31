@@ -162,6 +162,7 @@ Setup 期间只暂存，已有导入或其它模态关闭后再继续。相同 U
 Apart from the widget link, the app handles one link: `launchvpn://sub/add?url=<percent-encoded https-url>`.
 `SubscriptionDeepLink` rejects any other shape, any other query key, and any URL outside
 `Brand.subscriptionDomain` and its subdomains. A rejected link only shows a message.
+A subscription on that domain cannot redirect off it: such a download fails and changes nothing.
 
 `SubscriptionLinkService` keeps one subscription:
 

@@ -166,6 +166,19 @@ void main() {
     expect(find.text('Adding subscription…'), findsNothing);
   });
 
+  testWidgets('a database failure says so instead of dropping the link', (
+    tester,
+  ) async {
+    await tester.runAsync(
+      () => db.customStatement('DROP TABLE ${db.subscription.actualTableName}'),
+    );
+
+    await open(tester, _uri);
+
+    expect(find.byType(ShadToast), findsOneWidget);
+    expect(downloads, 0);
+  });
+
   testWidgets('declining the replacement downloads nothing', (tester) async {
     await tester.runAsync(existing);
 

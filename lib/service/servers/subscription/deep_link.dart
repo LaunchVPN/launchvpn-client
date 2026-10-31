@@ -26,16 +26,12 @@ final class SubscriptionDeepLink {
     final values = uri.queryParametersAll['url'];
     if (values == null || values.length != 1) return null;
     final url = Uri.tryParse(SubscriptionUrl.normalize(values.single));
-    if (url == null || !NetClient.isHttpsDownloadUri(url) || !_isOwn(url)) {
+    if (url == null ||
+        !NetClient.isHttpsDownloadUri(url) ||
+        !SubscriptionUrl.isOwn(url)) {
       return null;
     }
     return SubscriptionDeepLink._(url.toString());
-  }
-
-  static bool _isOwn(Uri url) {
-    final host = url.host.toLowerCase();
-    return host == Brand.subscriptionDomain ||
-        host.endsWith('.${Brand.subscriptionDomain}');
   }
 }
 

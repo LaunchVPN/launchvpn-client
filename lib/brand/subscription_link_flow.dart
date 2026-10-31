@@ -6,6 +6,7 @@ import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/servers/subscription/failure.dart';
+import 'package:onexray/service/servers/subscription/model.dart';
 
 /// Applies a deep link delivered by the system, without any form.
 ///
@@ -23,7 +24,21 @@ Future<void> openSubscriptionLink(
     return;
   }
   final subscriptions = service ?? SubscriptionLinkService();
-  final replaces = await subscriptions.replacesAnother(link);
+  final bool replaces;
+  try {
+    replaces = await subscriptions.replacesAnother(link);
+  } catch (error) {
+    if (!context.mounted) return;
+    ContextAlert.showToast(
+      context,
+      subscriptionFailureMessage(
+        l,
+        SubscriptionUpdateResult.writeFailed,
+        error: error,
+      ),
+    );
+    return;
+  }
   if (!context.mounted) return;
   if (replaces) {
     final confirmed = await ContextAlert.showConfirmDialog(
