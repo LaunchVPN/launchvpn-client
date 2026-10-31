@@ -306,6 +306,58 @@ struct BackupLocation: Hashable, CustomStringConvertible {
   }
 }
 
+/// What the app tells a subscription panel about this device.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct DeviceIdentity: Hashable, CustomStringConvertible {
+  var hwid: String
+  var os: String
+  var osVersion: String
+  var model: String
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> DeviceIdentity? {
+    let hwid = pigeonVar_list[0] as! String
+    let os = pigeonVar_list[1] as! String
+    let osVersion = pigeonVar_list[2] as! String
+    let model = pigeonVar_list[3] as! String
+
+    return DeviceIdentity(
+      hwid: hwid,
+      os: os,
+      osVersion: osVersion,
+      model: model
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      hwid,
+      os,
+      osVersion,
+      model,
+    ]
+  }
+  static func == (lhs: DeviceIdentity, rhs: DeviceIdentity) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return MessagesPigeonInternal.deepEquals(lhs.hwid, rhs.hwid) && MessagesPigeonInternal.deepEquals(lhs.os, rhs.os) && MessagesPigeonInternal.deepEquals(lhs.osVersion, rhs.osVersion) && MessagesPigeonInternal.deepEquals(lhs.model, rhs.model)
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("DeviceIdentity")
+    MessagesPigeonInternal.deepHash(value: hwid, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: os, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: osVersion, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: model, hasher: &hasher)
+  }
+
+  public var description: String {
+    return "DeviceIdentity(hwid: \(String(describing: hwid)), os: \(String(describing: os)), osVersion: \(String(describing: osVersion)), model: \(String(describing: model)))"
+  }
+}
+
 /// Generated class from Pigeon that represents data sent in messages.
 struct AppleVpnCapabilities: Hashable, CustomStringConvertible {
   var serviceExclusions: Bool
@@ -559,14 +611,16 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
     case 135:
       return BackupLocation.fromList(self.readValue() as! [Any?])
     case 136:
-      return AppleVpnCapabilities.fromList(self.readValue() as! [Any?])
+      return DeviceIdentity.fromList(self.readValue() as! [Any?])
     case 137:
-      return NativeLaunchAtLoginResult.fromList(self.readValue() as! [Any?])
+      return AppleVpnCapabilities.fromList(self.readValue() as! [Any?])
     case 138:
-      return PlatformPermissionResult.fromList(self.readValue() as! [Any?])
+      return NativeLaunchAtLoginResult.fromList(self.readValue() as! [Any?])
     case 139:
-      return NativeVpnCommandResult.fromList(self.readValue() as! [Any?])
+      return PlatformPermissionResult.fromList(self.readValue() as! [Any?])
     case 140:
+      return NativeVpnCommandResult.fromList(self.readValue() as! [Any?])
+    case 141:
       return AndroidAppInfo.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -597,20 +651,23 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? BackupLocation {
       super.writeByte(135)
       super.writeValue(value.toList())
-    } else if let value = value as? AppleVpnCapabilities {
+    } else if let value = value as? DeviceIdentity {
       super.writeByte(136)
       super.writeValue(value.toList())
-    } else if let value = value as? NativeLaunchAtLoginResult {
+    } else if let value = value as? AppleVpnCapabilities {
       super.writeByte(137)
       super.writeValue(value.toList())
-    } else if let value = value as? PlatformPermissionResult {
+    } else if let value = value as? NativeLaunchAtLoginResult {
       super.writeByte(138)
       super.writeValue(value.toList())
-    } else if let value = value as? NativeVpnCommandResult {
+    } else if let value = value as? PlatformPermissionResult {
       super.writeByte(139)
       super.writeValue(value.toList())
-    } else if let value = value as? AndroidAppInfo {
+    } else if let value = value as? NativeVpnCommandResult {
       super.writeByte(140)
+      super.writeValue(value.toList())
+    } else if let value = value as? AndroidAppInfo {
+      super.writeByte(141)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -640,6 +697,7 @@ protocol BridgeHostApi {
   func startVpn(completion: @escaping (Result<NativeVpnCommandResult, Error>) -> Void)
   func stopVpn(completion: @escaping (Result<NativeVpnCommandResult, Error>) -> Void)
   func invoke(requestJson: String, completion: @escaping (Result<String, Error>) -> Void)
+  func getDeviceIdentity(completion: @escaping (Result<DeviceIdentity, Error>) -> Void)
   func queryPlatformPermission(completion: @escaping (Result<PlatformPermissionResult, Error>) -> Void)
   func requestPlatformPermission(completion: @escaping (Result<PlatformPermissionResult, Error>) -> Void)
   func getInstalledApps(completion: @escaping (Result<[AndroidAppInfo], Error>) -> Void)
@@ -735,6 +793,21 @@ class BridgeHostApiSetup {
       }
     } else {
       invokeChannel.setMessageHandler(nil)
+    }
+    let getDeviceIdentityChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.onexray.BridgeHostApi.getDeviceIdentity\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      getDeviceIdentityChannel.setMessageHandler { _, reply in
+        api.getDeviceIdentity { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      getDeviceIdentityChannel.setMessageHandler(nil)
     }
     let queryPlatformPermissionChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.onexray.BridgeHostApi.queryPlatformPermission\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {

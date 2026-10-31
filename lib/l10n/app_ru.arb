@@ -220,10 +220,10 @@
   "xrayRawPageTitle": "Raw JSON",
   "subscriptionDownloadFailed": "Не удалось загрузить подписку",
   "subscriptionHwidTitle": "Отправлять идентификатор устройства (HWID)",
-  "subscriptionHwidDescription": "Включайте только по требованию провайдера. Отправляется случайный идентификатор, уникальный для этой подписки, без сведений об оборудовании. Отключение не удаляет запись об устройстве у провайдера.",
-  "subscriptionHwidRequired": "Провайдер требует поддерживаемый идентификатор устройства. Включите HWID для этой подписки или обратитесь к провайдеру, если он уже включён.",
+  "subscriptionHwidDescription": "LaunchVPN всегда отправляет серверу подписки данные этого устройства: постоянный идентификатор, версию системы и модель. Этот переключатель ни на что не влияет.",
+  "subscriptionHwidRequired": "Провайдеру нужен идентификатор устройства, но он его не получил. Обратитесь к провайдеру.",
   "subscriptionHwidLimitReached": "Провайдер сообщил о лимите устройств или ошибке регистрации. Управляйте устройствами у провайдера или обратитесь в его поддержку.",
-  "subscriptionHwidRejected": "Провайдер отклонил проверку устройства. Проверьте настройку HWID этой подписки или обратитесь к провайдеру.",
+  "subscriptionHwidRejected": "Провайдер отклонил проверку устройства. Обратитесь к провайдеру.",
   "subscriptionGenerateAgeKey": "Создать ключ",
   "subscriptionReplaceAgeKeyMessage": "Текущий ключ age будет заменён. Новый ключ не сможет расшифровать ответы, зашифрованные для прежнего ключа.",
   "subscriptionGenerateAgeKeyFailed": "Не удалось создать ключ age",
@@ -954,7 +954,7 @@
   "manualOrderChanged": "Список изменился. Загрузите его снова перед сортировкой.",
   "manualOrderReload": "Загрузить заново",
   "manualOrderClearSearch": "Очистите поиск для изменения порядка.",
-  "subscriptionAdvancedOff": "HWID и Age отключены",
+  "subscriptionAdvancedOff": "Age отключён",
   "subscriptionAdvancedConfigured": "Настроено: {options}",
   "@subscriptionAdvancedConfigured": {
     "placeholders": {"options": {"type": "String"}}

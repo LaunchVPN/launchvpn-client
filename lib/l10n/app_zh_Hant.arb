@@ -220,10 +220,10 @@
   "xrayRawPageTitle": "Raw JSON",
   "subscriptionDownloadFailed": "訂閱下載失敗",
   "subscriptionHwidTitle": "傳送裝置識別碼（HWID）",
-  "subscriptionHwidDescription": "僅在供應商要求時開啟。傳送此訂閱專屬的隨機識別碼，不讀取硬體資訊。關閉後不會刪除供應商儲存的裝置記錄。",
-  "subscriptionHwidRequired": "供應商要求支援的裝置識別碼。請為此訂閱開啟 HWID；若已開啟，請聯絡供應商。",
+  "subscriptionHwidDescription": "LaunchVPN 一律向訂閱伺服器傳送本裝置的識別碼：固定 ID、系統版本和裝置型號。此開關不起作用。",
+  "subscriptionHwidRequired": "供應商要求裝置識別碼，但未收到。請聯絡供應商。",
   "subscriptionHwidLimitReached": "供應商回報裝置數量已達上限或註冊失敗。請向供應商管理裝置或聯絡支援。",
-  "subscriptionHwidRejected": "供應商拒絕了裝置驗證。請檢查此訂閱的 HWID 設定或聯絡供應商。",
+  "subscriptionHwidRejected": "供應商拒絕了裝置驗證。請聯絡供應商。",
   "subscriptionGenerateAgeKey": "產生密鑰",
   "subscriptionReplaceAgeKeyMessage": "目前的 Age 密鑰將被取代，使用舊密鑰加密的訂閱將無法再以新密鑰解密。",
   "subscriptionGenerateAgeKeyFailed": "無法產生 Age 密鑰",
@@ -954,7 +954,7 @@
   "manualOrderChanged": "清單已變更，請重新載入後整理。",
   "manualOrderReload": "重新載入",
   "manualOrderClearSearch": "清空搜尋後可整理順序。",
-  "subscriptionAdvancedOff": "未開啟 HWID 和 Age",
+  "subscriptionAdvancedOff": "未開啟 Age",
   "subscriptionAdvancedConfigured": "已設定：{options}",
   "@subscriptionAdvancedConfigured": {
     "placeholders": {"options": {"type": "String"}}

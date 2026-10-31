@@ -1,12 +1,14 @@
 package com.launchvpn.app.pigeon
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.net.VpnService
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
 import com.elvishew.xlog.XLog
@@ -248,6 +250,17 @@ class AppHostApi(
             XLog.d("AppHostApi: getAppIcon failed for $packageName: $e")
             null
         }
+    }
+
+    // ANDROID_ID is scoped to the signing key, user and device, and survives reinstalls.
+    @SuppressLint("HardwareIds")
+    override fun getDeviceIdentity(callback: (Result<DeviceIdentity>) -> Unit) {
+        val hwid = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        if (hwid.isNullOrEmpty()) {
+            callback(Result.failure(IllegalStateException("ANDROID_ID is unavailable")))
+            return
+        }
+        callback(Result.success(DeviceIdentity(hwid, "Android", Build.VERSION.RELEASE, Build.MODEL)))
     }
 
     // macOS

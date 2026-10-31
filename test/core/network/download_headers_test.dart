@@ -3,11 +3,18 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/core/network/client.dart';
 import 'package:onexray/core/network/model.dart';
+import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 void main() {
   const publicKey = 'age1testpublickey';
   const hwid = 'd621fc3f-1b45-4b2b-93c7-17efb4c5c963';
+  final device = DeviceIdentity(
+    hwid: hwid,
+    os: 'Android',
+    osVersion: '16',
+    model: 'Pixel 9',
+  );
 
   setUpAll(() {
     PackageInfo.setMockInitialValues(
@@ -87,7 +94,7 @@ void main() {
 
       final result = await NetClient().getTextResponse(
         '${_serverUrl(server)}/start',
-        requestHeaders: const DownloadRequestHeaders(hwid: hwid),
+        requestHeaders: DownloadRequestHeaders(device: device),
       );
       expect(result.data, 'subscription');
       expect(result.headers.value('x-hwid-active'), 'true');
@@ -96,10 +103,21 @@ void main() {
   );
 
   test(
-    'strips HWID on cross-origin redirects, including a return to the source',
+    'strips the identity on cross-origin redirects, even back to the source',
     () async {
       final received = <String?>[];
+      final deviceDetails = <List<String?>>[];
       final ageHeaders = <String?>[];
+      void record(HttpRequest request) {
+        received.add(request.headers.value('x-hwid'));
+        deviceDetails.add([
+          request.headers.value('x-device-os'),
+          request.headers.value('x-ver-os'),
+          request.headers.value('x-device-model'),
+        ]);
+        ageHeaders.add(request.headers.value('X-Age-Public-Key'));
+      }
+
       final source = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       final target = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(() async {
@@ -107,8 +125,7 @@ void main() {
         await target.close(force: true);
       });
       source.listen((request) async {
-        received.add(request.headers.value('x-hwid'));
-        ageHeaders.add(request.headers.value('X-Age-Public-Key'));
+        record(request);
         if (request.uri.path == '/start') {
           request.response.statusCode = HttpStatus.found;
           request.response.headers.set(
@@ -121,8 +138,7 @@ void main() {
         await request.response.close();
       });
       target.listen((request) async {
-        received.add(request.headers.value('x-hwid'));
-        ageHeaders.add(request.headers.value('X-Age-Public-Key'));
+        record(request);
         request.response.statusCode = HttpStatus.temporaryRedirect;
         request.response.headers.set(
           HttpHeaders.locationHeader,
@@ -134,20 +150,25 @@ void main() {
       expect(
         await NetClient().getText(
           '${_serverUrl(source)}/start',
-          requestHeaders: const DownloadRequestHeaders(
-            hwid: hwid,
+          requestHeaders: DownloadRequestHeaders(
+            device: device,
             agePublicKey: publicKey,
           ),
         ),
         'final',
       );
       expect(received, [hwid, null, null]);
+      expect(deviceDetails, [
+        ['Android', '16', 'Pixel 9'],
+        [null, null, null],
+        [null, null, null],
+      ]);
       expect(ageHeaders, [publicKey, publicKey, publicKey]);
     },
   );
 
   test(
-    'concurrent downloads keep subscription UA and HWID overrides scoped',
+    'concurrent downloads keep subscription UA and device identity scoped',
     () async {
       final received = <String, String?>{};
       final agents = <String, String?>{};
@@ -164,15 +185,14 @@ void main() {
       await Future.wait([
         NetClient().getText(
           '${_serverUrl(server)}/one',
-          requestHeaders: const DownloadRequestHeaders(
-            hwid: hwid,
+          requestHeaders: DownloadRequestHeaders(
+            device: device,
             userAgent: 'v2rayNG/test',
           ),
         ),
         NetClient().getText(
           '${_serverUrl(server)}/two',
           requestHeaders: const DownloadRequestHeaders(
-            hwid: 'second-subscription',
             userAgent: 'v2rayN/test',
           ),
         ),
@@ -184,7 +204,7 @@ void main() {
       ]);
       expect(received, {
         '/one': hwid,
-        '/two': 'second-subscription',
+        '/two': null,
         '/geodata': null,
         '/age': null,
       });
@@ -196,6 +216,19 @@ void main() {
       });
     },
   );
+
+  test('drops device details a header cannot carry but keeps the HWID', () {
+    final headers = DownloadRequestHeaders(
+      device: DeviceIdentity(
+        hwid: hwid,
+        os: 'Android',
+        osVersion: '',
+        model: '小米 14',
+      ),
+    ).toHttpHeaders();
+
+    expect(headers, {'x-hwid': hwid, 'x-device-os': 'Android'});
+  });
 
   test('preserves the age header across a cross-origin redirect', () async {
     String? sourceHeader;

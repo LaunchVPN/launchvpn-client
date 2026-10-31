@@ -63,6 +63,12 @@ class AppHostApi {
     _tunFilesDir = p.normalize(value);
   }
 
+  /// Null on Linux and Windows, which have no native bridge for it.
+  Future<DeviceIdentity?> deviceIdentity() async {
+    if (AppPlatform.isLinux || AppPlatform.isWindows) return null;
+    return _api.getDeviceIdentity();
+  }
+
   Future<bool?> cleanupStaleDesktopCore() async {
     if (!AppPlatform.isLinux && !AppPlatform.isWindows) {
       return null;

@@ -10,6 +10,8 @@ import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/core/network/client.dart';
 import 'package:onexray/core/network/model.dart';
+import 'package:onexray/core/pigeon/host_api.dart';
+import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/advanced/xray/data_update/state.dart';
@@ -96,7 +98,8 @@ class SubscriptionService {
       _loadRowsOverride = null,
       _configurationReaderOverride = null,
       _client = NetClient(),
-      _pingOverride = null {
+      _pingOverride = null,
+      _readDeviceIdentity = AppHostApi().deviceIdentity {
     referenceReader = _storedReferences;
   }
 
@@ -108,11 +111,13 @@ class SubscriptionService {
     SubscriptionConfigurationReader? configurationReader,
     required void Function(int) schedulePing,
     SubscriptionReferenceReader? readReferences,
+    Future<DeviceIdentity?> Function()? readDeviceIdentity,
   }) : _databaseOverride = database,
        _loadRowsOverride = loadRows,
        _configurationReaderOverride = configurationReader,
        _client = client ?? NetClient(),
-       _pingOverride = schedulePing {
+       _pingOverride = schedulePing,
+       _readDeviceIdentity = readDeviceIdentity ?? (() async => null) {
     referenceReader = readReferences ?? _storedReferences;
   }
 
@@ -122,6 +127,7 @@ class SubscriptionService {
   _loadRowsOverride;
   final SubscriptionConfigurationReader? _configurationReaderOverride;
   final void Function(int)? _pingOverride;
+  final Future<DeviceIdentity?> Function() _readDeviceIdentity;
   final _generations = <int, int>{};
   final _refreshes = <int, _PendingSubscriptionRefresh>{};
   Future<Map<SubscriptionData, SubscriptionRefreshResult>>? _refreshAll;
@@ -669,7 +675,9 @@ class SubscriptionService {
         requestHeaders: DownloadRequestHeaders(
           userAgent: input.normalizedUserAgent,
           agePublicKey: ageContext?.publicKey,
-          hwid: input.hwidEnabled ? input.hwid : null,
+          // Panels return a placeholder without it. The per-subscription HWID
+          // fields are stored for upstream's schema and do not affect requests.
+          device: await _readDeviceIdentity(),
         ),
       );
       final denied = _hwidErrorStatus(response.headers);

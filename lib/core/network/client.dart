@@ -129,9 +129,10 @@ class NetClient {
         if (next.scheme != uri.scheme ||
             next.host != uri.host ||
             next.port != uri.port) {
-          // Consent belongs to the subscription origin, not a redirect target.
-          // Do not restore the identifier later in the redirect chain.
-          headers?.remove('x-hwid');
+          // Do not restore the identity later in the redirect chain.
+          if (headers != null) {
+            DownloadRequestHeaders.removeDeviceHeaders(headers);
+          }
         }
         uri = next;
         if (httpsOnly && !isHttpsDownloadUri(uri)) {

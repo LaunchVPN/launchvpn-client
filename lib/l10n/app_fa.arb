@@ -220,10 +220,10 @@
     "xrayRawPageTitle": "Raw JSON",
     "subscriptionDownloadFailed": "بارگیری اشتراک ناموفق بود",
     "subscriptionHwidTitle": "ارسال شناسه دستگاه (HWID)",
-    "subscriptionHwidDescription": "فقط در صورت درخواست ارائه‌دهنده فعال کنید. یک شناسه تصادفی مختص این اشتراک، بدون اطلاعات سخت‌افزاری، ارسال می‌شود. غیرفعال کردن این گزینه، سابقه دستگاه را نزد ارائه‌دهنده حذف نمی‌کند.",
-    "subscriptionHwidRequired": "ارائه‌دهنده به شناسه دستگاه پشتیبانی‌شده نیاز دارد. HWID را برای این اشتراک فعال کنید؛ اگر از قبل فعال است، با ارائه‌دهنده تماس بگیرید.",
+    "subscriptionHwidDescription": "LaunchVPN همیشه شناسه این دستگاه را به سرور اشتراک ارسال می‌کند: یک شناسه پایدار، نسخه سیستم‌عامل و مدل دستگاه. این کلید تأثیری ندارد.",
+    "subscriptionHwidRequired": "ارائه‌دهنده به شناسه دستگاهی نیاز دارد که دریافت نکرده است. با ارائه‌دهنده تماس بگیرید.",
     "subscriptionHwidLimitReached": "ارائه‌دهنده رسیدن به سقف تعداد دستگاه‌ها یا خطای ثبت را گزارش کرده است. دستگاه‌ها را نزد ارائه‌دهنده مدیریت کنید یا با پشتیبانی آن تماس بگیرید.",
-    "subscriptionHwidRejected": "ارائه‌دهنده تأیید دستگاه را رد کرد. تنظیم HWID این اشتراک را بررسی کنید یا با ارائه‌دهنده تماس بگیرید.",
+    "subscriptionHwidRejected": "ارائه‌دهنده تأیید دستگاه را رد کرد. با ارائه‌دهنده تماس بگیرید.",
     "subscriptionGenerateAgeKey": "ایجاد کلید",
     "subscriptionReplaceAgeKeyMessage": "کلید age فعلی جایگزین می‌شود. کلید جدید نمی‌تواند پاسخ‌های رمزگذاری‌شده برای کلید قبلی را رمزگشایی کند.",
     "subscriptionGenerateAgeKeyFailed": "ایجاد کلید age ممکن نشد",
@@ -954,7 +954,7 @@
   "manualOrderChanged": "فهرست تغییر کرد. پیش از مرتب‌سازی دوباره بارگیری کنید.",
   "manualOrderReload": "بارگیری دوباره",
   "manualOrderClearSearch": "برای مرتب‌سازی، جستجو را پاک کنید.",
-  "subscriptionAdvancedOff": "HWID و Age غیرفعال هستند",
+  "subscriptionAdvancedOff": "Age غیرفعال است",
   "subscriptionAdvancedConfigured": "پیکربندی‌شده: {options}",
   "@subscriptionAdvancedConfigured": {
     "placeholders": {"options": {"type": "String"}}
