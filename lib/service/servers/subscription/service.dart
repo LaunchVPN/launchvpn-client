@@ -102,7 +102,8 @@ class SubscriptionService {
       _configurationReaderOverride = null,
       _client = NetClient(),
       _pingOverride = null,
-      _readDeviceIdentity = AppHostApi().deviceIdentity {
+      _readDeviceIdentity = AppHostApi().deviceIdentity,
+      _now = DateTime.now {
     referenceReader = _storedReferences;
   }
 
@@ -115,12 +116,14 @@ class SubscriptionService {
     required void Function(int) schedulePing,
     SubscriptionReferenceReader? readReferences,
     Future<DeviceIdentity?> Function()? readDeviceIdentity,
+    DateTime Function()? now,
   }) : _databaseOverride = database,
        _loadRowsOverride = loadRows,
        _configurationReaderOverride = configurationReader,
        _client = client ?? NetClient(),
        _pingOverride = schedulePing,
-       _readDeviceIdentity = readDeviceIdentity ?? (() async => null) {
+       _readDeviceIdentity = readDeviceIdentity ?? (() async => null),
+       _now = now ?? DateTime.now {
     referenceReader = readReferences ?? _storedReferences;
   }
 
@@ -131,6 +134,7 @@ class SubscriptionService {
   final SubscriptionConfigurationReader? _configurationReaderOverride;
   final void Function(int)? _pingOverride;
   final Future<DeviceIdentity?> Function() _readDeviceIdentity;
+  final DateTime Function() _now;
   final _generations = <int, int>{};
   final _refreshes = <int, _PendingSubscriptionRefresh>{};
   Future<Map<SubscriptionData, SubscriptionRefreshResult>>? _refreshAll;
@@ -794,6 +798,15 @@ class SubscriptionService {
   /// so an exact comparison would stretch an hourly interval to two hours.
   static const _dueTolerance = Duration(minutes: 5);
 
+  /// The panel answered and refused this device, so asking again on the next
+  /// check cannot help. These wait a full interval, unlike a network failure.
+  static const _deviceRefusals = {
+    SubscriptionUpdateResult.hwidRequired,
+    SubscriptionUpdateResult.hwidLimitReached,
+    SubscriptionUpdateResult.hwidRejected,
+  };
+  final _refusedAt = <int, DateTime>{};
+
   Future<void> refreshOutdatedSubscription({
     AutoUpdateState? autoUpdateState,
     bool Function()? isCancelled,
@@ -807,12 +820,17 @@ class SubscriptionService {
     }
     final fallbackInterval = updateState.subscriptionInterval.value;
     final subs = await _database.subscriptionDao.allRows;
-    final now = DateTime.now();
+    final now = _now();
     for (final sub in subs) {
       if (_downloads.isPaused || (isCancelled?.call() ?? false)) break;
       final interval = sub.updateIntervalHours ?? fallbackInterval;
-      if ((now.difference(sub.timestamp) + _dueTolerance).inHours >= interval) {
-        await refreshSubscriptionResult(sub);
+      final refusedAt = _refusedAt[sub.id];
+      final last = refusedAt != null && refusedAt.isAfter(sub.timestamp)
+          ? refusedAt
+          : sub.timestamp;
+      if ((now.difference(last) + _dueTolerance).inHours >= interval) {
+        final result = await refreshSubscriptionResult(sub);
+        if (_deviceRefusals.contains(result.status)) _refusedAt[sub.id] = now;
       }
     }
   }
