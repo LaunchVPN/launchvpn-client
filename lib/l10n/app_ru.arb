@@ -965,5 +965,11 @@
   "jsonEditorDiscardChanges": "Отменить изменения",
   "tunnelDnsIpv4Invalid": "Введите корректный адрес IPv4.",
   "tunnelDnsIpv6Invalid": "Введите корректный адрес IPv6.",
-  "tunnelDnsServerNameRequired": "Введите имя сервера DNS over TLS."
+  "tunnelDnsServerNameRequired": "Введите имя сервера DNS over TLS.",
+  "subscriptionLinkInvalid": "Эта ссылка не подходит для LaunchVPN",
+  "subscriptionLinkReplaceTitle": "Заменить подписку?",
+  "subscriptionLinkReplaceMessage": "Новая подписка займёт место текущей. Если VPN включён, он переподключится.",
+  "subscriptionLinkReplaceConfirm": "Заменить",
+  "subscriptionLinkAdding": "Добавляем подписку…",
+  "subscriptionLinkAdded": "Подписка добавлена"
 }

@@ -43,7 +43,10 @@ void main() {
 
       expect(manifest, contains('android:label="${Brand.name}"'));
       expect(manifest, contains('android:scheme="${Brand.scheme}"'));
-      expect(manifest, contains('android:host="${Brand.appLinkHost}"'));
+      expect(
+        manifest,
+        contains('android:host="${Brand.subscriptionLinkHost}"'),
+      );
       expect(manifest, contains('"${Brand.androidId}.action.START_VPN"'));
       expect(manifest, contains('"${Brand.androidId}.action.STOP_VPN"'));
     });

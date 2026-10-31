@@ -12,7 +12,16 @@ abstract final class Brand {
   static const iosId = 'com.launchvpn.dev';
 
   static const scheme = 'launchvpn';
+
+  /// Host of the only deep link the system delivers to the app.
+  static const subscriptionLinkHost = 'sub';
+
+  /// Host of upstream's share links, read by upstream's paste and QR import.
+  /// Android does not register it, so these links no longer open the app.
   static const appLinkHost = 'app';
+
+  /// Deep links add subscriptions from this domain and its subdomains only.
+  static const subscriptionDomain = 'launch.tel';
 
   /// Leading User-Agent product. Panels pick the Xray JSON template by it.
   static const subscriptionClient = 'v2rayN';

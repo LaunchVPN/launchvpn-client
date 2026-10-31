@@ -50,7 +50,8 @@ tunnel and CI from it; our interface lives in `lib/brand` and does not overlap w
 upstream.
 
 **Deeplink**:
-A `launchvpn://` link that opens the app and adds a subscription (`/sub/add?url=`).
+`launchvpn://sub/add?url=<https-url>`: opens the app and makes that link's subscription
+the only one. Only subscriptions from our own domain are accepted.
 _Avoid_: intent, universal link
 
 **Flavor**:
