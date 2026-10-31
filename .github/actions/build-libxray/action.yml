@@ -14,23 +14,42 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v7
+    # The build also downloads Geodata, so the week in the key keeps it recent.
+    - name: Read the current week
+      id: week
+      shell: bash
+      run: echo "value=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+
+    - id: cache
+      uses: actions/cache@v6
+      with:
+        path: |
+          launchvpn-client/android/app/libs
+          launchvpn-client/swift/all/LibXray.xcframework
+          launchvpn-client/assets/dat
+        key: libxray-${{ inputs.system }}-${{ inputs.ref }}-${{ hashFiles('launchvpn-client/build_scripts/**/*.py') }}-${{ steps.week.outputs.value }}
+
+    - if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/checkout@v7
       with:
         repository: XTLS/libXray
         ref: ${{ inputs.ref }}
         path: libXray
 
-    - uses: actions/setup-go@v7
+    - if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/setup-go@v7
       with:
         go-version-file: libXray/go.mod
         cache-dependency-path: libXray/go.sum
 
-    - uses: actions/setup-python@v7
+    - if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/setup-python@v7
       with:
         python-version: "3.x"
         check-latest: true
 
     - name: Build the core
+      if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       env:
         SYSTEM: ${{ inputs.system }}
