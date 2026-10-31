@@ -36,7 +36,7 @@ void main() {
       await database.close();
 
       final upgraded = sqlite.sqlite3.open(file.path);
-      expect(upgraded.userVersion, 9);
+      expect(upgraded.userVersion, 10);
       expect(_snapshotV5(upgraded), before);
       upgraded.close();
 
@@ -129,7 +129,7 @@ void main() {
       );
       await database.close();
       final upgraded = sqlite.sqlite3.open(file.path);
-      expect(upgraded.userVersion, 9);
+      expect(upgraded.userVersion, 10);
       expect(_snapshotV3(upgraded), before);
       upgraded.close();
       final reopened = AppDatabase.forTesting(NativeDatabase(file));
@@ -150,7 +150,7 @@ void main() {
     expect(
       (await database.customSelect('PRAGMA user_version').getSingle())
           .read<int>('user_version'),
-      9,
+      10,
     );
   });
 
@@ -210,7 +210,7 @@ void main() {
             .read<String>('name'),
         'WAL-only name',
       );
-      expect(writer.userVersion, 9);
+      expect(writer.userVersion, 10);
       expect(_snapshot(writer, hasAgeKeys: true), _afterUpgrade(before));
       expect(
         file.parent.listSync().where(
@@ -221,7 +221,7 @@ void main() {
     },
   );
 
-  test('new installation creates schema 9 with empty assets and default connection configuration', () async {
+  test('new installation creates schema 10 with empty assets and default connection configuration', () async {
     final database = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(database.close);
 
@@ -258,7 +258,7 @@ void main() {
     expect(
       (await database.customSelect('PRAGMA user_version').getSingle())
           .read<int>('user_version'),
-      9,
+      10,
     );
   });
 
@@ -324,7 +324,7 @@ void main() {
           expect(
             (await reopened.customSelect('PRAGMA user_version').getSingle())
                 .read<int>('user_version'),
-            9,
+            10,
           );
           final subId = await reopened.subscriptionDao.insertRow(
             SubscriptionCompanion.insert(
@@ -426,7 +426,7 @@ void main() {
     await database.close();
 
     final upgraded = sqlite.sqlite3.open(file.path);
-    expect(upgraded.userVersion, 9);
+    expect(upgraded.userVersion, 10);
     expect(_snapshotV3(upgraded), before);
     upgraded.close();
 
@@ -467,7 +467,7 @@ void main() {
     await database.close();
 
     final upgraded = sqlite.sqlite3.open(file.path);
-    expect(upgraded.userVersion, 9);
+    expect(upgraded.userVersion, 10);
     expect(_snapshotV6(upgraded), before);
     upgraded.close();
     final reopened = AppDatabase.forTesting(NativeDatabase(file));
@@ -492,7 +492,7 @@ void main() {
     );
     await database.close();
     final upgraded = sqlite.sqlite3.open(file.path);
-    expect(upgraded.userVersion, 9);
+    expect(upgraded.userVersion, 10);
     expect(_snapshotV6(upgraded), before);
     upgraded.close();
     final reopened = AppDatabase.forTesting(NativeDatabase(file));
@@ -522,7 +522,7 @@ void main() {
       expect(rows.every((row) => row.manualSortOrder == 0), isTrue);
       await database.close();
       final upgraded = sqlite.sqlite3.open(file.path);
-      expect(upgraded.userVersion, 9);
+      expect(upgraded.userVersion, 10);
       expect(_snapshotV6(upgraded), before);
       upgraded.close();
       final reopened = AppDatabase.forTesting(NativeDatabase(file));
@@ -535,12 +535,43 @@ void main() {
     },
   );
 
+  test('schema 9 adds panel info without touching existing assets', () async {
+    final file = await _legacyDatabase(9);
+    final old = sqlite.sqlite3.open(file.path);
+    final before = _snapshotV6(old);
+    old.close();
+    final database = AppDatabase.forTesting(NativeDatabase(file));
+    final source = (await database.subscriptionDao.allRows).single;
+    expect(source.profileTitle, isNull);
+    expect(source.supportUrl, isNull);
+    expect(source.updateIntervalHours, isNull);
+    expect(source.userAgent, 'Saved custom UA');
+    await database.subscriptionDao.updateRow(
+      source.copyWith(
+        profileTitle: const Value('Provider'),
+        supportUrl: const Value('https://example.com/help'),
+        updateIntervalHours: const Value(12),
+      ),
+    );
+    await database.close();
+    final upgraded = sqlite.sqlite3.open(file.path);
+    expect(upgraded.userVersion, 10);
+    expect(_snapshotV6(upgraded), before);
+    upgraded.close();
+    final reopened = AppDatabase.forTesting(NativeDatabase(file));
+    addTearDown(reopened.close);
+    final saved = (await reopened.subscriptionDao.allRows).single;
+    expect(saved.profileTitle, 'Provider');
+    expect(saved.supportUrl, 'https://example.com/help');
+    expect(saved.updateIntervalHours, 12);
+  });
+
   test(
     'a future schema is rejected without changing the original database',
     () async {
       final file = await _legacyDatabase(2);
       final legacy = sqlite.sqlite3.open(file.path);
-      legacy.userVersion = 10;
+      legacy.userVersion = 11;
       legacy.close();
       final before = _snapshotFile(file, hasAgeKeys: true);
       final database = AppDatabase.forTesting(NativeDatabase(file));
@@ -549,7 +580,7 @@ void main() {
       expect(await file.exists(), isTrue);
       final check = sqlite.sqlite3.open(file.path);
       try {
-        expect(check.userVersion, 10);
+        expect(check.userVersion, 11);
         expect(_snapshot(check, hasAgeKeys: true), before);
       } finally {
         check.close();
@@ -696,6 +727,17 @@ Future<File> _legacyDatabase(int version) async {
       database.execute(
         "UPDATE subscription SET user_agent = 'Saved custom UA'",
       );
+    }
+    if (version >= 9) {
+      database.execute('''
+        CREATE TABLE manual_server_group (
+          id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          sort_order INTEGER NOT NULL DEFAULT 0
+        );
+        ALTER TABLE core_config ADD COLUMN manual_group_id INTEGER;
+        ALTER TABLE core_config ADD COLUMN manual_sort_order INTEGER NOT NULL DEFAULT 0;
+      ''');
     }
     database.execute('PRAGMA user_version = $version');
   } finally {

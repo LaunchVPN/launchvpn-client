@@ -4,7 +4,7 @@
 
 ## 原库升级
 
-当前数据库为 schema 9，支持已发布 v1–v8 的正式原位升级。结构修改与版本提交在同一事务中完成；
+当前数据库为 schema 10，支持已发布 v1–v9 的正式原位升级。结构修改与版本提交在同一事务中完成；
 保留 ID、订阅关系、Base64 JSON、Age 密钥、HWID 和全部旧 Raw，包括超过新增上限的记录。
 退休 Profile/full 行留在原库但不进入业务；旧产品模型按正式迁移转换结构，不重写 Raw 原文。
 迁移移除节点出口地区列，为来源增加 panel/mode，旧来源默认为 generic/appManaged；
@@ -121,6 +121,15 @@ macOS System Extension 因跨容器传输是唯一例外：清单纳入根目录
 
 订阅与 Geodata 独立保存开关和 24/72/168 小时周期；所有订阅共用自动更新开关和周期，User-Agent 由各订阅单独管理。
 启动、回前台、每小时和真实连接边沿检查到期；重复 connected 不重复调度。
+
+A subscription whose panel sent `Profile-Update-Interval` is due after that many hours, and the
+setting above applies only when the panel sent none. The interval counts from the start of the
+last successful download. A subscription counts as due five minutes early, so an hourly check
+does not miss an hourly interval by a few seconds.
+Checks run only while the app is running, so a refresh missed while it was closed runs on the
+next launch or return to the app. If the app stays open after a refresh that was not started by
+the hourly check, the next one can run up to an hour late. A failed refresh stays due and
+retries on the next check.
 
 订阅更新不要求 VPN；Geodata 自动更新仅在已确认连接时执行，连接成功后延迟 3 秒，期间断开则取消。
 等待订阅更新后及每个 Geodata 来源开始前复核连接；断开不启动后续来源，已经开始的更新完成文件事务。
