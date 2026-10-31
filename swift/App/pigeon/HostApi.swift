@@ -86,10 +86,10 @@ final class AppHostApi: @preconcurrency BridgeHostApi {
             let os = "macOS"
             #endif
             return DeviceIdentity(
-                hwid: try DeviceHwid.readOrCreate(),
+                hwid: try NativeDevice.readOrCreateHwid(),
                 os: os,
                 osVersion: "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)",
-                model: DeviceHwid.machineModel()
+                model: NativeDevice.machineModel()
             )
         })
     }
@@ -213,9 +213,10 @@ final class AppHostApi: @preconcurrency BridgeHostApi {
     }
 }
 
-/// A UUID kept in the Keychain, which outlives the app across reinstalls.
-/// `ThisDeviceOnly` keeps it out of backups: a restored phone is a new device.
-private enum DeviceHwid {
+/// The HWID is a UUID kept in the Keychain, which outlives the app across
+/// reinstalls. `ThisDeviceOnly` keeps it out of backups: a restored phone is a
+/// new device.
+private enum NativeDevice {
     private static var query: [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
@@ -224,7 +225,7 @@ private enum DeviceHwid {
         ]
     }
 
-    static func readOrCreate() throws -> String {
+    static func readOrCreateHwid() throws -> String {
         if let saved = try read() { return saved }
         let created = UUID().uuidString
         var item = query
@@ -236,7 +237,7 @@ private enum DeviceHwid {
         return created
     }
 
-    // Only a missing item may create a new ID. A locked Keychain must fail, or
+    // Only a missing item may create a new HWID. A locked Keychain must fail, or
     // the panel would count this phone as another device.
     private static func read() throws -> String? {
         var search = query

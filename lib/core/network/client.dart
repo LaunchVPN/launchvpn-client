@@ -129,12 +129,10 @@ class NetClient {
         if (next.scheme != uri.scheme ||
             next.host != uri.host ||
             next.port != uri.port) {
-          // The identity belongs to the subscription origin, not a redirect
-          // target. Do not restore it later in the redirect chain.
-          headers?.removeWhere(
-            (name, _) =>
-                DownloadRequestHeaders.deviceHeaderNames.contains(name),
-          );
+          // Do not restore the identity later in the redirect chain.
+          if (headers != null) {
+            DownloadRequestHeaders.removeDeviceHeaders(headers);
+          }
         }
         uri = next;
         if (httpsOnly && !isHttpsDownloadUri(uri)) {

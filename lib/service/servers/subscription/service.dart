@@ -675,8 +675,8 @@ class SubscriptionService {
         requestHeaders: DownloadRequestHeaders(
           userAgent: input.normalizedUserAgent,
           agePublicKey: ageContext?.publicKey,
-          // Panels return a placeholder without it, so the per-subscription
-          // HWID fields no longer decide what is sent.
+          // Panels return a placeholder without it. The per-subscription HWID
+          // fields are stored for upstream's schema and do not affect requests.
           device: await _readDeviceIdentity(),
         ),
       );

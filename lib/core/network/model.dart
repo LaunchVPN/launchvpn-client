@@ -7,21 +7,32 @@ final class DownloadRequestHeaders {
     this.userAgent,
   });
 
-  /// Headers that identify this device, sent only to the subscription origin.
-  static const deviceHeaderNames = [
-    'x-hwid',
-    'x-device-os',
-    'x-ver-os',
-    'x-device-model',
-  ];
+  static const _hwidHeader = 'x-hwid';
+  static const _osHeader = 'x-device-os';
+  static const _osVersionHeader = 'x-ver-os';
+  static const _modelHeader = 'x-device-model';
 
   final String? agePublicKey;
   final DeviceIdentity? device;
   final String? userAgent;
 
   static bool isValidUserAgent(String? value) =>
-      value == null ||
+      value == null || _isPrintableAscii(value);
+
+  static bool _isPrintableAscii(String value) =>
       value.codeUnits.every((code) => code >= 0x20 && code <= 0x7e);
+
+  /// The identity belongs to the subscription origin, not a redirect target.
+  static void removeDeviceHeaders(Map<String, String> headers) {
+    for (final name in const [
+      _hwidHeader,
+      _osHeader,
+      _osVersionHeader,
+      _modelHeader,
+    ]) {
+      headers.remove(name);
+    }
+  }
 
   Map<String, String>? toHttpHeaders() {
     final publicKey = agePublicKey?.trim();
@@ -39,12 +50,12 @@ final class DownloadRequestHeaders {
   // The panel only needs the HWID. Details are display text for its device
   // list, so one a header cannot carry must not fail the download.
   static Map<String, String> _deviceHeaders(DeviceIdentity identity) {
-    bool sendable(String value) => value.isNotEmpty && isValidUserAgent(value);
+    bool sendable(String value) => value.isNotEmpty && _isPrintableAscii(value);
     return {
-      'x-hwid': identity.hwid,
-      if (sendable(identity.os)) 'x-device-os': identity.os,
-      if (sendable(identity.osVersion)) 'x-ver-os': identity.osVersion,
-      if (sendable(identity.model)) 'x-device-model': identity.model,
+      _hwidHeader: identity.hwid,
+      if (sendable(identity.os)) _osHeader: identity.os,
+      if (sendable(identity.osVersion)) _osVersionHeader: identity.osVersion,
+      if (sendable(identity.model)) _modelHeader: identity.model,
     };
   }
 }

@@ -102,67 +102,70 @@ void main() {
     },
   );
 
-  test('strips the identity on cross-origin redirects, including back to the source', () async {
-    final received = <String?>[];
-    final deviceDetails = <List<String?>>[];
-    final ageHeaders = <String?>[];
-    void record(HttpRequest request) {
-      received.add(request.headers.value('x-hwid'));
-      deviceDetails.add([
-        request.headers.value('x-device-os'),
-        request.headers.value('x-ver-os'),
-        request.headers.value('x-device-model'),
-      ]);
-      ageHeaders.add(request.headers.value('X-Age-Public-Key'));
-    }
+  test(
+    'strips the identity on cross-origin redirects, even back to the source',
+    () async {
+      final received = <String?>[];
+      final deviceDetails = <List<String?>>[];
+      final ageHeaders = <String?>[];
+      void record(HttpRequest request) {
+        received.add(request.headers.value('x-hwid'));
+        deviceDetails.add([
+          request.headers.value('x-device-os'),
+          request.headers.value('x-ver-os'),
+          request.headers.value('x-device-model'),
+        ]);
+        ageHeaders.add(request.headers.value('X-Age-Public-Key'));
+      }
 
-    final source = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    final target = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    addTearDown(() async {
-      await source.close(force: true);
-      await target.close(force: true);
-    });
-    source.listen((request) async {
-      record(request);
-      if (request.uri.path == '/start') {
-        request.response.statusCode = HttpStatus.found;
+      final source = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final target = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await source.close(force: true);
+        await target.close(force: true);
+      });
+      source.listen((request) async {
+        record(request);
+        if (request.uri.path == '/start') {
+          request.response.statusCode = HttpStatus.found;
+          request.response.headers.set(
+            HttpHeaders.locationHeader,
+            _serverUrl(target),
+          );
+        } else {
+          request.response.write('final');
+        }
+        await request.response.close();
+      });
+      target.listen((request) async {
+        record(request);
+        request.response.statusCode = HttpStatus.temporaryRedirect;
         request.response.headers.set(
           HttpHeaders.locationHeader,
-          _serverUrl(target),
+          '${_serverUrl(source)}/final',
         );
-      } else {
-        request.response.write('final');
-      }
-      await request.response.close();
-    });
-    target.listen((request) async {
-      record(request);
-      request.response.statusCode = HttpStatus.temporaryRedirect;
-      request.response.headers.set(
-        HttpHeaders.locationHeader,
-        '${_serverUrl(source)}/final',
-      );
-      await request.response.close();
-    });
+        await request.response.close();
+      });
 
-    expect(
-      await NetClient().getText(
-        '${_serverUrl(source)}/start',
-        requestHeaders: DownloadRequestHeaders(
-          device: device,
-          agePublicKey: publicKey,
+      expect(
+        await NetClient().getText(
+          '${_serverUrl(source)}/start',
+          requestHeaders: DownloadRequestHeaders(
+            device: device,
+            agePublicKey: publicKey,
+          ),
         ),
-      ),
-      'final',
-    );
-    expect(received, [hwid, null, null]);
-    expect(deviceDetails, [
-      ['Android', '16', 'Pixel 9'],
-      [null, null, null],
-      [null, null, null],
-    ]);
-    expect(ageHeaders, [publicKey, publicKey, publicKey]);
-  });
+        'final',
+      );
+      expect(received, [hwid, null, null]);
+      expect(deviceDetails, [
+        ['Android', '16', 'Pixel 9'],
+        [null, null, null],
+        [null, null, null],
+      ]);
+      expect(ageHeaders, [publicKey, publicKey, publicKey]);
+    },
+  );
 
   test(
     'concurrent downloads keep subscription UA and device identity scoped',

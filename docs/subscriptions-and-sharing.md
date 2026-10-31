@@ -102,17 +102,18 @@ The identity is per device, so all subscriptions on a phone count as one device,
 it survives reinstalling the app. `ANDROID_ID` is scoped to the signing key, so a
 build signed with another key is a new device. The Keychain item is excluded from
 backups, so a restored phone is a new device. A Keychain or `ANDROID_ID` failure fails
-the download and keeps the saved servers; it never creates a new ID.
+the download and keeps the saved servers; it never creates a new HWID.
 
 The `hwidEnabled` and `hwid` source fields stay in the database, backups and upstream
-form, but they no longer affect requests. Device details that a header cannot carry
-are dropped; the HWID is always sent. Linux and Windows have no native identity and
-send nothing.
+form and do not affect requests. Device details that a header cannot carry are dropped;
+the HWID is always sent. macOS uses the Keychain path. Linux and Windows have no native
+identity and send nothing.
 
 The headers apply to this request only and never become shared client defaults.
 They survive HTTPS same-origin redirects and are removed for good on a cross-origin
 redirect, even if the chain returns to the source. Same origin means the same scheme,
-host and port. Age public keys keep the same download context and HTTPS downgrades are
+host and port. A cross-origin service receives the identity only when the user configures
+its URL directly. Age public keys keep the same download context and HTTPS downgrades are
 rejected. HWID rejection headers are checked before the body is parsed, so an HTTP 200
 placeholder cannot bypass a rejection, and a non-success status keeps its specific
 reason. The identity is not part of normal shares, Xray configuration or VPN validation.
