@@ -192,10 +192,9 @@ jobs:
           mv build/app/outputs/flutter-apk/app-release.apk \
             build/LaunchVPN-android-universal.apk
 
-      # The release variant reuses what the APK build already compiled.
       - name: Test Android native code
         working-directory: launchvpn-client/android
-        run: ./gradlew :app:testReleaseUnitTest
+        run: ./gradlew :app:testDebugUnitTest
 
       - name: Upload the APK
         uses: actions/upload-artifact@v7
