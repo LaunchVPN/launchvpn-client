@@ -12,6 +12,7 @@ import 'package:onexray/pages/theme/layout.dart';
 import 'package:onexray/pages/shared/widgets/settings_page.dart';
 import 'package:onexray/pages/shared/widgets/page_action_bar.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:onexray/core/brand.dart';
 
 class AppIconPage extends StatelessWidget {
   const AppIconPage({super.key});
@@ -117,7 +118,7 @@ class AppIconChoiceView extends StatelessWidget {
                 children: [
                   _iconImage(_imageFor(selected), 100),
                   const SizedBox(height: 9),
-                  Text('OneXray', style: AppTypography.iconPreviewBrand),
+                  Text(Brand.name, style: AppTypography.iconPreviewBrand),
                   const SizedBox(height: 9),
                   Text(
                     useDockIconAssets
