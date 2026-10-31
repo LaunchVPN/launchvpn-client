@@ -145,6 +145,27 @@ void main() {
     },
   );
 
+  testWidgets('finishing closes the progress, not a dialog opened above it', (
+    tester,
+  ) async {
+    download = Completer<void>();
+    await open(tester, _uri);
+    unawaited(
+      showDialog<void>(
+        context: tester.element(find.text('home')),
+        useRootNavigator: false,
+        builder: (_) => const AlertDialog(content: Text('other dialog')),
+      ),
+    );
+    await settle(tester);
+
+    download.complete();
+    await settle(tester);
+
+    expect(find.text('other dialog'), findsOneWidget);
+    expect(find.text('Adding subscription…'), findsNothing);
+  });
+
   testWidgets('declining the replacement downloads nothing', (tester) async {
     await tester.runAsync(existing);
 

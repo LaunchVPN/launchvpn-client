@@ -126,6 +126,8 @@
 主动读取与广播竞争只打开一次；手动导入页和直接压入 Navigator 的模态关闭后继续排队链接，Widget 链接不进入导入。
 定向测试位于 `test/service/shared/share/service_test.dart` 和 `test/pages/main/app_link_delivery_test.dart`，
 原生 App Link 交付、首次设置和实际配置启动仍需模拟器或设备验收。
+Deep link parsing and replacement are covered by `test/service/servers/subscription/deep_link_test.dart`,
+`test/service/servers/subscription/deep_link_service_test.dart` and `test/brand/subscription_link_flow_test.dart`.
 
 目标测试分别位于 `test/core/db/subscription_migration_test.dart`、`test/service/servers/subscription/`、
 `test/service/shared/xray/remnawave_test.dart`、`test/service/connect/`、`test/pages/servers/`、

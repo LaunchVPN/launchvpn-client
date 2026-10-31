@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/alert.dart';
+import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/servers/subscription/failure.dart';
 
@@ -33,16 +36,16 @@ Future<void> openSubscriptionLink(
   }
 
   final navigator = Navigator.of(context);
-  final progress = showDialog<void>(
+  final progress = DialogRoute<void>(
     context: context,
-    useRootNavigator: false,
     barrierDismissible: false,
     builder: (_) =>
         _SubscriptionLinkProgress(message: l.subscriptionLinkAdding),
   );
+  unawaited(navigator.push(progress));
   final result = await subscriptions.apply(link);
-  navigator.pop();
-  await progress;
+  // Another dialog may have opened above it, so this cannot pop the top route.
+  if (progress.isActive) navigator.removeRoute(progress);
   if (!context.mounted) return;
   ContextAlert.showToast(
     context,
@@ -63,10 +66,7 @@ class _SubscriptionLinkProgress extends StatelessWidget {
     child: AlertDialog(
       content: Row(
         children: [
-          const SizedBox.square(
-            dimension: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+          const ButtonProgressIndicator(size: 20),
           const SizedBox(width: 16),
           Expanded(child: Text(message)),
         ],

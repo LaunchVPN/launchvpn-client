@@ -64,7 +64,8 @@ final class SubscriptionLinkService {
   Future<SubscriptionInsertResult> apply(SubscriptionDeepLink link) async {
     try {
       final rows = await _database.subscriptionDao.allRows;
-      final loaded = await _load(link, rows);
+      final current = rows.where((row) => row.url == link.url).firstOrNull;
+      final loaded = await _load(link, current);
       if (!loaded.success) return loaded;
       for (final row in rows.where((row) => row.url != link.url)) {
         await _servers.remove(await _servers.previewRemoval(sourceId: row.id));
@@ -83,14 +84,13 @@ final class SubscriptionLinkService {
 
   Future<SubscriptionInsertResult> _load(
     SubscriptionDeepLink link,
-    List<SubscriptionData> rows,
+    SubscriptionData? current,
   ) async {
-    for (final row in rows) {
-      if (row.url != link.url) continue;
-      final result = await _subscriptions.refreshSubscriptionResult(row);
+    if (current != null) {
+      final result = await _subscriptions.refreshSubscriptionResult(current);
       return SubscriptionInsertResult(
         status: result.status,
-        subId: row.id,
+        subId: current.id,
         count: result.count,
         error: result.error,
       );

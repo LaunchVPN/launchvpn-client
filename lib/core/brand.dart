@@ -13,11 +13,11 @@ abstract final class Brand {
 
   static const scheme = 'launchvpn';
 
-  /// Host of the only deep link the system delivers to the app.
+  /// Host of the deep link that adds a subscription.
   static const subscriptionLinkHost = 'sub';
 
   /// Host of upstream's share links, read by upstream's paste and QR import.
-  /// Android does not register it, so these links no longer open the app.
+  /// Android does not register it, and iOS rejects it after opening the app.
   static const appLinkHost = 'app';
 
   /// Deep links add subscriptions from this domain and its subdomains only.
