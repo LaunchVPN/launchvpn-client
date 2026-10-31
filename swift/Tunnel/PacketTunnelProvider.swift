@@ -51,6 +51,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
     private static let stateQueue = DispatchQueue(label: "com.launchvpn.dev.tunnel.state")
     private var startContinuation: CheckedContinuation<Void, Error>?
     private var pendingStartSignal = false
+    #if os(iOS)
+    private let memoryLog = TunnelMemoryLog()
+    #endif
 
     override func startTunnel(
         options: [String: NSObject]? = nil,
@@ -397,6 +400,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
             YGLog("PacketTunnelProvider startXray \(error)")
             throw TunnelError.startXrayFailed(error)
         }
+        #if os(iOS)
+        memoryLog.mark("xray started")
+        #endif
     }
 
     private func patchRuntimeEnv(
@@ -429,6 +435,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
             }
         }
         root["env"] = env
+        #if os(iOS)
+        memoryLog.start(errorLogPath: (root["log"] as? [String: Any])?["error"] as? String)
+        #endif
         let data = try JsonTool.encodeObject(root)
         guard let updatedJson = String(data: data, encoding: .utf8) else {
             throw TunnelError.noXrayJson
@@ -441,6 +450,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
     }
 
     private func stopXray() {
+        #if os(iOS)
+        memoryLog.stop()
+        #endif
         do {
             let request = try LibXrayInvokeRequest(method: .stopXray).toText()
             let res = request.withCString { p in

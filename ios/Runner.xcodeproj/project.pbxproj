@@ -32,6 +32,7 @@
 		EB67F754308F0B400096B893 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EB67F753308F0B400096B893 /* WidgetKit.framework */; };
 		EB67F756308F0B400096B893 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EB67F755308F0B400096B893 /* SwiftUI.framework */; };
 		EB67F767308F0B400096B893 /* widgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EB67F752308F0B400096B893 /* widgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EB68C7312F94D127007C293A /* TunnelMemoryLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB68C7302F94D127007C293A /* TunnelMemoryLog.swift */; };
 		EB68C6FB2F94D127007C293A /* PacketTunnelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB68C6F92F94D127007C293A /* PacketTunnelProvider.swift */; };
 		EB68C7042F94D150007C293A /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB68C6FD2F94D150007C293A /* Constants.swift */; };
 		EB68C7052F94D150007C293A /* Tools.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB68C7012F94D150007C293A /* Tools.swift */; };
@@ -142,6 +143,7 @@
 		EB67F752308F0B400096B893 /* widgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = widgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		EB67F753308F0B400096B893 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		EB67F755308F0B400096B893 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		EB68C7302F94D127007C293A /* TunnelMemoryLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunnelMemoryLog.swift; sourceTree = "<group>"; };
 		EB68C6F92F94D127007C293A /* PacketTunnelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketTunnelProvider.swift; sourceTree = "<group>"; };
 		EB68C6FC2F94D150007C293A /* BridgeHeader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BridgeHeader.h; sourceTree = "<group>"; };
 		EB68C6FD2F94D150007C293A /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
@@ -300,6 +302,7 @@
 			isa = PBXGroup;
 			children = (
 				EB68C6F92F94D127007C293A /* PacketTunnelProvider.swift */,
+				EB68C7302F94D127007C293A /* TunnelMemoryLog.swift */,
 			);
 			name = Tunnel;
 			path = ../swift/Tunnel;
@@ -606,6 +609,7 @@
 				EBD700033006000000000003 /* RuntimeEnv.swift in Sources */,
 				EB68C70C2F94D150007C293A /* Logger.swift in Sources */,
 				EB68C6FB2F94D127007C293A /* PacketTunnelProvider.swift in Sources */,
+				EB68C7312F94D127007C293A /* TunnelMemoryLog.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
