@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:onexray/gen/fonts.gen.dart';
 import 'package:onexray/pages/theme/color.dart';
 import 'package:onexray/pages/theme/theme.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -41,8 +42,8 @@ abstract final class BrandSpacing {
 }
 
 abstract final class BrandText {
-  static const _display = 'Unbounded';
-  static const _body = 'Manrope';
+  static const _display = FontFamily.unbounded;
+  static const _body = FontFamily.manrope;
 
   static const wordmark = TextStyle(
     fontFamily: _display,
