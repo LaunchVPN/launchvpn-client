@@ -2,18 +2,15 @@
 import Foundation
 import os
 
-/// Appends the extension's remaining memory budget to Xray's error log, where a
-/// device can show it through the App's log viewer. iOS terminates the extension
-/// when this budget runs out, so `lowest` is the session's real headroom.
-/// Writes nothing unless file logs are on. Xray also opens the log with O_APPEND,
-/// so single-line writes do not interleave with its own.
+/// Appends the extension's memory use to Xray's error log, where a device can show
+/// it through the App's log viewer. iOS terminates the extension at its memory limit,
+/// so `headroom` is the limit minus the peak footprint: the closest this process has
+/// come to it, including spikes between lines. Writes nothing unless file logs are on.
+/// Xray also opens the log with O_APPEND, so lines do not interleave with its own.
 final class TunnelMemoryLog: @unchecked Sendable {
-    private static let sampleInterval = DispatchTimeInterval.seconds(1)
-    private static let samplesPerLine = 30
-    private static let notableDrop = 1024 * 1024
+    private static let lineInterval = DispatchTimeInterval.seconds(30)
 
     private let queue = DispatchQueue(label: "com.launchvpn.dev.tunnel.memory", qos: .utility)
-    private let availableAtLaunch = os_proc_available_memory()
     private lazy var timeFormat: DateFormatter = {
         let format = DateFormatter()
         format.locale = Locale(identifier: "en_US_POSIX")
@@ -22,9 +19,6 @@ final class TunnelMemoryLog: @unchecked Sendable {
     }()
     private var path: String?
     private var timer: DispatchSourceTimer?
-    private var lowest = Int.max
-    private var lowestLogged = Int.max
-    private var samplesSinceLine = 0
 
     /// `errorLogPath` is the Xray config's `log.error`; "none" means logs are off.
     func start(errorLogPath: String?) {
@@ -33,44 +27,42 @@ final class TunnelMemoryLog: @unchecked Sendable {
                 return
             }
             self.path = errorLogPath
-            self.append("launch", available: self.availableAtLaunch)
+            self.append("start")
             let timer = DispatchSource.makeTimerSource(queue: self.queue)
-            timer.schedule(deadline: .now(), repeating: Self.sampleInterval)
-            timer.setEventHandler { [weak self] in self?.sample() }
+            timer.schedule(deadline: .now() + Self.lineInterval, repeating: Self.lineInterval)
+            timer.setEventHandler { [weak self] in self?.append("running") }
             timer.resume()
             self.timer = timer
         }
     }
 
     func mark(_ stage: String) {
-        queue.async { self.append(stage, available: os_proc_available_memory()) }
+        queue.async { self.append(stage) }
     }
 
+    /// Synchronous so the last line is written before the extension exits.
     func stop() {
-        queue.async {
+        queue.sync {
             self.timer?.cancel()
             self.timer = nil
-            self.append("stop", available: os_proc_available_memory())
+            self.append("stop")
             self.path = nil
         }
     }
 
-    private func sample() {
-        let available = os_proc_available_memory()
-        lowest = min(lowest, available)
-        samplesSinceLine += 1
-        if samplesSinceLine >= Self.samplesPerLine || lowest <= lowestLogged - Self.notableDrop {
-            append("running", available: available)
-        }
-    }
-
-    private func append(_ stage: String, available: Int) {
+    private func append(_ stage: String) {
         guard let path else { return }
-        lowest = min(lowest, available)
-        lowestLogged = lowest
-        samplesSinceLine = 0
-        let time = timeFormat.string(from: Date())
-        let line = "\(time) [Memory] \(stage): available \(Self.megabytes(available)) MB, lowest \(Self.megabytes(lowest)) MB\n"
+        guard let footprint = Self.footprint() else {
+            YGLog("TunnelMemoryLog task_info failed")
+            return
+        }
+        let available = os_proc_available_memory()
+        let headroom = available + footprint.current - footprint.peak
+        let line = "\(timeFormat.string(from: Date())) [Memory] \(stage): "
+            + "headroom \(Self.megabytes(headroom)) MB, "
+            + "available \(Self.megabytes(available)) MB, "
+            + "footprint \(Self.megabytes(footprint.current)) MB, "
+            + "peak \(Self.megabytes(footprint.peak)) MB\n"
         let fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0o600)
         guard fd >= 0 else {
             YGLog("TunnelMemoryLog open failed: \(errno)")
@@ -80,6 +72,18 @@ final class TunnelMemoryLog: @unchecked Sendable {
         if line.withCString({ write(fd, $0, strlen($0)) }) < 0 {
             YGLog("TunnelMemoryLog write failed: \(errno)")
         }
+    }
+
+    private static func footprint() -> (current: Int, peak: Int)? {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(tunnel_task_self(), task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return nil }
+        return (Int(info.phys_footprint), Int(info.ledger_phys_footprint_peak))
     }
 
     private static func megabytes(_ bytes: Int) -> String {

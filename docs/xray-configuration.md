@@ -396,10 +396,10 @@ iOS/iPadOS 隐藏图标默认关闭，仅非全流量时生效：运行副本追
 ### iOS memory headroom
 
 iOS terminates the tunnel extension when it exceeds its memory limit, which drops the VPN.
-While Xray file logs are on, the extension appends `[Memory]` lines to `error.log` from
-`os_proc_available_memory`: at launch, once Xray has started, on stop, every 30 seconds, and
-whenever the session's lowest value falls by 1 MB. `lowest` is the headroom to compare between
-configurations. With logs off, it writes nothing and starts no timer.
+While Xray file logs are on, the extension appends `[Memory]` lines to `error.log`: when the
+tunnel starts, once Xray has started, on stop, and every 30 seconds in between. `headroom` is the
+limit minus the peak footprint the kernel recorded for this process, so it includes spikes between
+lines. It is the value to compare between configurations. With logs off, nothing is written.
 
 ### IPv6 策略
 
