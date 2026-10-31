@@ -393,6 +393,14 @@ Linux 不默认接管系统 DNS；Raw 的 autoSystemDnsToGateway 依赖可工作
 iOS/iPadOS 隐藏图标默认关闭，仅非全流量时生效：运行副本追加 0.0.0.0/31，IPv6 开启另加 ::/127。
 不写回用户列表，不改变状态来源；依赖系统路由行为，可能影响网络切换，不保证所有系统版本隐藏。
 
+### iOS memory headroom
+
+iOS terminates the tunnel extension when it exceeds its memory limit, which drops the VPN.
+While Xray file logs are on, the extension appends `[Memory]` lines to `error.log`: when the
+tunnel starts, once Xray has started, on stop, and every 30 seconds in between. `headroom` is the
+limit minus the peak footprint the kernel recorded for this process, so it includes spikes between
+lines. It is the value to compare between configurations. With logs off, nothing is written.
+
 ### IPv6 策略
 
 关闭时 Apple/Android/Linux/EXE 不配置隧道 IPv6 地址、路由和 DNS；MSIX/Vole 保留自身处理。
