@@ -19,12 +19,17 @@ abstract final class AppTheme {
     contentPadding: EdgeInsets.symmetric(horizontal: 18),
   );
 
-  static ThemeData material(Brightness brightness, {bool mobile = false}) =>
-      _build(
-        brightness: brightness,
-        colors: AppColorTokens.fallback(brightness),
-        mobile: mobile,
-      );
+  static ThemeData material(
+    Brightness brightness, {
+    bool mobile = false,
+    AppPalette? palette,
+  }) => _build(
+    brightness: brightness,
+    colors: palette == null
+        ? AppColorTokens.fallback(brightness)
+        : AppColorTokens(palette),
+    mobile: mobile,
+  );
 
   static AppBarTheme appBarTheme({
     required AppPalette palette,
@@ -193,8 +198,9 @@ abstract final class AppTheme {
     Brightness brightness, {
     bool mobile = false,
     TextScaler textScaler = TextScaler.noScaling,
+    AppPalette? palette,
   }) {
-    final palette = AppColorTokens.fallback(brightness).palette;
+    palette ??= AppColorTokens.fallback(brightness).palette;
     // Shad buttons use a tight height. Grow it with the scaled label instead of
     // constraining larger system text to the prototype's minimum height.
     final buttonHeight = math.max(
@@ -206,7 +212,7 @@ abstract final class AppTheme {
     );
     return ShadThemeData(
       brightness: brightness,
-      colorScheme: shadColorScheme(brightness),
+      colorScheme: shadColorScheme(brightness, palette: palette),
       radius: const BorderRadius.all(Radius.circular(AppRadii.control)),
       textTheme: AppTypography.shad,
       primaryButtonTheme: ShadButtonTheme(
@@ -299,8 +305,11 @@ abstract final class AppTheme {
     );
   }
 
-  static ShadColorScheme shadColorScheme(Brightness brightness) {
-    final palette = AppColorTokens.fallback(brightness).palette;
+  static ShadColorScheme shadColorScheme(
+    Brightness brightness, {
+    AppPalette? palette,
+  }) {
+    palette ??= AppColorTokens.fallback(brightness).palette;
     return ShadColorScheme(
       background: palette.background,
       foreground: palette.foreground,

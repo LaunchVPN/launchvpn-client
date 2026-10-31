@@ -64,6 +64,19 @@ class $AssetsDatGen {
   ];
 }
 
+class $AssetsFontsGen {
+  const $AssetsFontsGen();
+
+  /// File path: assets/fonts/OFL-Manrope.txt
+  String get oFLManrope => 'assets/fonts/OFL-Manrope.txt';
+
+  /// File path: assets/fonts/OFL-Unbounded.txt
+  String get oFLUnbounded => 'assets/fonts/OFL-Unbounded.txt';
+
+  /// List of all assets
+  List<String> get values => [oFLManrope, oFLUnbounded];
+}
+
 class $AssetsGeodataGen {
   const $AssetsGeodataGen();
 
@@ -130,6 +143,7 @@ class $AssetsMacosIconGen {
 abstract final class Assets {
   static const $AssetsAppIconGen appIcon = $AssetsAppIconGen();
   static const $AssetsDatGen dat = $AssetsDatGen();
+  static const $AssetsFontsGen fonts = $AssetsFontsGen();
   static const $AssetsGeodataGen geodata = $AssetsGeodataGen();
   static const $AssetsIconGen icon = $AssetsIconGen();
   static const AssetGenImage logo = AssetGenImage('assets/logo.png');

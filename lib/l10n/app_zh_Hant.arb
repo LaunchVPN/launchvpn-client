@@ -971,5 +971,20 @@
   "subscriptionLinkReplaceMessage": "新訂閱將取代目前的訂閱。如果 VPN 已開啟，它會重新連線。",
   "subscriptionLinkReplaceConfirm": "替換",
   "subscriptionLinkAdding": "正在新增訂閱…",
-  "subscriptionLinkAdded": "訂閱已新增"
+  "subscriptionLinkAdded": "訂閱已新增",
+  "homeTab": "首頁",
+  "homeStatusOff": "未連線",
+  "homeHintOff": "點擊連線",
+  "homeStatusConnecting": "正在連線…",
+  "homeHintConnecting": "正在選擇最快的伺服器",
+  "homeStatusReconnecting": "正在重新連線…",
+  "homeHintReconnecting": "正在恢復連線",
+  "homeStatusDisconnecting": "正在中斷連線…",
+  "homeStatusConnected": "已連線",
+  "homeIpHidden": "IP 已隱藏",
+  "homeConnectFailed": "連線失敗，點擊重試",
+  "homeNoSubscription": "請從機器人或網站開啟訂閱連結",
+  "homeDaysLeft": "{days, plural, other {{days} 天}}",
+  "homeStatusUncertain": "VPN 可能仍在執行",
+  "homeHintUncertain": "點擊關閉"
 }

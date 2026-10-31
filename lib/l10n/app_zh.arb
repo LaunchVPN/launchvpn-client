@@ -971,5 +971,20 @@
   "subscriptionLinkReplaceMessage": "新订阅将取代当前订阅。如果 VPN 已开启，它会重新连接。",
   "subscriptionLinkReplaceConfirm": "替换",
   "subscriptionLinkAdding": "正在添加订阅…",
-  "subscriptionLinkAdded": "订阅已添加"
+  "subscriptionLinkAdded": "订阅已添加",
+  "homeTab": "首页",
+  "homeStatusOff": "未连接",
+  "homeHintOff": "点击连接",
+  "homeStatusConnecting": "正在连接…",
+  "homeHintConnecting": "正在选择最快的服务器",
+  "homeStatusReconnecting": "正在重新连接…",
+  "homeHintReconnecting": "正在恢复连接",
+  "homeStatusDisconnecting": "正在断开…",
+  "homeStatusConnected": "已连接",
+  "homeIpHidden": "IP 已隐藏",
+  "homeConnectFailed": "连接失败，点击重试",
+  "homeNoSubscription": "请从机器人或网站打开订阅链接",
+  "homeDaysLeft": "{days, plural, other {{days} 天}}",
+  "homeStatusUncertain": "VPN 可能仍在运行",
+  "homeHintUncertain": "点击关闭"
 }

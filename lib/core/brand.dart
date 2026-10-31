@@ -5,6 +5,9 @@
 abstract final class Brand {
   static const name = 'LaunchVPN';
 
+  /// The name as the logo draws it.
+  static const wordmark = 'launchvpn';
+
   static const androidId = 'com.launchvpn.app';
 
   /// Temporary ID for the personal Apple account. It becomes `com.launchvpn.app`

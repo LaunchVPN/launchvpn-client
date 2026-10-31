@@ -971,5 +971,20 @@
   "subscriptionLinkReplaceMessage": "اشتراک جدید جای اشتراک فعلی را می‌گیرد. اگر VPN روشن باشد، دوباره وصل می‌شود.",
   "subscriptionLinkReplaceConfirm": "جایگزین کردن",
   "subscriptionLinkAdding": "در حال افزودن اشتراک…",
-  "subscriptionLinkAdded": "اشتراک اضافه شد"
+  "subscriptionLinkAdded": "اشتراک اضافه شد",
+  "homeTab": "خانه",
+  "homeStatusOff": "متصل نیست",
+  "homeHintOff": "برای اتصال ضربه بزنید",
+  "homeStatusConnecting": "در حال اتصال…",
+  "homeHintConnecting": "در حال انتخاب سریع‌ترین سرور",
+  "homeStatusReconnecting": "در حال اتصال مجدد…",
+  "homeHintReconnecting": "در حال بازیابی اتصال",
+  "homeStatusDisconnecting": "در حال قطع اتصال…",
+  "homeStatusConnected": "متصل",
+  "homeIpHidden": "IP پنهان است",
+  "homeConnectFailed": "اتصال برقرار نشد. برای تلاش دوباره ضربه بزنید",
+  "homeNoSubscription": "پیوند اشتراک را از ربات یا وب‌سایت باز کنید",
+  "homeDaysLeft": "{days, plural, other {{days} روز}}",
+  "homeStatusUncertain": "ممکن است VPN هنوز روشن باشد",
+  "homeHintUncertain": "برای خاموش کردن ضربه بزنید"
 }

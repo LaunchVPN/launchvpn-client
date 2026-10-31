@@ -1,7 +1,7 @@
 # 订阅、导入与分享
 
 标准分享用于客户端互通，App Link 与完整 JSON 各有保真边界；备份走 [独立协议](backup.md)，普通导入不猜测备份格式。
-Imports are submitted by explicit user action. System links only accept LaunchVPN subscriptions, see [System deep link](#system-deep-link).
+This build has no manual import screen: a subscription arrives only through a [system deep link](#system-deep-link). The import sections below describe upstream pages kept for merging.
 
 ## 订阅
 
@@ -152,8 +152,8 @@ Age App Link 只携带算法，不带公私钥；接收端生成新密钥对，�
 ## App Link
 
 外部链接由 `ShareService` 在启动早期暂存并广播；服务初始化不等待导入页面。
-Once the main UI's services are ready and it has rendered, it subscribes to the broadcast and reads once through the same atomic claim, passing links in arrival order to [System deep link](#system-deep-link).
-Setup 期间只暂存，已有导入或其它模态关闭后再继续。相同 URI 在排队或处理中合并；
+Once `BrandShell`'s services are ready and it has rendered, it subscribes to the broadcast and reads once through the same atomic claim, passing links in arrival order to [System deep link](#system-deep-link).
+While a link is being handled or a dialog is open, later links wait. 相同 URI 在排队或处理中合并；
 完成、取消、失败或页面销毁均结束本次领取，不自动重放，之后用户再次打开同一链接仍可导入。
 暂存只在内存中保留；Widget 导航链接仍由独立入口处理。
 
