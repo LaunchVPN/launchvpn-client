@@ -3146,5 +3146,21 @@
   "subscriptionLinkReplaceMessage": "The new subscription takes the place of the current one. If VPN is on, it reconnects.",
   "subscriptionLinkReplaceConfirm": "Replace",
   "subscriptionLinkAdding": "Adding subscription…",
-  "subscriptionLinkAdded": "Subscription added"
+  "subscriptionLinkAdded": "Subscription added",
+  "homeTab": "Home",
+  "homeStatusOff": "Not connected",
+  "homeHintOff": "Tap to connect",
+  "homeStatusConnecting": "Connecting…",
+  "homeHintConnecting": "Finding the fastest server",
+  "homeStatusReconnecting": "Reconnecting…",
+  "homeHintReconnecting": "Restoring the connection",
+  "homeStatusDisconnecting": "Disconnecting…",
+  "homeStatusConnected": "Connected",
+  "homeIpHidden": "IP hidden",
+  "homeConnectFailed": "Couldn't connect. Tap to try again",
+  "homeNoSubscription": "Open your subscription link from the bot or the website",
+  "homeDaysLeft": "{days, plural, one {{days} day} other {{days} days}}",
+  "@homeDaysLeft": {
+    "placeholders": {"days": {"type": "int"}}
+  }
 }

@@ -971,5 +971,18 @@
   "subscriptionLinkReplaceMessage": "Новая подписка займёт место текущей. Если VPN включён, он переподключится.",
   "subscriptionLinkReplaceConfirm": "Заменить",
   "subscriptionLinkAdding": "Добавляем подписку…",
-  "subscriptionLinkAdded": "Подписка добавлена"
+  "subscriptionLinkAdded": "Подписка добавлена",
+  "homeTab": "Главная",
+  "homeStatusOff": "Не подключено",
+  "homeHintOff": "Нажмите, чтобы подключиться",
+  "homeStatusConnecting": "Подключение…",
+  "homeHintConnecting": "Выбираем самый быстрый сервер",
+  "homeStatusReconnecting": "Переподключение…",
+  "homeHintReconnecting": "Восстанавливаем соединение",
+  "homeStatusDisconnecting": "Отключение…",
+  "homeStatusConnected": "Подключено",
+  "homeIpHidden": "IP скрыт",
+  "homeConnectFailed": "Не удалось подключиться. Нажмите, чтобы попробовать ещё раз",
+  "homeNoSubscription": "Откройте ссылку на подписку из бота или с сайта",
+  "homeDaysLeft": "{days, plural, one {{days} день} few {{days} дня} many {{days} дней} other {{days} дня}}"
 }
