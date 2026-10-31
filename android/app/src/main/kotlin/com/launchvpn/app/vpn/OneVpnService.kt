@@ -383,14 +383,14 @@ class OneVpnService : VpnService() {
             .setSubText(if (running) getString(R.string.notification_vpn_connected) else null)
             .setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(details))
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(openPendingIntent)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setOngoing(true)
             .addAction(
                 Notification.Action.Builder(
-                    Icon.createWithResource(this, R.mipmap.ic_launcher),
+                    Icon.createWithResource(this, R.drawable.ic_notification),
                     getString(R.string.notification_action_open),
                     openPendingIntent
                 ).build()
