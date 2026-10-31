@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -168,5 +169,18 @@ void main() {
         );
       }
     });
+  });
+
+  test('translations name the app by its brand name', () {
+    for (final file in Directory('lib/l10n').listSync().whereType<File>().where(
+      (file) => file.path.endsWith('.arb'),
+    )) {
+      final messages = (jsonDecode(file.readAsStringSync()) as Map)
+          .cast<String, Object?>();
+      for (final MapEntry(:key, :value) in messages.entries) {
+        if (key.startsWith('@')) continue;
+        expect(value, isNot(contains('OneXray')), reason: '${file.path}: $key');
+      }
+    }
   });
 }

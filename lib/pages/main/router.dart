@@ -10,6 +10,7 @@ import 'package:onexray/service/shared/event_bus/state.dart';
 import 'package:onexray/service/shared/event_bus/enum.dart';
 import 'package:onexray/service/settings/language/locale.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:onexray/core/brand.dart';
 
 class GoRouteApp extends StatelessWidget {
   const GoRouteApp({super.key});
@@ -33,7 +34,7 @@ class GoRouteApp extends StatelessWidget {
         final mobile = constraints.maxWidth <= AppLayout.mobileBreakpoint;
         return MaterialApp.router(
           debugShowCheckedModeBanner: false,
-          title: "OneXray",
+          title: Brand.name,
           themeMode: state.themeCode.themeMode,
           theme: AppTheme.material(Brightness.light, mobile: mobile),
           darkTheme: AppTheme.material(Brightness.dark, mobile: mobile),

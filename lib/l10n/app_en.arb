@@ -24,7 +24,7 @@
   "lanProxyRawJsonNotice": "Not available in Raw JSON mode. Configure sharing in your Raw JSON inbounds instead.",
   "lanProxySecurityHint": "No authentication. Enable only on trusted networks.",
   "lanProxyClientHint": "On other devices, enter this device's LAN IP address and this port in proxy settings. Sharing is available only while the VPN is running.",
-  "lanProxyNextStartNotice": "Applies the next time you start VPN from OneXray.",
+  "lanProxyNextStartNotice": "Applies the next time you start VPN from LaunchVPN.",
   "automationTitle": "External automation",
   "automationEnable": "Allow external automation",
   "automationSummary": "Start or stop VPN from Tasker, MacroDroid or Automate using an authenticated Android broadcast.",
@@ -33,8 +33,8 @@
   "automationParameters": "Broadcast parameters",
   "automationCopyParameters": "Copy parameters",
   "automationCopied": "Copied",
-  "automationConfigurationHint": "Uses the last generated configuration. After changes, connect once in OneXray first.",
-  "automationPermissionHint": "Complete VPN and local network permissions in OneXray first. If a request fails, tap the notification to resolve it. OneXray will not open automatically.",
+  "automationConfigurationHint": "Uses the last generated configuration. After changes, connect once in LaunchVPN first.",
+  "automationPermissionHint": "Complete VPN and local network permissions in LaunchVPN first. If a request fails, tap the notification to resolve it. LaunchVPN will not open automatically.",
   "automationHelp": "Automation setup and troubleshooting",
   "localApiTitle": "Local API",
   "localApiSummary": "Let local command-line tools check and compile configurations.",
@@ -50,7 +50,7 @@
   "localApiResetToken": "Reset token",
   "localApiTokenCopied": "Access token copied",
   "localApiTokenReset": "Access token reset. Copy the new token to your tools.",
-  "localApiAppRequired": "Available only while OneXray is running. Listens on 127.0.0.1 and does not start or stop the VPN.",
+  "localApiAppRequired": "Available only while LaunchVPN is running. Listens on 127.0.0.1 and does not start or stop the VPN.",
   "jsonEditorErrorLocation": "Line {line}, column {column}",
   "jsonEditorLocateError": "Locate error",
   "jsonEditorCopyError": "Copy error",
@@ -91,7 +91,7 @@
   },
   "subscriptionPackageCacheHint": "Provider data from the last subscription update, not live usage.",
   "trafficWidgetAdd": "Add traffic widget",
-  "trafficWidgetManualHint": "Add the OneXray traffic widget from your launcher's widget picker.",
+  "trafficWidgetManualHint": "Add the LaunchVPN traffic widget from your launcher's widget picker.",
   "backupAutomatic": "Automatic backup",
   "backupInterval": "Backup interval",
   "backupIntervalHint": "Applies only to automatic backups, independently of data updates.",
@@ -108,8 +108,8 @@
   "backupSwitchToLocal": "Switch to local backup",
   "backupChangeLocation": "Change backup location",
   "backupAndroidHint": "Choose or create one document in Google Drive using the system picker. Future backups overwrite that same document. Creating another file may produce a numbered copy.",
-  "backupWindowsHint": "Choose a folder already synchronized by OneDrive. OneXray writes one fixed backup file there; OneDrive manages synchronization.",
-  "backupAppleHint": "Use iCloud Drive or a file outside OneXray's data folder to keep the backup when removing the app. On iOS, choose a folder to create the file.",
+  "backupWindowsHint": "Choose a folder already synchronized by OneDrive. LaunchVPN writes one fixed backup file there; OneDrive manages synchronization.",
+  "backupAppleHint": "Use iCloud Drive or a file outside LaunchVPN's data folder to keep the backup when removing the app. On iOS, choose a folder to create the file.",
   "backupNotConfigured": "No backup location selected",
   "backupExistingTitle": "File already contains data",
   "backupExistingPrompt": "Restore the configurations in this file, or overwrite it with a backup of your current configurations.",
@@ -141,9 +141,9 @@
   "geodataPendingDownload": "Not downloaded. Download this source before using configurations that require it.",
   "routingNormalConfiguration": "Normal configuration",
   "routingAdvancedJson": "Advanced JSON",
-  "routingAdvancedSummary": "Edit DNS, inbounds and routing in JSON; use servers already imported into OneXray.",
+  "routingAdvancedSummary": "Edit DNS, inbounds and routing in JSON; use servers already imported into LaunchVPN.",
   "routingAdvancedTemplate": "Advanced routing template",
-  "routingAdvancedNotice": "Start outbounds with 1–3 empty objects for entry nodes. OneXray supplies selected servers, the proxy balancer, direct/block and platform settings. You control DNS and rule order. Round robin leaves unmatched traffic on the first entry node. With lowest-latency selection, managed VPN and LAN traffic also use the proxy balancer after your rules. Extra inbounds need explicit routing rules. See the documentation before editing.",
+  "routingAdvancedNotice": "Start outbounds with 1–3 empty objects for entry nodes. LaunchVPN supplies selected servers, the proxy balancer, direct/block and platform settings. You control DNS and rule order. Round robin leaves unmatched traffic on the first entry node. With lowest-latency selection, managed VPN and LAN traffic also use the proxy balancer after your rules. Extra inbounds need explicit routing rules. See the documentation before editing.",
   "routingFakeDns": "Use FakeDNS",
   "routingFakeDnsHint": "Return virtual IPs and restore domains before routing. Domains matched by local DNS still use real IPs. Cached DNS results may temporarily affect access after disconnecting or reconnecting.",
   "routingFragment": "Use Fragment",
@@ -226,7 +226,7 @@
   "resultFailed": "failed",
   "menuBarStartVpn": "Start VPN",
   "menuBarStopVpn": "Stop VPN",
-  "menuBarShowApp": "Show OneXray",
+  "menuBarShowApp": "Show LaunchVPN",
   "menuBarQuitApp": "Quit",
   "menuBarQuitAndStopVpn": "Quit and Stop VPN",
   "actionResult": "{action} {result}",
@@ -257,7 +257,7 @@
   "subscriptionMissingAgeSecretKey": "This encrypted subscription requires an age secret key",
   "subscriptionDecryptFailed": "Unable to decrypt the subscription with this age key",
   "subscriptionDecryptedTooLarge": "The decrypted subscription exceeds the 16 MiB limit",
-  "sharePageOneXrayLink": "OneXray link",
+  "sharePageOneXrayLink": "LaunchVPN link",
   "sharePageQRCode": "QRCode",
   "sharePageSaveQRCode": "Save QR image",
   "sharePageShowQRCode": "Show QR code",
@@ -266,11 +266,11 @@
   "settingsPageDesktop": "Desktop",
   "desktopSettingsPageSectionStartup": "Startup",
   "settingsPageLaunchAtLogin": "Launch at login",
-  "settingsPageLaunchAtLoginDescription": "Start OneXray when you sign in",
+  "settingsPageLaunchAtLoginDescription": "Start LaunchVPN when you sign in",
   "settingsPageStartHidden": "Start hidden",
   "settingsPageStartHiddenDescription": "Open without showing the main window",
   "settingsPageLaunchAtLoginRequiresApproval": "System approval required",
-  "settingsPageLaunchAtLoginApprovalDescription": "Allow OneXray in your system's login or startup app settings",
+  "settingsPageLaunchAtLoginApprovalDescription": "Allow LaunchVPN in your system's login or startup app settings",
   "settingsPageLaunchAtLoginUnavailable": "Launch at login is unavailable",
   "settingsPageLaunchAtLoginUpdateFailed": "Unable to update launch at login",
   "appUpdateAlreadyLatest": "You are using the latest version",
@@ -424,17 +424,17 @@
   "@prototypeYourRegion": {
     "description": "Approved prototype copy: Your region"
   },
-  "prototypeWelcome": "Welcome to OneXray",
+  "prototypeWelcome": "Welcome to LaunchVPN",
   "@prototypeWelcome": {
-    "description": "Approved prototype copy: Welcome to OneXray"
+    "description": "Approved prototype copy: Welcome to LaunchVPN"
   },
   "prototypeWelcomeSubtitle": "Your servers. A simpler connection.",
   "@prototypeWelcomeSubtitle": {
     "description": "Approved prototype copy: Your servers. A simpler connection."
   },
-  "prototypeNoDataCollection": "OneXray does not collect usage or browsing data.",
+  "prototypeNoDataCollection": "LaunchVPN does not collect usage or browsing data.",
   "@prototypeNoDataCollection": {
-    "description": "Approved prototype copy: OneXray does not collect usage or browsing data."
+    "description": "Approved prototype copy: LaunchVPN does not collect usage or browsing data."
   },
   "prototypeBringOwnServers": "You need to provide your own servers or subscriptions.",
   "@prototypeBringOwnServers": {
@@ -444,9 +444,9 @@
   "@prototypePrivacyPolicy": {
     "description": "Approved prototype copy: Privacy policy"
   },
-  "prototypeNoDataUpload": "OneXray does not collect or upload usage, browsing, or analytics data.",
+  "prototypeNoDataUpload": "LaunchVPN does not collect or upload usage, browsing, or analytics data.",
   "@prototypeNoDataUpload": {
-    "description": "Approved prototype copy: OneXray does not collect or upload usage, browsing, or analytics data."
+    "description": "Approved prototype copy: LaunchVPN does not collect or upload usage, browsing, or analytics data."
   },
   "prototypeConfiguredSourcesNotice": "You provide your own servers and subscriptions. Connections and data updates contact the sources you configure.",
   "@prototypeConfiguredSourcesNotice": {
@@ -480,9 +480,9 @@
   "@prototypeVpnPermission": {
     "description": "Approved prototype copy: VPN permission"
   },
-  "prototypeAllowAddVpn": "Allow OneXray to add a VPN configuration.",
+  "prototypeAllowAddVpn": "Allow LaunchVPN to add a VPN configuration.",
   "@prototypeAllowAddVpn": {
-    "description": "Approved prototype copy: Allow OneXray to add a VPN configuration."
+    "description": "Approved prototype copy: Allow LaunchVPN to add a VPN configuration."
   },
   "prototypeAuthorized": "Authorized",
   "@prototypeAuthorized": {
@@ -524,9 +524,9 @@
   "@prototypeInterfaceSelectionNotice": {
     "description": "Approved prototype copy: Select the network interface Xray uses to connect. Only the interface name is saved."
   },
-  "prototypeWhereWillYouUse": "Where will you use OneXray?",
+  "prototypeWhereWillYouUse": "Where will you use LaunchVPN?",
   "@prototypeWhereWillYouUse": {
-    "description": "Approved prototype copy: Where will you use OneXray?"
+    "description": "Approved prototype copy: Where will you use LaunchVPN?"
   },
   "prototypeChooseCountryRegion": "Choose your country or region",
   "@prototypeChooseCountryRegion": {
@@ -584,9 +584,9 @@
   "@prototypeGoToHome": {
     "description": "Approved prototype copy: Go to Home"
   },
-  "prototypeStartUsingOneXray": "Start using OneXray",
+  "prototypeStartUsingOneXray": "Start using LaunchVPN",
   "@prototypeStartUsingOneXray": {
-    "description": "Approved prototype copy: Start using OneXray"
+    "description": "Approved prototype copy: Start using LaunchVPN"
   },
   "prototypeFirstConnectionHint": "Add a subscription or import a server to make your first connection.",
   "@prototypeFirstConnectionHint": {
@@ -815,11 +815,11 @@
       }
     }
   },
-  "prototypeRawManagedSettingsNotice": "This complete configuration controls servers, routing, and Xray DNS when selected. TUN, interface, and logging remain managed by OneXray.",
+  "prototypeRawManagedSettingsNotice": "This complete configuration controls servers, routing, and Xray DNS when selected. TUN, interface, and logging remain managed by LaunchVPN.",
   "@prototypeRawManagedSettingsNotice": {
-    "description": "Approved prototype copy: This complete configuration controls servers, routing, and Xray DNS when selected. TUN, interface, and logging remain managed by OneXray."
+    "description": "Approved prototype copy: This complete configuration controls servers, routing, and Xray DNS when selected. TUN, interface, and logging remain managed by LaunchVPN."
   },
-  "prototypeRawAdditionalSettingsNotice": "Configure additional inbounds, DNS, FakeDNS, and advanced routing here. OneXray manages platform tunIn settings; other tunIn fields are preserved.",
+  "prototypeRawAdditionalSettingsNotice": "Configure additional inbounds, DNS, FakeDNS, and advanced routing here. LaunchVPN manages platform tunIn settings; other tunIn fields are preserved.",
   "@prototypeRawAdditionalSettingsNotice": {
     "description": "Raw JSON editor guidance: user tunIn fields are preserved except for platform-managed settings."
   },
@@ -876,13 +876,13 @@
   "@prototypeCompleteXrayConfiguration": {
     "description": "Approved prototype copy: Complete Xray configuration"
   },
-  "prototypeRawRuntimeOverrideNotice": "Uses the complete configuration. OneXray manages tunnel platform settings, logs and statistics.",
+  "prototypeRawRuntimeOverrideNotice": "Uses the complete configuration. LaunchVPN manages tunnel platform settings, logs and statistics.",
   "@prototypeRawRuntimeOverrideNotice": {
     "description": "Raw JSON runtime ownership notice, including the limited platform tunIn override."
   },
-  "prototypeAddServersToOneXray": "Add servers to OneXray",
+  "prototypeAddServersToOneXray": "Add servers to LaunchVPN",
   "@prototypeAddServersToOneXray": {
-    "description": "Approved prototype copy: Add servers to OneXray"
+    "description": "Approved prototype copy: Add servers to LaunchVPN"
   },
   "prototypeChooseAddMethod": "Choose how you want to add servers.",
   "@prototypeChooseAddMethod": {
@@ -916,9 +916,9 @@
   "@prototypeImportLinks": {
     "description": "Approved prototype copy: Import links"
   },
-  "prototypeImportLinksHint": "One link per line. Supports servers, subscriptions, and OneXray import links.",
+  "prototypeImportLinksHint": "One link per line. Supports servers, subscriptions, and LaunchVPN import links.",
   "@prototypeImportLinksHint": {
-    "description": "Approved prototype copy: One link per line. Supports servers, subscriptions, and OneXray import links."
+    "description": "Approved prototype copy: One link per line. Supports servers, subscriptions, and LaunchVPN import links."
   },
   "prototypeNoSupportedLinks": "No supported links were recognized. Check the input and try again.",
   "@prototypeNoSupportedLinks": {
@@ -932,7 +932,7 @@
   "@prototypeSubscriptionLink": {
     "description": "Approved prototype copy: Subscription link"
   },
-  "prototypeSubscriptionDescription": "A subscription is a server list supplied by your provider. OneXray can check it for updates later. Supports VMessAEAD / VLESS, Hysteria2, SS, SOCKS and Trojan share links.",
+  "prototypeSubscriptionDescription": "A subscription is a server list supplied by your provider. LaunchVPN can check it for updates later. Supports VMessAEAD / VLESS, Hysteria2, SS, SOCKS and Trojan share links.",
   "@prototypeSubscriptionDescription": {
     "description": "Subscription explanation and supported share formats, shown in both the add and edit forms."
   },
@@ -988,9 +988,9 @@
   "@prototypeNodeJsonHint": {
     "description": "Approved prototype copy: The root object must contain a non-empty outbounds array."
   },
-  "prototypeLocalInputPrivacy": "Input is processed on this device and is never sent to OneXray.",
+  "prototypeLocalInputPrivacy": "Input is processed on this device and is never sent to LaunchVPN.",
   "@prototypeLocalInputPrivacy": {
-    "description": "Approved prototype copy: Input is processed on this device and is never sent to OneXray."
+    "description": "Approved prototype copy: Input is processed on this device and is never sent to LaunchVPN."
   },
   "prototypeImportPreview": "Import preview",
   "@prototypeImportPreview": {
@@ -1249,9 +1249,9 @@
   "@prototypeCannotUndo": {
     "description": "Approved prototype copy: This change cannot be undone."
   },
-  "prototypeWhyConnectionTitle": "Why OneXray chose this connection",
+  "prototypeWhyConnectionTitle": "Why LaunchVPN chose this connection",
   "@prototypeWhyConnectionTitle": {
-    "description": "Approved prototype copy: Why OneXray chose this connection"
+    "description": "Approved prototype copy: Why LaunchVPN chose this connection"
   },
   "prototypeSmartConnectionChainReason": "Smart Routing keeps the selected regions direct. VPN traffic enters through {entries}, then exits through {exit}.",
   "@prototypeSmartConnectionChainReason": {
@@ -1305,9 +1305,9 @@
       }
     }
   },
-  "prototypeMultipleEntriesReason": "OneXray selected {count} entry servers with the best speed and availability. New connections are distributed between them.",
+  "prototypeMultipleEntriesReason": "LaunchVPN selected {count} entry servers with the best speed and availability. New connections are distributed between them.",
   "@prototypeMultipleEntriesReason": {
-    "description": "Approved prototype copy: OneXray selected {count} entry servers with the best speed and availability. New connections are distributed between them.",
+    "description": "Approved prototype copy: LaunchVPN selected {count} entry servers with the best speed and availability. New connections are distributed between them.",
     "placeholders": {
       "count": {
         "type": "int"
@@ -1332,9 +1332,9 @@
       }
     }
   },
-  "prototypeNoAnalyticsLocalLogs": "OneXray does not collect or upload analytics. Optional logs stay on this device.",
+  "prototypeNoAnalyticsLocalLogs": "LaunchVPN does not collect or upload analytics. Optional logs stay on this device.",
   "@prototypeNoAnalyticsLocalLogs": {
-    "description": "Approved prototype copy: OneXray does not collect or upload analytics. Optional logs stay on this device."
+    "description": "Approved prototype copy: LaunchVPN does not collect or upload analytics. Optional logs stay on this device."
   },
   "prototypeEditSubscription": "Edit subscription",
   "@prototypeEditSubscription": {
@@ -1712,9 +1712,9 @@
   "@prototypeLanguage": {
     "description": "Approved prototype copy: Language"
   },
-  "prototypeChooseLanguage": "Choose the language used throughout OneXray.",
+  "prototypeChooseLanguage": "Choose the language used throughout LaunchVPN.",
   "@prototypeChooseLanguage": {
-    "description": "Approved prototype copy: Choose the language used throughout OneXray."
+    "description": "Approved prototype copy: Choose the language used throughout LaunchVPN."
   },
   "prototypeLanguageSavedNotice": "Saving updates the language on every page. Server and subscription names stay as entered.",
   "@prototypeLanguageSavedNotice": {
@@ -1736,9 +1736,9 @@
   "@prototypeLaunchAtLogin": {
     "description": "Approved prototype copy: Launch at login"
   },
-  "prototypeLaunchAtLoginHint": "Start OneXray when you sign in",
+  "prototypeLaunchAtLoginHint": "Start LaunchVPN when you sign in",
   "@prototypeLaunchAtLoginHint": {
-    "description": "Approved prototype copy: Start OneXray when you sign in"
+    "description": "Approved prototype copy: Start LaunchVPN when you sign in"
   },
   "prototypeStartHidden": "Start hidden",
   "@prototypeStartHidden": {
@@ -1752,9 +1752,9 @@
   "@prototypeHideDockIcon": {
     "description": "Approved prototype copy: Hide Dock icon"
   },
-  "prototypeHideDockIconHint": "Hide OneXray from the Dock",
+  "prototypeHideDockIconHint": "Hide LaunchVPN from the Dock",
   "@prototypeHideDockIconHint": {
-    "description": "Approved prototype copy: Hide OneXray from the Dock"
+    "description": "Approved prototype copy: Hide LaunchVPN from the Dock"
   },
   "prototypeConfirmRestore": "Confirm restore",
   "@prototypeConfirmRestore": {
@@ -1768,9 +1768,9 @@
   "@prototypeAbout": {
     "description": "Approved prototype copy: About"
   },
-  "prototypeAboutOneXray": "About OneXray",
+  "prototypeAboutOneXray": "About LaunchVPN",
   "@prototypeAboutOneXray": {
-    "description": "Approved prototype copy: About OneXray"
+    "description": "Approved prototype copy: About LaunchVPN"
   },
   "prototypeAppInformation": "App information, documentation, and support.",
   "@prototypeAppInformation": {
@@ -1788,9 +1788,9 @@
   "@prototypeCheckAppUpdates": {
     "description": "Approved prototype copy: Check for app updates"
   },
-  "prototypeAboutUpdateAvailable": "About OneXray — update available",
+  "prototypeAboutUpdateAvailable": "About LaunchVPN — update available",
   "@prototypeAboutUpdateAvailable": {
-    "description": "Approved prototype copy: About OneXray — update available"
+    "description": "Approved prototype copy: About LaunchVPN — update available"
   },
   "prototypeVersionAvailable": "Version {version} is available",
   "@prototypeVersionAvailable": {
@@ -1801,9 +1801,9 @@
       }
     }
   },
-  "prototypeCheckNewVersions": "Check for new OneXray versions",
+  "prototypeCheckNewVersions": "Check for new LaunchVPN versions",
   "@prototypeCheckNewVersions": {
-    "description": "Approved prototype copy: Check for new OneXray versions"
+    "description": "Approved prototype copy: Check for new LaunchVPN versions"
   },
   "prototypeReleaseNotes": "Release notes",
   "@prototypeReleaseNotes": {
@@ -1817,9 +1817,9 @@
   "@prototypeDocumentation": {
     "description": "Approved prototype copy: Documentation"
   },
-  "prototypeRateOneXray": "Rate OneXray",
+  "prototypeRateOneXray": "Rate LaunchVPN",
   "@prototypeRateOneXray": {
-    "description": "Rate OneXray in the platform app store"
+    "description": "Rate LaunchVPN in the platform app store"
   },
   "prototypeCommunity": "Community",
   "@prototypeCommunity": {
@@ -1973,9 +1973,9 @@
   "@prototypeChooseInterface": {
     "description": "Approved prototype copy: Choose an interface"
   },
-  "prototypeManagedInterfaceNotice": "Selected during initial setup. OneXray manages this setting. Raw JSON cannot override it.",
+  "prototypeManagedInterfaceNotice": "Selected during initial setup. LaunchVPN manages this setting. Raw JSON cannot override it.",
   "@prototypeManagedInterfaceNotice": {
-    "description": "Approved prototype copy: Selected during initial setup. OneXray manages this setting. Raw JSON cannot override it."
+    "description": "Approved prototype copy: Selected during initial setup. LaunchVPN manages this setting. Raw JSON cannot override it."
   },
   "prototypeRestoreDefaults": "Restore default settings",
   "@prototypeRestoreDefaults": {
@@ -2150,9 +2150,9 @@
   "@prototypeReadOnlyRuntimeConfiguration": {
     "description": "Approved prototype copy: Read-only runtime configuration"
   },
-  "prototypeManagedLogNotice": "OneXray manages both Xray log files. log settings in Raw JSON do not apply.",
+  "prototypeManagedLogNotice": "LaunchVPN manages both Xray log files. log settings in Raw JSON do not apply.",
   "@prototypeManagedLogNotice": {
-    "description": "Approved prototype copy: OneXray manages both Xray log files. log settings in Raw JSON do not apply."
+    "description": "Approved prototype copy: LaunchVPN manages both Xray log files. log settings in Raw JSON do not apply."
   },
   "prototypeFollowing": "Following",
   "@prototypeFollowing": {
@@ -2662,9 +2662,9 @@
       }
     }
   },
-  "prototypeDeletedServerSelectionNotice": "If this server is currently selected or used as the VPN final exit, OneXray will return to Automatic selection.",
+  "prototypeDeletedServerSelectionNotice": "If this server is currently selected or used as the VPN final exit, LaunchVPN will return to Automatic selection.",
   "@prototypeDeletedServerSelectionNotice": {
-    "description": "Approved prototype copy: If this server is currently selected or used as the VPN final exit, OneXray will return to Automatic selection."
+    "description": "Approved prototype copy: If this server is currently selected or used as the VPN final exit, LaunchVPN will return to Automatic selection."
   },
   "prototypeDeletedRouteSmartNotice": "Smart Routing will be selected after this route is deleted.",
   "@prototypeDeletedRouteSmartNotice": {
@@ -2723,9 +2723,9 @@
   "@prototypeRoutingPreviewHint": {
     "description": "Approved prototype copy: With the current settings, traffic is handled like this."
   },
-  "prototypeRuleOrderMaintained": "Rule order is maintained by OneXray",
+  "prototypeRuleOrderMaintained": "Rule order is maintained by LaunchVPN",
   "@prototypeRuleOrderMaintained": {
-    "description": "Approved prototype copy: Rule order is maintained by OneXray"
+    "description": "Approved prototype copy: Rule order is maintained by LaunchVPN"
   },
   "prototypeCommonAdDomains": "Common ad domains",
   "@prototypeCommonAdDomains": {
@@ -2759,13 +2759,13 @@
   "@prototypeIconRed": {
     "description": "Approved prototype copy: Red"
   },
-  "prototypeHomeScreenIconHint": "Choose the OneXray icon shown on the Home Screen.",
+  "prototypeHomeScreenIconHint": "Choose the LaunchVPN icon shown on the Home Screen.",
   "@prototypeHomeScreenIconHint": {
-    "description": "Approved prototype copy: Choose the OneXray icon shown on the Home Screen."
+    "description": "Approved prototype copy: Choose the LaunchVPN icon shown on the Home Screen."
   },
-  "prototypeDockIconHint": "Choose the OneXray icon shown in the Dock.",
+  "prototypeDockIconHint": "Choose the LaunchVPN icon shown in the Dock.",
   "@prototypeDockIconHint": {
-    "description": "Approved prototype copy: Choose the OneXray icon shown in the Dock."
+    "description": "Approved prototype copy: Choose the LaunchVPN icon shown in the Dock."
   },
   "prototypeHomeScreenPreview": "Home Screen preview",
   "@prototypeHomeScreenPreview": {
@@ -2839,7 +2839,7 @@
     "description": "Approved prototype copy: Save QR image"
   },
   "@sharePageOneXrayLink": {
-    "description": "Approved prototype copy: OneXray link"
+    "description": "Approved prototype copy: LaunchVPN link"
   },
   "@desktopSettingsPageSectionStartup": {
     "description": "Approved prototype copy: Startup"
@@ -2848,7 +2848,7 @@
     "description": "Approved prototype copy: Launch at login"
   },
   "@settingsPageLaunchAtLoginDescription": {
-    "description": "Approved prototype copy: Start OneXray when you sign in"
+    "description": "Approved prototype copy: Start LaunchVPN when you sign in"
   },
   "@settingsPageStartHidden": {
     "description": "Approved prototype copy: Start hidden"
@@ -2895,9 +2895,9 @@
   "@buttonOpenSettings": {
     "description": "Approved prototype copy: Open system settings"
   },
-  "prototypeAboutPrivacyNotice": "OneXray does not collect or upload usage, traffic, or browsing data.",
+  "prototypeAboutPrivacyNotice": "LaunchVPN does not collect or upload usage, traffic, or browsing data.",
   "@prototypeAboutPrivacyNotice": {
-    "description": "Approved prototype copy: OneXray does not collect or upload usage, traffic, or browsing data."
+    "description": "Approved prototype copy: LaunchVPN does not collect or upload usage, traffic, or browsing data."
   },
   "prototypeEditServerHint": "Edit its Xray outbound JSON",
   "@prototypeEditServerHint": {
@@ -3081,7 +3081,7 @@
   "subscriptionUserAgentHint": "Uses a compatible UA by default; enter a custom value if needed.",
   "subscriptionUserAgentInvalid": "Use a single line of ASCII text for User-Agent.",
   "subscriptionRemnawaveFormatTitle": "Remnawave did not return JSON",
-  "subscriptionConvertToOrdinaryMessage": "Switch “{name}” to a regular subscription managed by OneXray?",
+  "subscriptionConvertToOrdinaryMessage": "Switch “{name}” to a regular subscription managed by LaunchVPN?",
   "subscriptionConvertToOrdinary": "Convert to regular subscription",
   "@subscriptionConvertToOrdinaryMessage": {
     "placeholders": {

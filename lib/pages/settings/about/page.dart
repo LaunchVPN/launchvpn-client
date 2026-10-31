@@ -14,6 +14,7 @@ import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/event_bus/state.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:onexray/pages/settings/widgets.dart';
+import 'package:onexray/core/brand.dart';
 
 class AboutOneXrayPage extends StatelessWidget {
   const AboutOneXrayPage({super.key});
@@ -64,7 +65,10 @@ class AboutOneXrayPage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 9),
-                          Text('OneXray', style: AppTypography.aboutBrandTitle),
+                          Text(
+                            Brand.name,
+                            style: AppTypography.aboutBrandTitle,
+                          ),
                           const SizedBox(height: 9),
                           Text(
                             l10n.prototypeCrossPlatformXrayClient,

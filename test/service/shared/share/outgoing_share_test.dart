@@ -52,8 +52,8 @@ void main() {
       ),
     );
     await share.sendText(const ShareText(title: '  ', text: ' exact text '));
-    expect(sent.title, 'OneXray');
-    expect(sent.subject, 'OneXray');
+    expect(sent.title, 'LaunchVPN');
+    expect(sent.subject, 'LaunchVPN');
     expect(sent.text, ' exact text ');
     expect(sent.sharePositionOrigin, isNull);
   });

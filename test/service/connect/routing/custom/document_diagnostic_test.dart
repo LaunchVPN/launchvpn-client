@@ -190,7 +190,7 @@ void main() {
                 },
               },
               ['dns', 'servers', 1, 'queryStrategy'],
-              'dns.servers[1].queryStrategy is managed by OneXray; use App settings',
+              'dns.servers[1].queryStrategy is managed by LaunchVPN; use App settings',
             ),
             (
               {
@@ -204,7 +204,7 @@ void main() {
                 },
               },
               ['routing', 'rules', 0, 'inboundTag', 1],
-              'routing.rules[0].inboundTag is managed by OneXray; use App settings',
+              'routing.rules[0].inboundTag is managed by LaunchVPN; use App settings',
             ),
             (
               {

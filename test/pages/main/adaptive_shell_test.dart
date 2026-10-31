@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/service/settings/language/locale.dart';
 import 'package:onexray/pages/main/adaptive_shell.dart';
@@ -193,7 +194,7 @@ void main() {
       const ValueKey('primary-desktop-navigation'),
     );
     expect(find.text('connect-content'), findsOneWidget);
-    expect(find.text('OneXray'), findsOneWidget);
+    expect(find.text(Brand.name), findsOneWidget);
     expect(
       tester.getSize(desktopNavigation).width,
       AppLayout.desktopSidebarWidth,
@@ -240,7 +241,7 @@ void main() {
         tester.getSize(desktopNavigation).width,
         AppLayout.compactSidebarWidth,
       );
-      expect(find.text('OneXray'), findsOneWidget);
+      expect(find.text(Brand.name), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
     await tester.binding.setSurfaceSize(const Size(720, 800));
@@ -452,7 +453,7 @@ void main() {
           lessThanOrEqualTo(landscape.width - padding.right),
         );
         expect(
-          tester.getSize(find.text('OneXray')).height,
+          tester.getSize(find.text(Brand.name)).height,
           lessThan(50 * scale),
         );
 

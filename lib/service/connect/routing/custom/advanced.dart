@@ -10,6 +10,7 @@ import 'package:onexray/service/connect/routing/options.dart';
 import 'package:onexray/service/shared/xray/runtime_inbounds.dart';
 import 'package:onexray/service/shared/xray/runtime_outbounds.dart';
 import 'package:onexray/service/shared/xray/fragment.dart';
+import 'package:onexray/core/brand.dart';
 
 /// Node-free JSON template. No ordinary model round-trip or implicit DNS rules.
 final class AdvancedRoutingProfile implements RoutingConfiguration {
@@ -412,7 +413,7 @@ void _keys(Map<String, dynamic> value, Set<String> allowed, List<Object> path) {
 bool _internal(String tag) =>
     tag.startsWith('app-entry-') || tag.startsWith('app-exit-');
 Never _managed(List<Object> path, {String? label}) => throw JsonDiagnostic(
-  '${label ?? _pathLabel(path)} is managed by OneXray; use App settings',
+  '${label ?? _pathLabel(path)} is managed by ${Brand.name}; use App settings',
   path: path,
 );
 void _definition(Object? tag, List<Object> path, Set<String> tags) {
