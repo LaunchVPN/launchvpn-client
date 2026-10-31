@@ -167,7 +167,7 @@ object VpnController {
                 }, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
             manager.notify(if (showToast && !stopping) OneVpnService.NOTIFICATION_ID else 4, Notification.Builder(context, channel)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setStyle(Notification.BigTextStyle().bigText(text))
