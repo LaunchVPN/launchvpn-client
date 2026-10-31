@@ -131,7 +131,8 @@ next launch or return to the app. If the app stays open after a refresh that was
 the hourly check, the next one can run up to an hour late. A failed refresh stays due and
 retries on the next check. When the panel refuses the device, the next automatic attempt waits a
 full interval, because a retry cannot help until the user frees a device. The wait is kept in
-memory, so a new launch asks once, and opening the subscription link always asks.
+memory, so a new launch asks once, and opening the subscription link always asks. Changing the
+request source clears the wait.
 
 订阅更新不要求 VPN；Geodata 自动更新仅在已确认连接时执行，连接成功后延迟 3 秒，期间断开则取消。
 等待订阅更新后及每个 Geodata 来源开始前复核连接；断开不启动后续来源，已经开始的更新完成文件事务。

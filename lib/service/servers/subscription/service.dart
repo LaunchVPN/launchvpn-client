@@ -314,6 +314,7 @@ class SubscriptionService {
     final problem = SubscriptionValidator.validate(input);
     if (problem != null) return problem;
     _refreshes.remove(id);
+    _refusedAt.remove(id);
     final generation = _beginUpdate(id);
     try {
       return await _database.transaction(() async {
@@ -552,6 +553,7 @@ class SubscriptionService {
         confirmOrdinary: confirmOrdinary,
       );
       _ensureCurrent(id, generation);
+      if (_deviceRefusals.contains(loaded.status)) _refusedAt[id] = _now();
       if (!loaded.hasUsableRows ||
           (!loaded.convertedToOrdinary &&
               loaded.mode.name != subscription.mode)) {
@@ -829,8 +831,7 @@ class SubscriptionService {
           ? refusedAt
           : sub.timestamp;
       if ((now.difference(last) + _dueTolerance).inHours >= interval) {
-        final result = await refreshSubscriptionResult(sub);
-        if (_deviceRefusals.contains(result.status)) _refusedAt[sub.id] = now;
+        await refreshSubscriptionResult(sub);
       }
     }
   }
