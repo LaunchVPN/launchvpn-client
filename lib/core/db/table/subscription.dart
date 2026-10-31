@@ -24,4 +24,8 @@ class Subscription extends Table {
   IntColumn get totalBytes => integer().nullable()();
   IntColumn get expireTimestamp => integer().nullable()();
   DateTimeColumn get userInfoUpdatedAt => dateTime().nullable()();
+
+  TextColumn get profileTitle => text().nullable()();
+  TextColumn get supportUrl => text().nullable()();
+  IntColumn get updateIntervalHours => integer().nullable()();
 }

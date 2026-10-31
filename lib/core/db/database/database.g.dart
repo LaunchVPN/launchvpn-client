@@ -781,6 +781,38 @@ class $SubscriptionTable extends Subscription
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _profileTitleMeta = const VerificationMeta(
+    'profileTitle',
+  );
+  @override
+  late final GeneratedColumn<String> profileTitle = GeneratedColumn<String>(
+    'profile_title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _supportUrlMeta = const VerificationMeta(
+    'supportUrl',
+  );
+  @override
+  late final GeneratedColumn<String> supportUrl = GeneratedColumn<String>(
+    'support_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _updateIntervalHoursMeta =
+      const VerificationMeta('updateIntervalHours');
+  @override
+  late final GeneratedColumn<int> updateIntervalHours = GeneratedColumn<int>(
+    'update_interval_hours',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -799,6 +831,9 @@ class $SubscriptionTable extends Subscription
     totalBytes,
     expireTimestamp,
     userInfoUpdatedAt,
+    profileTitle,
+    supportUrl,
+    updateIntervalHours,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -932,6 +967,30 @@ class $SubscriptionTable extends Subscription
         ),
       );
     }
+    if (data.containsKey('profile_title')) {
+      context.handle(
+        _profileTitleMeta,
+        profileTitle.isAcceptableOrUnknown(
+          data['profile_title']!,
+          _profileTitleMeta,
+        ),
+      );
+    }
+    if (data.containsKey('support_url')) {
+      context.handle(
+        _supportUrlMeta,
+        supportUrl.isAcceptableOrUnknown(data['support_url']!, _supportUrlMeta),
+      );
+    }
+    if (data.containsKey('update_interval_hours')) {
+      context.handle(
+        _updateIntervalHoursMeta,
+        updateIntervalHours.isAcceptableOrUnknown(
+          data['update_interval_hours']!,
+          _updateIntervalHoursMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1005,6 +1064,18 @@ class $SubscriptionTable extends Subscription
         DriftSqlType.dateTime,
         data['${effectivePrefix}user_info_updated_at'],
       ),
+      profileTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_title'],
+      ),
+      supportUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}support_url'],
+      ),
+      updateIntervalHours: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}update_interval_hours'],
+      ),
     );
   }
 
@@ -1032,6 +1103,9 @@ class SubscriptionData extends DataClass
   final int? totalBytes;
   final int? expireTimestamp;
   final DateTime? userInfoUpdatedAt;
+  final String? profileTitle;
+  final String? supportUrl;
+  final int? updateIntervalHours;
   const SubscriptionData({
     required this.id,
     required this.name,
@@ -1049,6 +1123,9 @@ class SubscriptionData extends DataClass
     this.totalBytes,
     this.expireTimestamp,
     this.userInfoUpdatedAt,
+    this.profileTitle,
+    this.supportUrl,
+    this.updateIntervalHours,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1087,6 +1164,15 @@ class SubscriptionData extends DataClass
     if (!nullToAbsent || userInfoUpdatedAt != null) {
       map['user_info_updated_at'] = Variable<DateTime>(userInfoUpdatedAt);
     }
+    if (!nullToAbsent || profileTitle != null) {
+      map['profile_title'] = Variable<String>(profileTitle);
+    }
+    if (!nullToAbsent || supportUrl != null) {
+      map['support_url'] = Variable<String>(supportUrl);
+    }
+    if (!nullToAbsent || updateIntervalHours != null) {
+      map['update_interval_hours'] = Variable<int>(updateIntervalHours);
+    }
     return map;
   }
 
@@ -1124,6 +1210,15 @@ class SubscriptionData extends DataClass
       userInfoUpdatedAt: userInfoUpdatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(userInfoUpdatedAt),
+      profileTitle: profileTitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(profileTitle),
+      supportUrl: supportUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(supportUrl),
+      updateIntervalHours: updateIntervalHours == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updateIntervalHours),
     );
   }
 
@@ -1151,6 +1246,11 @@ class SubscriptionData extends DataClass
       userInfoUpdatedAt: serializer.fromJson<DateTime?>(
         json['userInfoUpdatedAt'],
       ),
+      profileTitle: serializer.fromJson<String?>(json['profileTitle']),
+      supportUrl: serializer.fromJson<String?>(json['supportUrl']),
+      updateIntervalHours: serializer.fromJson<int?>(
+        json['updateIntervalHours'],
+      ),
     );
   }
   @override
@@ -1173,6 +1273,9 @@ class SubscriptionData extends DataClass
       'totalBytes': serializer.toJson<int?>(totalBytes),
       'expireTimestamp': serializer.toJson<int?>(expireTimestamp),
       'userInfoUpdatedAt': serializer.toJson<DateTime?>(userInfoUpdatedAt),
+      'profileTitle': serializer.toJson<String?>(profileTitle),
+      'supportUrl': serializer.toJson<String?>(supportUrl),
+      'updateIntervalHours': serializer.toJson<int?>(updateIntervalHours),
     };
   }
 
@@ -1193,6 +1296,9 @@ class SubscriptionData extends DataClass
     Value<int?> totalBytes = const Value.absent(),
     Value<int?> expireTimestamp = const Value.absent(),
     Value<DateTime?> userInfoUpdatedAt = const Value.absent(),
+    Value<String?> profileTitle = const Value.absent(),
+    Value<String?> supportUrl = const Value.absent(),
+    Value<int?> updateIntervalHours = const Value.absent(),
   }) => SubscriptionData(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -1216,6 +1322,11 @@ class SubscriptionData extends DataClass
     userInfoUpdatedAt: userInfoUpdatedAt.present
         ? userInfoUpdatedAt.value
         : this.userInfoUpdatedAt,
+    profileTitle: profileTitle.present ? profileTitle.value : this.profileTitle,
+    supportUrl: supportUrl.present ? supportUrl.value : this.supportUrl,
+    updateIntervalHours: updateIntervalHours.present
+        ? updateIntervalHours.value
+        : this.updateIntervalHours,
   );
   SubscriptionData copyWithCompanion(SubscriptionCompanion data) {
     return SubscriptionData(
@@ -1251,6 +1362,15 @@ class SubscriptionData extends DataClass
       userInfoUpdatedAt: data.userInfoUpdatedAt.present
           ? data.userInfoUpdatedAt.value
           : this.userInfoUpdatedAt,
+      profileTitle: data.profileTitle.present
+          ? data.profileTitle.value
+          : this.profileTitle,
+      supportUrl: data.supportUrl.present
+          ? data.supportUrl.value
+          : this.supportUrl,
+      updateIntervalHours: data.updateIntervalHours.present
+          ? data.updateIntervalHours.value
+          : this.updateIntervalHours,
     );
   }
 
@@ -1272,7 +1392,10 @@ class SubscriptionData extends DataClass
           ..write('downloadBytes: $downloadBytes, ')
           ..write('totalBytes: $totalBytes, ')
           ..write('expireTimestamp: $expireTimestamp, ')
-          ..write('userInfoUpdatedAt: $userInfoUpdatedAt')
+          ..write('userInfoUpdatedAt: $userInfoUpdatedAt, ')
+          ..write('profileTitle: $profileTitle, ')
+          ..write('supportUrl: $supportUrl, ')
+          ..write('updateIntervalHours: $updateIntervalHours')
           ..write(')'))
         .toString();
   }
@@ -1295,6 +1418,9 @@ class SubscriptionData extends DataClass
     totalBytes,
     expireTimestamp,
     userInfoUpdatedAt,
+    profileTitle,
+    supportUrl,
+    updateIntervalHours,
   );
   @override
   bool operator ==(Object other) =>
@@ -1315,7 +1441,10 @@ class SubscriptionData extends DataClass
           other.downloadBytes == this.downloadBytes &&
           other.totalBytes == this.totalBytes &&
           other.expireTimestamp == this.expireTimestamp &&
-          other.userInfoUpdatedAt == this.userInfoUpdatedAt);
+          other.userInfoUpdatedAt == this.userInfoUpdatedAt &&
+          other.profileTitle == this.profileTitle &&
+          other.supportUrl == this.supportUrl &&
+          other.updateIntervalHours == this.updateIntervalHours);
 }
 
 class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
@@ -1335,6 +1464,9 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
   final Value<int?> totalBytes;
   final Value<int?> expireTimestamp;
   final Value<DateTime?> userInfoUpdatedAt;
+  final Value<String?> profileTitle;
+  final Value<String?> supportUrl;
+  final Value<int?> updateIntervalHours;
   const SubscriptionCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -1352,6 +1484,9 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
     this.totalBytes = const Value.absent(),
     this.expireTimestamp = const Value.absent(),
     this.userInfoUpdatedAt = const Value.absent(),
+    this.profileTitle = const Value.absent(),
+    this.supportUrl = const Value.absent(),
+    this.updateIntervalHours = const Value.absent(),
   });
   SubscriptionCompanion.insert({
     this.id = const Value.absent(),
@@ -1370,6 +1505,9 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
     this.totalBytes = const Value.absent(),
     this.expireTimestamp = const Value.absent(),
     this.userInfoUpdatedAt = const Value.absent(),
+    this.profileTitle = const Value.absent(),
+    this.supportUrl = const Value.absent(),
+    this.updateIntervalHours = const Value.absent(),
   }) : name = Value(name),
        url = Value(url),
        timestamp = Value(timestamp);
@@ -1390,6 +1528,9 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
     Expression<int>? totalBytes,
     Expression<int>? expireTimestamp,
     Expression<DateTime>? userInfoUpdatedAt,
+    Expression<String>? profileTitle,
+    Expression<String>? supportUrl,
+    Expression<int>? updateIntervalHours,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1408,6 +1549,10 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
       if (totalBytes != null) 'total_bytes': totalBytes,
       if (expireTimestamp != null) 'expire_timestamp': expireTimestamp,
       if (userInfoUpdatedAt != null) 'user_info_updated_at': userInfoUpdatedAt,
+      if (profileTitle != null) 'profile_title': profileTitle,
+      if (supportUrl != null) 'support_url': supportUrl,
+      if (updateIntervalHours != null)
+        'update_interval_hours': updateIntervalHours,
     });
   }
 
@@ -1428,6 +1573,9 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
     Value<int?>? totalBytes,
     Value<int?>? expireTimestamp,
     Value<DateTime?>? userInfoUpdatedAt,
+    Value<String?>? profileTitle,
+    Value<String?>? supportUrl,
+    Value<int?>? updateIntervalHours,
   }) {
     return SubscriptionCompanion(
       id: id ?? this.id,
@@ -1446,6 +1594,9 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
       totalBytes: totalBytes ?? this.totalBytes,
       expireTimestamp: expireTimestamp ?? this.expireTimestamp,
       userInfoUpdatedAt: userInfoUpdatedAt ?? this.userInfoUpdatedAt,
+      profileTitle: profileTitle ?? this.profileTitle,
+      supportUrl: supportUrl ?? this.supportUrl,
+      updateIntervalHours: updateIntervalHours ?? this.updateIntervalHours,
     );
   }
 
@@ -1500,6 +1651,15 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
     if (userInfoUpdatedAt.present) {
       map['user_info_updated_at'] = Variable<DateTime>(userInfoUpdatedAt.value);
     }
+    if (profileTitle.present) {
+      map['profile_title'] = Variable<String>(profileTitle.value);
+    }
+    if (supportUrl.present) {
+      map['support_url'] = Variable<String>(supportUrl.value);
+    }
+    if (updateIntervalHours.present) {
+      map['update_interval_hours'] = Variable<int>(updateIntervalHours.value);
+    }
     return map;
   }
 
@@ -1521,7 +1681,10 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
           ..write('downloadBytes: $downloadBytes, ')
           ..write('totalBytes: $totalBytes, ')
           ..write('expireTimestamp: $expireTimestamp, ')
-          ..write('userInfoUpdatedAt: $userInfoUpdatedAt')
+          ..write('userInfoUpdatedAt: $userInfoUpdatedAt, ')
+          ..write('profileTitle: $profileTitle, ')
+          ..write('supportUrl: $supportUrl, ')
+          ..write('updateIntervalHours: $updateIntervalHours')
           ..write(')'))
         .toString();
   }
@@ -3142,6 +3305,9 @@ typedef $$SubscriptionTableCreateCompanionBuilder =
       Value<int?> totalBytes,
       Value<int?> expireTimestamp,
       Value<DateTime?> userInfoUpdatedAt,
+      Value<String?> profileTitle,
+      Value<String?> supportUrl,
+      Value<int?> updateIntervalHours,
     });
 typedef $$SubscriptionTableUpdateCompanionBuilder =
     SubscriptionCompanion Function({
@@ -3161,6 +3327,9 @@ typedef $$SubscriptionTableUpdateCompanionBuilder =
       Value<int?> totalBytes,
       Value<int?> expireTimestamp,
       Value<DateTime?> userInfoUpdatedAt,
+      Value<String?> profileTitle,
+      Value<String?> supportUrl,
+      Value<int?> updateIntervalHours,
     });
 
 class $$SubscriptionTableFilterComposer
@@ -3249,6 +3418,21 @@ class $$SubscriptionTableFilterComposer
 
   ColumnFilters<DateTime> get userInfoUpdatedAt => $composableBuilder(
     column: $table.userInfoUpdatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get profileTitle => $composableBuilder(
+    column: $table.profileTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get supportUrl => $composableBuilder(
+    column: $table.supportUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updateIntervalHours => $composableBuilder(
+    column: $table.updateIntervalHours,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3341,6 +3525,21 @@ class $$SubscriptionTableOrderingComposer
     column: $table.userInfoUpdatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get profileTitle => $composableBuilder(
+    column: $table.profileTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get supportUrl => $composableBuilder(
+    column: $table.supportUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updateIntervalHours => $composableBuilder(
+    column: $table.updateIntervalHours,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SubscriptionTableAnnotationComposer
@@ -3415,6 +3614,21 @@ class $$SubscriptionTableAnnotationComposer
     column: $table.userInfoUpdatedAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get profileTitle => $composableBuilder(
+    column: $table.profileTitle,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get supportUrl => $composableBuilder(
+    column: $table.supportUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updateIntervalHours => $composableBuilder(
+    column: $table.updateIntervalHours,
+    builder: (column) => column,
+  );
 }
 
 class $$SubscriptionTableTableManager
@@ -3464,6 +3678,9 @@ class $$SubscriptionTableTableManager
                 Value<int?> totalBytes = const Value.absent(),
                 Value<int?> expireTimestamp = const Value.absent(),
                 Value<DateTime?> userInfoUpdatedAt = const Value.absent(),
+                Value<String?> profileTitle = const Value.absent(),
+                Value<String?> supportUrl = const Value.absent(),
+                Value<int?> updateIntervalHours = const Value.absent(),
               }) => SubscriptionCompanion(
                 id: id,
                 name: name,
@@ -3481,6 +3698,9 @@ class $$SubscriptionTableTableManager
                 totalBytes: totalBytes,
                 expireTimestamp: expireTimestamp,
                 userInfoUpdatedAt: userInfoUpdatedAt,
+                profileTitle: profileTitle,
+                supportUrl: supportUrl,
+                updateIntervalHours: updateIntervalHours,
               ),
           createCompanionCallback:
               ({
@@ -3500,6 +3720,9 @@ class $$SubscriptionTableTableManager
                 Value<int?> totalBytes = const Value.absent(),
                 Value<int?> expireTimestamp = const Value.absent(),
                 Value<DateTime?> userInfoUpdatedAt = const Value.absent(),
+                Value<String?> profileTitle = const Value.absent(),
+                Value<String?> supportUrl = const Value.absent(),
+                Value<int?> updateIntervalHours = const Value.absent(),
               }) => SubscriptionCompanion.insert(
                 id: id,
                 name: name,
@@ -3517,6 +3740,9 @@ class $$SubscriptionTableTableManager
                 totalBytes: totalBytes,
                 expireTimestamp: expireTimestamp,
                 userInfoUpdatedAt: userInfoUpdatedAt,
+                profileTitle: profileTitle,
+                supportUrl: supportUrl,
+                updateIntervalHours: updateIntervalHours,
               ),
           withReferenceMapper: (p0) => p0
               .map(
