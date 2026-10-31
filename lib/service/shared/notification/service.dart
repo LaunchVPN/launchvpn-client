@@ -15,7 +15,7 @@ final class NotificationService {
 
   Future<void> asyncInit() async {
     const initializationSettingsAndroid = AndroidInitializationSettings(
-      'ic_launcher',
+      'ic_notification',
     );
     const initializationSettingsDarwin = DarwinInitializationSettings(
       requestAlertPermission: false,
