@@ -528,6 +528,7 @@ class SubscriptionService {
           status: SubscriptionUpdateResult.notFound,
         );
       }
+      final requestedAt = DateTime.now();
       final loaded = await _loadRows(
         SubscriptionInput(
           name: subscription.name,
@@ -561,6 +562,7 @@ class SubscriptionService {
         subscription,
         loaded,
         generation,
+        requestedAt,
       );
       if (result.success && loaded.mode == SubscriptionMode.appManaged) {
         _schedulePing(id);
@@ -586,6 +588,7 @@ class SubscriptionService {
     SubscriptionData expected,
     SubscriptionLoadResult loaded,
     int generation,
+    DateTime requestedAt,
   ) {
     final db = _database;
     return db.transaction(() async {
@@ -615,7 +618,7 @@ class SubscriptionService {
             ? SubscriptionPanel.generic.name
             : current.panel,
         mode: loaded.mode.name,
-        timestamp: DateTime.now(),
+        timestamp: requestedAt,
         uploadBytes: Value(loaded.userInfo?.uploadBytes),
         downloadBytes: Value(loaded.userInfo?.downloadBytes),
         totalBytes: Value(loaded.userInfo?.totalBytes),

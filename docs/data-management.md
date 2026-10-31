@@ -123,8 +123,9 @@ macOS System Extension 因跨容器传输是唯一例外：清单纳入根目录
 启动、回前台、每小时和真实连接边沿检查到期；重复 connected 不重复调度。
 
 A subscription whose panel sent `Profile-Update-Interval` is due after that many hours, and the
-setting above applies only when the panel sent none. A subscription counts as due five minutes
-early, so an hourly check does not miss an hourly interval by the length of the last download.
+setting above applies only when the panel sent none. The interval counts from the start of the
+last successful download. A subscription counts as due five minutes early, so an hourly check
+does not miss an hourly interval by a few seconds.
 Checks run only while the app is running, so a refresh missed while it was closed runs on the
 next launch or return to the app. If the app stays open after a refresh that was not started by
 the hourly check, the next one can run up to an hour late. A failed refresh stays due and

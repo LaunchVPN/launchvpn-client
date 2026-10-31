@@ -212,6 +212,23 @@ void main() {
       expect(downloads, ['due']);
     });
 
+    test('the interval counts from the start of the download', () async {
+      await addSource('slow', const Duration(hours: 2), 1);
+      final started = DateTime.now();
+      final subject = service((_) async {
+        await Future<void>.delayed(const Duration(milliseconds: 2100));
+        return loaded(null);
+      });
+
+      await subject.refreshOutdatedSubscription(autoUpdateState: settings);
+
+      final source = (await database.subscriptionDao.allRows).single;
+      expect(
+        source.timestamp.difference(started),
+        lessThan(const Duration(seconds: 1)),
+      );
+    });
+
     test('a refresh restarts the panel interval', () async {
       await addSource('source', const Duration(hours: 2), 1);
       final downloads = <String>[];
