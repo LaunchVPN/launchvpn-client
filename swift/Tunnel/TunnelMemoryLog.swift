@@ -14,7 +14,7 @@ final class TunnelMemoryLog: @unchecked Sendable {
 
     private let queue = DispatchQueue(label: "com.launchvpn.dev.tunnel.memory", qos: .utility)
     private let availableAtLaunch = os_proc_available_memory()
-    private let timeFormat: DateFormatter = {
+    private lazy var timeFormat: DateFormatter = {
         let format = DateFormatter()
         format.locale = Locale(identifier: "en_US_POSIX")
         format.dateFormat = "yyyy/MM/dd HH:mm:ss"

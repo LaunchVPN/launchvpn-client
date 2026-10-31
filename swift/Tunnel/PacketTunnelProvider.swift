@@ -87,6 +87,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
                 completionHandler(nil)
             } catch {
                 #if os(iOS)
+                memoryLog.stop()
                 AppleWidgetPublisher.publish(.unknown)
                 #endif
                 completionHandler(error)

@@ -399,7 +399,7 @@ iOS terminates the tunnel extension when it exceeds its memory limit, which drop
 While Xray file logs are on, the extension appends `[Memory]` lines to `error.log` from
 `os_proc_available_memory`: at launch, once Xray has started, on stop, every 30 seconds, and
 whenever the session's lowest value falls by 1 MB. `lowest` is the headroom to compare between
-configurations. With logs off, the extension samples and writes nothing.
+configurations. With logs off, it writes nothing and starts no timer.
 
 ### IPv6 策略
 
