@@ -9,6 +9,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/core/network/client.dart';
+import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/service/servers/subscription/model.dart';
 import 'package:onexray/service/servers/subscription/reader.dart';
 import 'package:onexray/service/servers/subscription/service.dart';
@@ -100,6 +101,12 @@ void main() {
             withFiles: (action) => action(),
           ),
           schedulePing: pings.add,
+          readDeviceIdentity: () async => DeviceIdentity(
+            hwid: 'device-hwid',
+            os: 'Android',
+            osVersion: '16',
+            model: 'Pixel 9',
+          ),
         );
         const url = 'https://provider.example/sub/example?token=test';
         final inserted = await service.insertSubscription(
@@ -111,8 +118,7 @@ void main() {
             mode: SubscriptionMode.providerManaged,
             ageSecretKey: 'test-secret',
             agePublicKey: 'test-public',
-            hwidEnabled: true,
-            hwid: 'test-device',
+            hwid: 'stored-per-subscription-identity',
           ),
         );
         expect(inserted.error, isNull);
@@ -139,7 +145,10 @@ void main() {
           expect(request.uri.toString(), url);
           expect(request.headers['User-Agent'], expectedUserAgent);
           expect(request.headers['X-Age-Public-Key'], 'test-public');
-          expect(request.headers['x-hwid'], 'test-device');
+          expect(request.headers['x-hwid'], 'device-hwid');
+          expect(request.headers['x-device-os'], 'Android');
+          expect(request.headers['x-ver-os'], '16');
+          expect(request.headers['x-device-model'], 'Pixel 9');
         }
         expect(pings, isEmpty);
         expect(client.options.headers['User-Agent'], defaultUserAgent);

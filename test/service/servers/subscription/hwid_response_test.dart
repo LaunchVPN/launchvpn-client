@@ -19,6 +19,13 @@ import 'package:onexray/service/shared/event_bus/service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late AppDatabase database;
+  const hwid = 'device-hwid';
+  Future<DeviceIdentity?> readDevice() async => DeviceIdentity(
+    hwid: hwid,
+    os: 'Android',
+    osVersion: '16',
+    model: 'Pixel 9',
+  );
 
   setUp(() {
     final bus = AppEventBus();
@@ -105,6 +112,7 @@ void main() {
             database: database,
             client: NetClient.forTesting(client),
             schedulePing: pings.add,
+            readDeviceIdentity: readDevice,
           );
 
           final result = await service.refreshSubscriptionResult(row);
@@ -117,7 +125,7 @@ void main() {
                 .id,
             nodeId,
           );
-          expect(requests.single.headers['x-hwid'], isNull);
+          expect(requests.single.headers['x-hwid'], hwid);
           expect(pings, isEmpty);
           expect(AppEventBus.instance.state.downloading, isFalse);
 
@@ -125,15 +133,13 @@ void main() {
             const SubscriptionInput(
               name: 'New',
               url: 'https://provider.example/another',
-              hwidEnabled: true,
-              hwid: 'draft-device-identity',
               ageSecretKey: 'secret',
               agePublicKey: 'public',
             ),
           );
           expect(added.status, expected);
           expect(await database.subscriptionDao.allRows, [row]);
-          expect(requests.last.headers['x-hwid'], 'draft-device-identity');
+          expect(requests.last.headers['x-hwid'], hwid);
           expect(requests.last.headers['X-Age-Public-Key'], 'public');
           expect(pings, isEmpty);
           if (expected != SubscriptionUpdateResult.downloadFailed) {
@@ -153,7 +159,40 @@ void main() {
   }
 
   test(
-    'normal responses use saved consent; active alone never opts in',
+    'an unreadable device identity fails the refresh before any request',
+    () async {
+      final id = await database.subscriptionDao.insertRow(
+        SubscriptionCompanion.insert(
+          name: 'Provider',
+          url: 'https://provider.example/sub',
+          timestamp: DateTime.utc(2025),
+        ),
+      );
+      final row = (await database.subscriptionDao.searchRow(id))!;
+      final requests = <RequestOptions>[];
+      final client = Dio()
+        ..httpClientAdapter = _ResponseAdapter((options) {
+          requests.add(options);
+          return ResponseBody.fromString('', 200);
+        });
+      addTearDown(client.close);
+      final service = SubscriptionService.forTesting(
+        database: database,
+        client: NetClient.forTesting(client),
+        schedulePing: (_) {},
+        readDeviceIdentity: () async => throw StateError('Keychain is locked'),
+      );
+
+      final result = await service.refreshSubscriptionResult(row);
+
+      expect(result.status, SubscriptionUpdateResult.downloadFailed);
+      expect(requests, isEmpty);
+      expect(await database.subscriptionDao.searchRow(id), row);
+    },
+  );
+
+  test(
+    'every request sends the device identity, whatever the source setting',
     () async {
       const channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.onexray.BridgeHostApi.invoke',
@@ -211,6 +250,7 @@ void main() {
         database: database,
         client: NetClient.forTesting(client),
         schedulePing: pings.add,
+        readDeviceIdentity: readDevice,
       );
       for (final enabled in [false, true]) {
         userInfoHeader = 'upload=100; download=200; total=1000; expire=0';
@@ -227,7 +267,7 @@ void main() {
         expect(inserted.success, isTrue);
         final row = (await database.subscriptionDao.searchRow(inserted.subId))!;
         expect(row.hwidEnabled, enabled);
-        expect(sent.last, row.hwid);
+        expect(sent.last, hwid);
         expect(row.hwid, enabled ? isNotNull : isNull);
         expect(row.uploadBytes, 100);
         expect(row.downloadBytes, 200);
@@ -244,7 +284,7 @@ void main() {
         expect(refreshed.totalBytes, isNull);
         expect(refreshed.expireTimestamp, isNull);
         expect(refreshed.userInfoUpdatedAt, isNull);
-        expect(sent.last, row.hwid);
+        expect(sent.last, hwid);
         if (enabled) {
           await service.saveSubscriptionInput(
             row.id,
@@ -254,7 +294,7 @@ void main() {
             (await service.refreshSubscriptionResult(row)).success,
             isTrue,
           );
-          expect(sent.last, isNull);
+          expect(sent.last, hwid);
           expect(
             (await database.subscriptionDao.searchRow(row.id))!.hwid,
             row.hwid,

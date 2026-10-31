@@ -34,7 +34,7 @@ Remnawave 在 Age 解密后先判断是否为 JSON：有效 JSON 统一进入完
 前台刷新遇到同一来源或整批的在途后台刷新时，补入确认回调，复用当前请求及解析结果；仅后台刷新仍不弹出确认。
 解析成功才在保存节点的同一事务中将 `panel/mode` 改为 `generic/appManaged`，保留来源 ID、URL、UA、Age 和 HWID。
 取消、普通解析失败或后台无交互上下文时保持来源与缓存原样；确认期间的来源编辑或删除仍使旧更新失效。
-仅使用用户输入的 HTTPS URL，不追加 `/json`，不通过 Accept 假定响应格式或替用户开启 HWID。
+仅使用用户输入的 HTTPS URL，不追加 `/json`，不通过 Accept 假定响应格式。
 
 新来源的“根据订阅格式”是尚未决定的输入状态：普通节点默认 App 管理，完整 JSON 默认提供方模式；
 成功导入后保存明确的两种 mode，已有来源刷新保持原 mode；确认从 Remnawave 转为普通订阅时改为 App 管理。
@@ -86,18 +86,36 @@ panel/mode 变化同样使旧导入失效，迟到响应不得覆盖编辑、切
 列表摘要和分组详情明确“提供方信息、非实时”，无数据隐藏区域，缺字段显示未提供。
 套餐不是 App 流量，不增加请求、定时器或周期，不进入分享和备份；恢复后由正常更新重新获取。
 
-### 可选设备标识（HWID）
+### Device identity (HWID)
 
-发送开关默认关闭，由用户明确开启，响应和导入链接不能代为开启；Age 与 HWID 可组合。
-标识是每订阅独立的随机 UUID，不读取硬件/广告/系统标识。生成后永久保留于该来源：
-关闭再开、改名、改 URL/提供商、失败重试、重启和升级均不重建；删除重建或清理数据才产生新标识。
-跨源编辑 URL 时关闭发送开关，用户重新开启仍发送原标识。删除本地来源不删除提供商设备记录。
+Panels return a placeholder instead of servers when a request has no `x-hwid`, so
+every subscription download sends the device identity without a user setting:
 
-只在本次请求附加 `x-hwid`，不写共享客户端默认头，不附加型号/系统版本。
-HTTPS 同源重定向保留，跨源移除且后续跳回也不恢复；同源按协议/主机/端口判断。
-Age 公钥沿用同一下载上下文；HTTPS 降级拒绝。跨源服务须由用户直接配置并授权该 URL。
-先检查 HWID 拒绝头再解析正文，HTTP 200 空正文/占位节点不能绕过拒绝；非成功状态也保留具体拒绝原因。
-HWID、发送开关不随普通分享发出，也不参与 Xray 配置或 VPN 校验。
+| Header | Android | iOS |
+|---|---|---|
+| `x-hwid` | `ANDROID_ID` | UUID stored in the Keychain |
+| `x-device-os` | `Android` | `iOS` |
+| `x-ver-os` | OS release | OS version |
+| `x-device-model` | `Build.MODEL` | Machine identifier, such as `iPhone12,1` |
+
+The identity is per device, so all subscriptions on a phone count as one device, and
+it survives reinstalling the app. `ANDROID_ID` is scoped to the signing key, so a
+build signed with another key is a new device. The Keychain item is excluded from
+backups, so a restored phone is a new device. A Keychain or `ANDROID_ID` failure fails
+the download and keeps the saved servers; it never creates a new ID.
+
+The `hwidEnabled` and `hwid` source fields stay in the database, backups and upstream
+form, but they no longer affect requests. Device details that a header cannot carry
+are dropped; the HWID is always sent. Linux and Windows have no native identity and
+send nothing.
+
+The headers apply to this request only and never become shared client defaults.
+They survive HTTPS same-origin redirects and are removed for good on a cross-origin
+redirect, even if the chain returns to the source. Same origin means the same scheme,
+host and port. Age public keys keep the same download context and HTTPS downgrades are
+rejected. HWID rejection headers are checked before the body is parsed, so an HTTP 200
+placeholder cannot bypass a rejection, and a non-success status keeps its specific
+reason. The identity is not part of normal shares, Xray configuration or VPN validation.
 
 ## Age 加密订阅
 
