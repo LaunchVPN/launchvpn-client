@@ -984,5 +984,7 @@
   "homeIpHidden": "IP پنهان است",
   "homeConnectFailed": "اتصال برقرار نشد. برای تلاش دوباره ضربه بزنید",
   "homeNoSubscription": "پیوند اشتراک را از ربات یا وب‌سایت باز کنید",
-  "homeDaysLeft": "{days, plural, other {{days} روز}}"
+  "homeDaysLeft": "{days, plural, other {{days} روز}}",
+  "homeStatusUncertain": "ممکن است VPN هنوز روشن باشد",
+  "homeHintUncertain": "برای خاموش کردن ضربه بزنید"
 }

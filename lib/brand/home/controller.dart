@@ -16,6 +16,9 @@ enum HomeStatus {
   connected,
   disconnecting,
   failed,
+
+  /// A command failed and the tunnel may still be up.
+  uncertain,
 }
 
 enum HomeRequest { connect, disconnect }
@@ -30,6 +33,7 @@ class HomeState {
     this.view = const ConnectionView(),
     ServerCatalog? catalog,
     this.request,
+    this.restoring = false,
   }) : catalog = catalog ?? ServerCatalog();
 
   final ConnectionView view;
@@ -39,6 +43,10 @@ class HomeState {
   // a phase. The tap is acknowledged at once without claiming a native state.
   final HomeRequest? request;
 
+  /// The session fell from connected to connecting, so the system is restoring
+  /// it. The same phase after off is a start from outside the app.
+  final bool restoring;
+
   HomeStatus get status {
     if (request == HomeRequest.disconnect) return HomeStatus.disconnecting;
     if (request == HomeRequest.connect) return HomeStatus.connecting;
@@ -46,14 +54,21 @@ class HomeState {
       ConnectionPhase.connected => HomeStatus.connected,
       ConnectionPhase.disconnecting => HomeStatus.disconnecting,
       ConnectionPhase.preparing => HomeStatus.connecting,
-      // Our own start publishes this phase without a runtime. A runtime means
-      // the system is restoring a session that was already up.
       ConnectionPhase.connecting =>
-        view.runtime == null ? HomeStatus.connecting : HomeStatus.reconnecting,
+        restoring ? HomeStatus.reconnecting : HomeStatus.connecting,
       ConnectionPhase.disconnected || ConnectionPhase.failed =>
-        _attemptFailed ? HomeStatus.failed : HomeStatus.off,
+        view.canDisconnect
+            ? HomeStatus.uncertain
+            : _attemptFailed
+            ? HomeStatus.failed
+            : HomeStatus.off,
     };
   }
+
+  /// Our own start publishes no runtime and can be cancelled. With a runtime no
+  /// command is running here, so only a disconnect can stop it.
+  bool get _cancellable =>
+      request == HomeRequest.connect || view.runtime == null;
 
   bool get _attemptFailed =>
       view.failed &&
@@ -65,8 +80,7 @@ class HomeState {
 
   bool get canToggle => switch (status) {
     HomeStatus.disconnecting => false,
-    HomeStatus.off ||
-    HomeStatus.failed => subscription != null || view.canDisconnect,
+    HomeStatus.off || HomeStatus.failed => subscription != null,
     _ => true,
   };
 
@@ -92,15 +106,23 @@ class HomeState {
     return left <= 0 ? 0 : (left / Duration.millisecondsPerDay).ceil();
   }
 
-  HomeState copyWith({ConnectionView? view, ServerCatalog? catalog}) =>
-      HomeState(
-        view: view ?? this.view,
-        catalog: catalog ?? this.catalog,
-        request: request,
-      );
+  HomeState copyWith({
+    ConnectionView? view,
+    ServerCatalog? catalog,
+    bool? restoring,
+  }) => HomeState(
+    view: view ?? this.view,
+    catalog: catalog ?? this.catalog,
+    request: request,
+    restoring: restoring ?? this.restoring,
+  );
 
-  HomeState _withRequest(HomeRequest? request) =>
-      HomeState(view: view, catalog: catalog, request: request);
+  HomeState _withRequest(HomeRequest? request) => HomeState(
+    view: view,
+    catalog: catalog,
+    request: request,
+    restoring: restoring,
+  );
 }
 
 class HomeController extends PageCubit<HomeState> {
@@ -122,8 +144,20 @@ class HomeController extends PageCubit<HomeState> {
   final Future<PlatformPermissionResult> Function() _requestPermission;
   StreamSubscription<ServerCatalog>? _catalog;
 
-  void _connectionChanged() =>
-      emit(state.copyWith(view: coordinator.state.value));
+  void _connectionChanged() {
+    final view = coordinator.state.value;
+    final wasUp =
+        state.view.phase == ConnectionPhase.connected || state.restoring;
+    emit(
+      state.copyWith(
+        view: view,
+        restoring:
+            wasUp &&
+            view.phase == ConnectionPhase.connecting &&
+            view.runtime != null,
+      ),
+    );
+  }
 
   Future<void> initialize() async {
     _catalog ??= ServerCatalog.watch(_db).listen(
@@ -137,18 +171,14 @@ class HomeController extends PageCubit<HomeState> {
   Future<void> toggle(ConnectionActionRunner run) async {
     if (!state.canToggle) return;
     switch (state.status) {
-      case HomeStatus.connecting:
+      case HomeStatus.connecting when state._cancellable:
         coordinator.cancel();
-      case HomeStatus.connected || HomeStatus.reconnecting:
-        await _perform(HomeRequest.disconnect, run, coordinator.disconnect);
       case HomeStatus.off || HomeStatus.failed:
-        if (state.view.canDisconnect) {
-          await _perform(HomeRequest.disconnect, run, coordinator.disconnect);
-        } else {
-          await _perform(HomeRequest.connect, run, _connect);
-        }
+        await _perform(HomeRequest.connect, run, _connect);
       case HomeStatus.disconnecting:
         break;
+      default:
+        await _perform(HomeRequest.disconnect, run, coordinator.disconnect);
     }
   }
 

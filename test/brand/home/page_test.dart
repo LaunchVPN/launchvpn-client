@@ -206,14 +206,54 @@ void main() {
     await pumpHome(tester);
     await addSubscription(tester);
     runtime = _runtime(DateTime.now());
-    status = VpnStatus.connecting;
+    status = VpnStatus.connected;
     await tester.runAsync(() async {
+      await coordinator.refresh();
+      status = VpnStatus.connecting;
       await coordinator.refresh();
       await pumpEventQueue(times: 20);
     });
     await tester.pump();
 
     expect(find.text('Переподключение…'), findsOneWidget);
+    expect(toggleState(tester), ConnectToggleState.transitioning);
+  });
+
+  testWidgets('a failed attempt says so and keeps the knob off', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+    await addSubscription(tester);
+
+    coordinator.state.value = const ConnectionView(
+      phase: ConnectionPhase.failed,
+      issue: 'startFailed',
+    );
+    await tester.pump();
+
+    expect(find.text('Не подключено'), findsOneWidget);
+    expect(
+      find.text('Не удалось подключиться. Нажмите, чтобы попробовать ещё раз'),
+      findsOneWidget,
+    );
+    expect(toggleState(tester), ConnectToggleState.off);
+  });
+
+  testWidgets('a failed stop warns instead of claiming the VPN is off', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+    await addSubscription(tester);
+
+    coordinator.state.value = const ConnectionView(
+      phase: ConnectionPhase.failed,
+      issue: 'stopFailed',
+    );
+    await tester.pump();
+
+    expect(find.text('VPN может быть включён'), findsOneWidget);
+    expect(find.text('Нажмите, чтобы отключить'), findsOneWidget);
+    expect(find.text('Не подключено'), findsNothing);
     expect(toggleState(tester), ConnectToggleState.transitioning);
   });
 

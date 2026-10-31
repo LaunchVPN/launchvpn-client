@@ -9,6 +9,7 @@ import 'package:onexray/service/shared/share/service.dart';
 abstract final class BrandRoutes {
   static const home = '/home';
   static const settings = '/settings';
+  static const homeBranch = 0;
 }
 
 /// The whole navigable app. Upstream's pages are not registered, so nothing can

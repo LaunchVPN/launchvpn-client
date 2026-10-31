@@ -12,14 +12,16 @@ upstream pages kept for merging. They are not reachable in this build.
 - The interface has one dark theme, `lib/brand/theme.dart`, and one language, Russian.
   `BrandTheme.palette` also feeds upstream's Material and Shad themes, so shared dialogs and
   toasts match. Manrope and Unbounded are bundled with their licenses in `assets/fonts/`.
-- Home's toggle follows `ConnectionCoordinator`. A tap connects, cancels a connection in
-  progress, or disconnects. `connecting` with a runtime means the system is restoring a live
-  session and reads as a reconnect. iOS reports this while reasserting. Android keeps its
-  tunnel up across a network change and reports nothing, so it stays connected.
-- A failed attempt shows a toast with the reason and a persistent short message. The designed
-  error screen replaces this later. Without a subscription the toggle is disabled.
-- The location card names the running configuration, or otherwise the first one the automatic
-  selection would use. Settings has only its title until its rows arrive.
+- Home's toggle follows `ConnectionCoordinator`. A tap connects, cancels our own connection in
+  progress, or disconnects, which also stops a start from outside the app.
+- A session falling from connected to connecting reads as a reconnect. No platform emits that
+  today on a network change: Android keeps its tunnel up and reports nothing, and the iOS tunnel
+  never sets `reasserting`. So after a network change the screen stays connected.
+- A failed attempt shows a toast with the reason and a persistent short message. If a command
+  failed and the tunnel may still be up, the screen says so and a tap disconnects. Without a
+  subscription the toggle is disabled.
+- The location card names the server in use, or otherwise the first one the automatic selection
+  would use. Settings shows only its title.
 - `BrandShell` owns service startup and retry, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published.
 

@@ -26,6 +26,16 @@ abstract final class BrandRadii {
   static const full = 999.0;
 }
 
+abstract final class BrandShadows {
+  static const knob = [
+    BoxShadow(
+      color: Color.fromRGBO(0, 0, 0, 0.3),
+      offset: Offset(0, 4),
+      blurRadius: 12,
+    ),
+  ];
+}
+
 abstract final class BrandSpacing {
   static const page = 24.0;
 }
@@ -56,6 +66,9 @@ abstract final class BrandText {
     fontSize: 15,
     height: 22 / 15,
     color: BrandColors.muted,
+  );
+  static final timer = hint.copyWith(
+    fontFeatures: const [FontFeature.tabularFigures()],
   );
   static const cardTitle = TextStyle(
     fontFamily: _body,

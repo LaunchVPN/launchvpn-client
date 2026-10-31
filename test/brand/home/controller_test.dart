@@ -216,8 +216,11 @@ void main() {
 
     test('a tap during a reconnect stops the VPN', () async {
       await addSubscription();
-      status = VpnStatus.connecting;
+      status = VpnStatus.connected;
       await coordinator.refresh();
+      await settle();
+      status = VpnStatus.connecting;
+      statusEvents.add(VpnStatus.connecting);
       await settle();
       expect(controller.state.status, HomeStatus.reconnecting);
 
@@ -228,10 +231,50 @@ void main() {
 
       expect(controller.state.status, HomeStatus.off);
     });
+
+    test('a start from outside the app is not a reconnect', () async {
+      await addSubscription();
+      status = VpnStatus.connecting;
+      await coordinator.refresh();
+      await settle();
+
+      expect(controller.state.status, HomeStatus.connecting);
+    });
+
+    test('a tap stops a start from outside the app', () async {
+      await addSubscription();
+      status = VpnStatus.connecting;
+      await coordinator.refresh();
+      await settle();
+
+      status = VpnStatus.disconnected;
+      stop.complete(const HostConnection(VpnStatus.disconnected));
+      await controller.toggle(run);
+      await settle();
+
+      expect(controller.state.status, HomeStatus.off);
+    });
+
+    test('a failed disconnect never claims the VPN is off', () async {
+      await addSubscription();
+      status = VpnStatus.connected;
+      await coordinator.refresh();
+      await settle();
+
+      final stopping = controller.toggle(run);
+      await settle();
+      stop.completeError(StateError('no answer'));
+      await stopping;
+      await settle();
+
+      expect(failures, hasLength(1));
+      expect(controller.state.status, HomeStatus.uncertain);
+      expect(controller.state.canToggle, isTrue);
+    });
   });
 
   group('subscription data', () {
-    test('names the running configuration', () async {
+    test('names the server in use', () async {
       await addSubscription();
       status = VpnStatus.connected;
       await coordinator.refresh();

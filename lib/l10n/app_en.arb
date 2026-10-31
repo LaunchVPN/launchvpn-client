@@ -3162,5 +3162,7 @@
   "homeDaysLeft": "{days, plural, one {{days} day} other {{days} days}}",
   "@homeDaysLeft": {
     "placeholders": {"days": {"type": "int"}}
-  }
+  },
+  "homeStatusUncertain": "VPN may still be on",
+  "homeHintUncertain": "Tap to turn it off"
 }

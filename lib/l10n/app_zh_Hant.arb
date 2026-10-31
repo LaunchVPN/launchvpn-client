@@ -984,5 +984,7 @@
   "homeIpHidden": "IP 已隱藏",
   "homeConnectFailed": "連線失敗，點擊重試",
   "homeNoSubscription": "請從機器人或網站開啟訂閱連結",
-  "homeDaysLeft": "{days, plural, other {{days} 天}}"
+  "homeDaysLeft": "{days, plural, other {{days} 天}}",
+  "homeStatusUncertain": "VPN 可能仍在執行",
+  "homeHintUncertain": "點擊關閉"
 }

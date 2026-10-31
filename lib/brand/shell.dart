@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:onexray/brand/router.dart';
 import 'package:onexray/brand/subscription_link_flow.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
@@ -103,7 +104,7 @@ class _BrandShellState extends State<BrandShell> {
   }
 
   Future<void> _handleQuickAction(ShortCutAction action) async {
-    widget.navigationShell.goBranch(0);
+    widget.navigationShell.goBranch(BrandRoutes.homeBranch);
     final coordinator = ConnectionCoordinator.instance;
     final command = switch (action) {
       ShortCutAction.startVpn => coordinator.connect,

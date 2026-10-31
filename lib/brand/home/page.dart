@@ -6,7 +6,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/toggle.dart';
+import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/theme.dart';
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
 
@@ -94,7 +96,7 @@ class _Header extends StatelessWidget {
       const LaunchMark.logo(color: BrandColors.accent),
       const SizedBox(width: 8),
       const Text(
-        'launchvpn',
+        Brand.wordmark,
         style: BrandText.wordmark,
         textScaler: TextScaler.noScaling,
       ),
@@ -158,6 +160,7 @@ class _Hero extends StatelessWidget {
       HomeStatus.reconnecting => l.homeStatusReconnecting,
       HomeStatus.connected => l.homeStatusConnected,
       HomeStatus.disconnecting => l.homeStatusDisconnecting,
+      HomeStatus.uncertain => l.homeStatusUncertain,
     };
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -203,6 +206,7 @@ class _Hint extends StatelessWidget {
       HomeStatus.reconnecting => text(l.homeHintReconnecting),
       HomeStatus.connected => _ConnectedHint(since: state.connectedSince),
       HomeStatus.disconnecting => const SizedBox.shrink(),
+      HomeStatus.uncertain => text(l.homeHintUncertain),
     };
   }
 }
@@ -249,9 +253,7 @@ class _ConnectedHintState extends State<_ConnectedHint> {
     return Text(
       since == null ? hidden : '${_elapsed(since)} · $hidden',
       textAlign: TextAlign.center,
-      style: BrandText.hint.copyWith(
-        fontFeatures: const [FontFeature.tabularFigures()],
-      ),
+      style: BrandText.timer,
     );
   }
 }
