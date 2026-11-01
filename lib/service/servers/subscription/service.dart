@@ -612,6 +612,7 @@ class SubscriptionService {
       final references = await referenceReader();
       _ensureCurrent(expected.id, generation);
       final selected = await _selectedGroup(current.id);
+      final rows = await _withLastDelays(current.id, loaded.rows);
       await db.subscriptionDao.deleteConfigs(
         current.id,
         protectedIds: {
@@ -619,11 +620,7 @@ class SubscriptionService {
           ...references.runningIds,
         },
       );
-      await ConfigWriter.writeRowsBatchInTransaction(
-        db,
-        loaded.rows,
-        current.id,
-      );
+      await ConfigWriter.writeRowsBatchInTransaction(db, rows, current.id);
       if (selected != null) await _moveSelection(selected);
       final updated = current.copyWith(
         panel: loaded.convertedToOrdinary
@@ -650,6 +647,26 @@ class SubscriptionService {
         count: loaded.count,
       );
     });
+  }
+
+  /// A group cannot be measured while the tunnel is up, so a refreshed one keeps
+  /// the last delay of its old row until it can.
+  Future<List<CoreConfigCompanion>> _withLastDelays(
+    int subId,
+    List<CoreConfigCompanion> rows,
+  ) async {
+    final type = CoreConfigType.Remnawave.name;
+    final delays = {
+      for (final row in await _database.coreConfigDao.allActiveServerRows())
+        if (row.subId == subId && row.type == type) row.name: row.delay,
+    };
+    return [
+      for (final row in rows)
+        if (row.type.value == type && delays.containsKey(row.name.value))
+          row.copyWith(delay: Value(delays[row.name.value]!))
+        else
+          row,
+    ];
   }
 
   /// The stored selection when it is a provider group of this subscription.

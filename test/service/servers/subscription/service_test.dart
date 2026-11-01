@@ -979,6 +979,17 @@ void main() {
       expect(stored.connection.trafficMode, TrafficMode.allVpn);
     });
 
+    test('a fresh group keeps the last delay of the row it replaces', () async {
+      final old = (await database.coreConfigDao.searchRow(germany))!;
+      await database.coreConfigDao.updateRow(old.copyWith(delay: 516));
+
+      await refreshed([_provider('Germany'), _provider('Poland')])
+          .refreshSubscriptionResult(source);
+
+      expect((await rowNamed('Germany')).delay, 516);
+      expect((await rowNamed('Poland')).delay, PingDelayConstants.unknown);
+    });
+
     test('ignores a selected ordinary server', () async {
       final manual = await database.coreConfigDao.insertRow(_node('Manual'));
       final selection = ServerSelection.server(manual);
