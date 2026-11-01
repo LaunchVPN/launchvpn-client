@@ -325,7 +325,8 @@ class _Harness {
         withFiles: (action) => action(),
       ),
       schedulePing: pings.add,
-      readReferences: () => SubscriptionNodeReferences(fixedId: protectedId),
+      readReferences: () =>
+          SubscriptionNodeReferences(startingIds: {?protectedId}),
     );
   }
 

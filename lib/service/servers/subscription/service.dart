@@ -15,6 +15,7 @@ import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/advanced/xray/data_update/state.dart';
+import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/shared/db/config_writer.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
@@ -610,15 +611,18 @@ class SubscriptionService {
       }
       final references = await referenceReader();
       _ensureCurrent(expected.id, generation);
+      final selected = await _selectedGroup(current.id);
+      final rows = await _withLastDelays(current.id, loaded.rows);
+      final groups = await _groupIds(current.id);
       await db.subscriptionDao.deleteConfigs(
         current.id,
-        protectedIds: references.protectedIds,
+        protectedIds: {
+          ...references.protectedIds.where((id) => !groups.contains(id)),
+          ...references.startingIds,
+        },
       );
-      await ConfigWriter.writeRowsBatchInTransaction(
-        db,
-        loaded.rows,
-        current.id,
-      );
+      await ConfigWriter.writeRowsBatchInTransaction(db, rows, current.id);
+      if (selected != null) await _moveSelection(selected);
       final updated = current.copyWith(
         panel: loaded.convertedToOrdinary
             ? SubscriptionPanel.generic.name
@@ -645,6 +649,79 @@ class SubscriptionService {
       );
     });
   }
+
+  /// Provider groups are not kept for what is selected or running: a started
+  /// session no longer reads its row, and a kept copy would hold old servers.
+  Future<Set<int>> _groupIds(int subId) async => {
+    for (final row in await _database.coreConfigDao.allActiveServerRows())
+      if (row.subId == subId && row.type == CoreConfigType.Remnawave.name)
+        row.id,
+  };
+
+  /// A group cannot be measured while the tunnel is up, so a refreshed one keeps
+  /// the last delay of its old row until it can.
+  Future<List<CoreConfigCompanion>> _withLastDelays(
+    int subId,
+    List<CoreConfigCompanion> rows,
+  ) async {
+    final type = CoreConfigType.Remnawave.name;
+    final delays = {
+      for (final row in await _database.coreConfigDao.allActiveServerRows())
+        if (row.subId == subId && row.type == type) row.name: row.delay,
+    };
+    return [
+      for (final row in rows)
+        if (row.type.value == type && delays.containsKey(row.name.value))
+          row.copyWith(delay: Value(delays[row.name.value]!))
+        else
+          row,
+    ];
+  }
+
+  /// The stored selection when it is a provider group of this subscription.
+  /// Unlike an ordinary server, it must not stay on the group's old servers.
+  Future<CoreConfigData?> _selectedGroup(int subId) async {
+    final selection = (await _storedConfiguration()).connection.selection;
+    if (selection.kind != SelectionKind.server) return null;
+    final row = await _database.coreConfigDao.searchRow(selection.id!);
+    return row?.subId == subId && row?.type == CoreConfigType.Remnawave.name
+        ? row
+        : null;
+  }
+
+  /// Puts the selection on the fresh row of the same group. A group the panel
+  /// dropped falls back to automatic, as a removed server does.
+  Future<void> _moveSelection(CoreConfigData selected) async {
+    final rows = await _database.coreConfigDao.allActiveServerRows();
+    final fresh = rows.where(
+      (row) =>
+          row.id > selected.id &&
+          row.type == selected.type &&
+          row.subId == selected.subId &&
+          row.name == selected.name,
+    );
+    final stored = await _storedConfiguration();
+    await _database.connectionConfigDao.commit(
+      configurationJson: ConnectionConfiguration(
+        policy: stored.policy,
+        connection: ConnectionSettings.fromJson({
+          ...stored.connection.toJson(),
+          'selection':
+              (fresh.isEmpty
+                      ? const ServerSelection.automatic()
+                      : ServerSelection.server(fresh.last.id))
+                  .toJson(),
+        }),
+      ).encode(),
+    );
+  }
+
+  Future<ConnectionConfiguration> _storedConfiguration() async =>
+      ConnectionConfiguration.fromJson(
+        jsonDecode(
+          (await _database.connectionConfigDao.read()).configurationJson,
+        ) as Map<String, dynamic>,
+      );
 
   static bool _sameSource(
     SubscriptionData current,

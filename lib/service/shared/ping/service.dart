@@ -9,6 +9,7 @@ import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
+import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/core/tools/empty.dart';
 import 'package:onexray/service/shared/ping/batch.dart';
 import 'package:onexray/service/shared/ping/state.dart';
@@ -213,18 +214,85 @@ class PingService {
       await db.transaction(() async {
         for (var index = 0; index < results.length; index++) {
           final result = results[index];
-          final delay = result.success
-              ? result.delay
-              : result.delay == PingDelayConstants.timeout
-              ? PingDelayConstants.timeout
-              : PingDelayConstants.error;
-          await _updateRow(db, batchRows[index], delay);
+          await _updateRow(db, batchRows[index], _storedDelay(result));
         }
       });
       AppEventBus.instance.updatePingResults({
         for (var index = 0; index < results.length; index++)
           batchRows[index].id: results[index],
       });
+    }
+  }
+
+  static int _storedDelay(PingBatchResult result) => result.success
+      ? result.delay
+      : result.delay == PingDelayConstants.timeout
+      ? PingDelayConstants.timeout
+      : PingDelayConstants.error;
+
+  /// Measures what the locations screen lists, using only the app's own core.
+  /// A provider group takes the delay of its first server that answers, trying
+  /// at most [_locationAttempts] of them, so one sweep stays seconds long. A
+  /// cancelled sweep leaves the last delays of the rows it did not finish.
+  Future<void> pingLocations(
+    List<CoreConfigData> rows, {
+    bool Function()? isCancelled,
+  }) => _enqueuePing(() async {
+    final db = _database;
+    final pingState = PingState();
+    await pingState.readFromPreferences();
+    final servers = {for (final row in rows) row: _locationServers(row)};
+    final unanswered = <CoreConfigData, PingBatchResult>{
+      for (final row in rows) row: PingBatchResult.failed(),
+    };
+    for (var attempt = 0; attempt < _locationAttempts; attempt++) {
+      final round = unanswered.keys
+          .where((row) => attempt < servers[row]!.length)
+          .toList();
+      for (final slice in round.slices(PingBatchRunner.maxBatchSize)) {
+        if (_pingQueue.isPaused || (isCancelled?.call() ?? false)) return;
+        final results = await (_batchOverride ?? PingBatchRunner.run)([
+          for (final row in slice) PingBatchSource(servers[row]![attempt]),
+        ], pingState);
+        await db.transaction(() async {
+          for (var index = 0; index < results.length; index++) {
+            unanswered[slice[index]] = results[index];
+            if (results[index].success) {
+              await _updateRow(db, slice[index], results[index].delay);
+              unanswered.remove(slice[index]);
+            }
+          }
+        });
+      }
+    }
+    await db.transaction(() async {
+      for (final entry in unanswered.entries) {
+        await _updateRow(db, entry.key, _storedDelay(entry.value));
+      }
+    });
+  });
+
+  static const _locationAttempts = 3;
+  static const _notServers = {'freedom', 'blackhole', 'dns', 'loopback'};
+
+  List<String> _locationServers(CoreConfigData row) {
+    try {
+      if (CoreConfigType.fromString(row.type) != CoreConfigType.Remnawave) {
+        return [encodeSingleOutbound(readOutboundFromDbData(row))];
+      }
+      final outbounds =
+          ResolvedProfile.fromRow(row).config['outbounds'] as List;
+      return [
+        for (final outbound in outbounds.cast<Map<String, dynamic>>())
+          // A chained server cannot be reached on its own.
+          if (!_notServers.contains(outbound['protocol']) &&
+              outboundDialerProxy(outbound)?.isNotEmpty != true &&
+              outboundProxyTag(outbound)?.isNotEmpty != true)
+            encodeSingleOutbound(outbound),
+      ];
+    } on FormatException catch (error) {
+      ygLogger('Read location servers failed (${error.runtimeType})');
+      return const [];
     }
   }
 

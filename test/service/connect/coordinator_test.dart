@@ -1573,6 +1573,45 @@ void main() {
     expect((await coordinator.readReferences()).runningIds, {2, 3, 4});
   });
 
+  test('a chosen group counts as starting only until it runs', () async {
+    final profiles = await _providerRows(db);
+    final selected = profiles.$1;
+    final pending = _providerRuntime(selected);
+    late ConnectionCoordinator coordinator;
+    late Set<int> whilePreparing;
+    var status = VpnStatus.disconnected;
+    ConnectionRuntime? running;
+    coordinator = await _initialize(
+      ConnectionCoordinator(
+        database: db,
+        readRuntime: () async => running,
+        inspect: (runtime, {observedStatus}) async =>
+            HostConnection(status, runtime: runtime),
+        prepare: (_, _) async {
+          whilePreparing = (await coordinator.readReferences()).startingIds;
+          return pending;
+        },
+        start: (runtime) async {
+          status = VpnStatus.connected;
+          running = runtime;
+          return HostConnection(VpnStatus.connected, runtime: runtime);
+        },
+      ),
+    );
+    final next = ConnectionConfiguration(
+      connection: ConnectionSettings(
+        selection: ServerSelection.server(selected.id),
+      ),
+    );
+
+    await coordinator.apply(next, connect: true);
+
+    expect(whilePreparing, {selected.id});
+    final references = await coordinator.readReferences();
+    expect(references.startingIds, isEmpty);
+    expect(references.runningIds, {selected.id});
+  });
+
   test(
     'a provider profile stays protected before preparation completes',
     () async {

@@ -988,5 +988,10 @@
   "homeStatusUncertain": "VPN 可能仍在运行",
   "homeHintUncertain": "点击关闭",
   "homePresetSmart": "智能",
-  "homePresetAllVpn": "全部走 VPN"
+  "homePresetAllVpn": "全部走 VPN",
+  "locationsTitle": "位置",
+  "locationsAutomatic": "自动",
+  "locationsOthers": "国家和服务",
+  "locationsDelay": "{ms} 毫秒",
+  "locationsNoAnswer": "无响应"
 }

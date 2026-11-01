@@ -116,6 +116,126 @@ void main() {
     );
   });
 
+  group('locations', () {
+    Future<CoreConfigData> group(String name, List<String> servers) async {
+      final id = await db.coreConfigDao.insertRow(
+        _node(name, subId: 1).copyWith(
+          type: const Value('Remnawave'),
+          data: Value(
+            base64Encode(
+              utf8.encode(
+                jsonEncode({
+                  'outbounds': [
+                    for (final server in servers)
+                      {'tag': server, 'protocol': 'vless'},
+                    {'tag': 'direct', 'protocol': 'freedom'},
+                    {'tag': 'block', 'protocol': 'blackhole'},
+                  ],
+                }),
+              ),
+            ),
+          ),
+        ),
+      );
+      return (await db.coreConfigDao.searchRow(id))!;
+    }
+
+    String tag(PingBatchSource source) =>
+        jsonDecode(source.xrayJson)['outbounds'][0]['tag'] as String;
+
+    test('a group takes the delay of its first server that answers', () async {
+      final germany = await group('Germany', ['de1', 'de2', 'de3', 'de4']);
+      final poland = await group('Poland', ['pl1', 'pl2']);
+      final asked = <String>[];
+      final service = PingService.forTesting(
+        database: db,
+        runBatch: (sources, _) async => [
+          for (final source in sources)
+            () {
+              asked.add(tag(source));
+              return tag(source) == 'de2' || tag(source) == 'pl1'
+                  ? const PingBatchResult(true, 120, '')
+                  : const PingBatchResult(
+                      false,
+                      PingDelayConstants.timeout,
+                      'timeout',
+                    );
+            }(),
+        ],
+      );
+
+      await service.pingLocations([germany, poland]);
+
+      expect(asked, ['de1', 'pl1', 'de2']);
+      expect((await db.coreConfigDao.searchRow(germany.id))!.delay, 120);
+      expect((await db.coreConfigDao.searchRow(poland.id))!.delay, 120);
+    });
+
+    test('a group gives up after three silent servers', () async {
+      final germany = await group('Germany', ['de1', 'de2', 'de3', 'de4']);
+      final asked = <String>[];
+      final service = PingService.forTesting(
+        database: db,
+        runBatch: (sources, _) async {
+          asked.addAll(sources.map(tag));
+          return [
+            for (final _ in sources)
+              const PingBatchResult(
+                false,
+                PingDelayConstants.timeout,
+                'timeout',
+              ),
+          ];
+        },
+      );
+
+      await service.pingLocations([germany]);
+
+      expect(asked, ['de1', 'de2', 'de3']);
+      expect(
+        (await db.coreConfigDao.searchRow(germany.id))!.delay,
+        PingDelayConstants.timeout,
+      );
+    });
+
+    test('never asks more than a native batch can hold', () async {
+      final rows = [
+        for (var index = 0; index < 7; index++)
+          await group('Group $index', ['server$index']),
+      ];
+      final sizes = <int>[];
+      final service = PingService.forTesting(
+        database: db,
+        runBatch: (sources, _) async {
+          sizes.add(sources.length);
+          return _successes(sources.length);
+        },
+      );
+
+      await service.pingLocations(rows);
+
+      expect(sizes, [5, 2]);
+    });
+
+    test('a cancelled sweep keeps the last delay', () async {
+      final germany = await group('Germany', ['de1']);
+      await db.coreConfigDao.updateRow(germany.copyWith(delay: 80));
+      var runs = 0;
+      final service = PingService.forTesting(
+        database: db,
+        runBatch: (sources, _) async {
+          runs++;
+          return _successes(sources.length);
+        },
+      );
+
+      await service.pingLocations([germany], isCancelled: () => true);
+
+      expect(runs, 0);
+      expect((await db.coreConfigDao.searchRow(germany.id))!.delay, 80);
+    });
+  });
+
   test('explicit forced probes exclude provider source caches and complete profiles', () async {
     final appSource = await db.subscriptionDao.insertRow(
       SubscriptionCompanion.insert(

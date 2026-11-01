@@ -5,6 +5,7 @@ import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/servers/locations.dart';
 import 'package:onexray/service/shared/ping/service.dart';
 import 'package:onexray/service/connect/routing/custom/configuration.dart';
 
@@ -156,7 +157,7 @@ class ConnectionResolver {
                   )
                   .toList()
                 ..sort((a, b) => a.id.compareTo(b.id));
-          for (final row in profiles) {
+          for (final row in LocationList.currentRows(profiles)) {
             try {
               result.complete(ResolvedConnectionTarget.profile(row));
               return;

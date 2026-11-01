@@ -22,6 +22,16 @@ App 下载统一默认使用 `v2rayN/<LaunchVPN 版本> <完整 LaunchVPN UA>`�
 编辑只保存来源设置并使旧请求失效，不下载、不替换缓存或热切换当前运行，也不要求已经有可用缓存。
 更新保护准备中、待启动、运行中、固定选择、最终出口及收藏原行，保留它们的 ID 与配置原文，并插入全部新结果；
 同名新旧条目允许并存，保护行不计入本轮导入数。保护解除后后续更新清理旧行，不原地覆盖运行配置。
+
+Provider groups are the exception to the protection above. A selected or running group is replaced
+like any other, because a started session no longer reads its row and a kept copy would hold old
+servers; the session itself keeps running on them until it reconnects. In the same transaction, the
+selection moves to the fresh row with the same name, or back to automatic if the panel dropped the
+group. Only a connection still starting keeps the row it reads (`SubscriptionNodeReferences.startingIds`).
+While such a row exists, `LocationList.currentRows` makes the newest row of a name the current one,
+so two groups the panel gives the same name show as one. A fresh group keeps the last delay of the
+row it replaces.
+
 普通活动节点进入自动测速队列，不等待测速；提供方完整配置不进入单 outbound 测速。
 
 ### 面板与配置使用方式

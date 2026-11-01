@@ -145,6 +145,8 @@ class ConnectionCoordinator with WidgetsBindingObserver {
         ));
   }
 
+  Stream<void> get configurationChanges => db.connectionConfigDao.watch();
+
   Future<ConnectionConfiguration> get configuration async =>
       ConnectionConfiguration.fromJson(
         jsonDecode((await db.connectionConfigDao.read()).configurationJson)
@@ -345,6 +347,7 @@ class ConnectionCoordinator with WidgetsBindingObserver {
           ? stored.connection.selection.id
           : null,
       finalExitId: stored.connection.smart.finalExitId,
+      startingIds: {...?_pendingRuntime?.nodeIds, ..._preparingNodeIds},
     );
   }
 
@@ -468,14 +471,20 @@ class ConnectionCoordinator with WidgetsBindingObserver {
     await apply(next, connect: true);
   }
 
-  /// Stores the mode before a running session restarts with it, so a failed or
-  /// cancelled reconnect does not take back the user's choice.
-  Future<void> applyTrafficMode(TrafficMode mode) async {
+  Future<void> applyTrafficMode(TrafficMode mode) =>
+      _storeThenRestart({'trafficMode': mode.name});
+
+  Future<void> applySelection(ServerSelection selection) =>
+      _storeThenRestart({'selection': selection.toJson()});
+
+  /// Stores the change before a running session restarts with it, so a failed
+  /// or cancelled reconnect does not take back the user's choice.
+  Future<void> _storeThenRestart(Map<String, dynamic> change) async {
     final current = await configuration;
     final next = ConnectionConfiguration(
       connection: ConnectionSettings.fromJson({
         ...current.connection.toJson(),
-        'trafficMode': mode.name,
+        ...change,
       }),
       policy: current.policy,
     );
@@ -549,7 +558,11 @@ class ConnectionCoordinator with WidgetsBindingObserver {
         }
         bool touchedHost = false;
         try {
-          _preparingNodeIds = {...?old?.nodeIds};
+          final selection = next.connection.selection;
+          _preparingNodeIds = {
+            ...?old?.nodeIds,
+            if (selection.kind == SelectionKind.server) selection.id!,
+          };
           _checkCancelled(cancellation);
           var running = current;
           if (current.status != VpnStatus.disconnected) {

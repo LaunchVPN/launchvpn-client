@@ -878,6 +878,159 @@ void main() {
     );
   }
 
+  group('a stored provider selection across a refresh', () {
+    late SubscriptionData source;
+    late int germany;
+
+    SubscriptionService refreshed(
+      List<CoreConfigCompanion> rows, {
+      SubscriptionNodeReferences references =
+          const SubscriptionNodeReferences(),
+    }) => _service(
+      database,
+      (_) async => SubscriptionLoadResult(
+        status: SubscriptionUpdateResult.success,
+        mode: SubscriptionMode.providerManaged,
+        rows: rows,
+      ),
+      readReferences: () => references,
+    );
+
+    Future<ServerSelection> storedSelection() async =>
+        ConnectionConfiguration.fromJson(
+          jsonDecode(
+            (await database.connectionConfigDao.read()).configurationJson,
+          ) as Map<String, dynamic>,
+        ).connection.selection;
+
+    setUp(() async {
+      source = (await _source(database)).copyWith(mode: 'providerManaged');
+      await database.subscriptionDao.updateRow(source);
+      germany = await database.coreConfigDao.insertRow(
+        _provider('Germany', subId: source.id),
+      );
+      await database.connectionConfigDao.commit(
+        configurationJson: ConnectionConfiguration(
+          connection: ConnectionSettings(
+            selection: ServerSelection.server(germany),
+            trafficMode: TrafficMode.allVpn,
+          ),
+        ).encode(),
+      );
+    });
+
+    Future<CoreConfigData> rowNamed(String name) async =>
+        (await database.coreConfigDao.allActiveServerRows()).lastWhere(
+          (row) => row.name == name,
+        );
+
+    test(
+      'moves to the fresh row of that group and drops the old one',
+      () async {
+        final result = await refreshed(
+          [_provider('Poland'), _provider('Germany')],
+          references: SubscriptionNodeReferences(fixedId: germany),
+        ).refreshSubscriptionResult(source);
+
+        expect(result.success, isTrue);
+        final fresh = await rowNamed('Germany');
+        expect(fresh.id, isNot(germany));
+        expect((await storedSelection()).id, fresh.id);
+        expect((await storedSelection()).kind, SelectionKind.server);
+        expect(await database.coreConfigDao.searchRow(germany), isNull);
+      },
+    );
+
+    test(
+      'a running session gives up its row, yet the selection moves on',
+      () async {
+        await refreshed(
+          [_provider('Germany')],
+          references: SubscriptionNodeReferences(
+            fixedId: germany,
+            runningIds: {germany},
+          ),
+        ).refreshSubscriptionResult(source);
+
+        expect(await database.coreConfigDao.searchRow(germany), isNull);
+        expect((await storedSelection()).id, (await rowNamed('Germany')).id);
+      },
+    );
+
+    test('a group the panel dropped leaves even while it runs', () async {
+      await refreshed(
+        [_provider('Poland')],
+        references: SubscriptionNodeReferences(runningIds: {germany}),
+      ).refreshSubscriptionResult(source);
+
+      expect(await database.coreConfigDao.searchRow(germany), isNull);
+      expect((await storedSelection()).kind, SelectionKind.automatic);
+    });
+
+    test('a connection still starting keeps the row it reads', () async {
+      await refreshed(
+        [_provider('Germany')],
+        references: SubscriptionNodeReferences(
+          fixedId: germany,
+          runningIds: {germany},
+          startingIds: {germany},
+        ),
+      ).refreshSubscriptionResult(source);
+
+      expect(await database.coreConfigDao.searchRow(germany), isNotNull);
+      expect((await storedSelection()).id, (await rowNamed('Germany')).id);
+    });
+
+    test('falls back to automatic when the panel dropped the group', () async {
+      await refreshed(
+        [_provider('Poland')],
+        references: SubscriptionNodeReferences(fixedId: germany),
+      ).refreshSubscriptionResult(source);
+
+      expect((await storedSelection()).kind, SelectionKind.automatic);
+      expect(await database.coreConfigDao.searchRow(germany), isNull);
+    });
+
+    test('leaves the other connection settings alone', () async {
+      await refreshed(
+        [_provider('Germany')],
+        references: SubscriptionNodeReferences(fixedId: germany),
+      ).refreshSubscriptionResult(source);
+
+      final stored = ConnectionConfiguration.fromJson(
+        jsonDecode(
+          (await database.connectionConfigDao.read()).configurationJson,
+        ) as Map<String, dynamic>,
+      );
+      expect(stored.connection.trafficMode, TrafficMode.allVpn);
+    });
+
+    test('a fresh group keeps the last delay of the row it replaces', () async {
+      final old = (await database.coreConfigDao.searchRow(germany))!;
+      await database.coreConfigDao.updateRow(old.copyWith(delay: 516));
+
+      await refreshed([_provider('Germany'), _provider('Poland')])
+          .refreshSubscriptionResult(source);
+
+      expect((await rowNamed('Germany')).delay, 516);
+      expect((await rowNamed('Poland')).delay, PingDelayConstants.unknown);
+    });
+
+    test('ignores a selected ordinary server', () async {
+      final manual = await database.coreConfigDao.insertRow(_node('Manual'));
+      final selection = ServerSelection.server(manual);
+      await database.connectionConfigDao.commit(
+        configurationJson: ConnectionConfiguration(
+          connection: ConnectionSettings(selection: selection),
+        ).encode(),
+      );
+
+      await refreshed([_provider('Germany')]).refreshSubscriptionResult(source);
+
+      expect((await storedSelection()).id, manual);
+    });
+  });
+
   test('provider refresh preserves old references and favorites alongside every new cache', () async {
     final source = (await _source(database)).copyWith(mode: 'providerManaged');
     await database.subscriptionDao.updateRow(source);
@@ -895,8 +1048,7 @@ void main() {
       _node('Old exit', subId: source.id),
     );
     var references = SubscriptionNodeReferences(
-      runningIds: {old[0].id},
-      fixedId: old[1].id,
+      startingIds: {old[0].id, old[1].id},
       finalExitId: exitId,
     );
     final pings = <int>[];

@@ -20,13 +20,19 @@ upstream pages kept for merging. They are not reachable in this build.
 - A failed attempt shows a toast with the reason and a persistent short message. If a command
   failed and the tunnel may still be up, the screen says so and a tap disconnects. Without a
   subscription the toggle is disabled.
-- The location card names the server in use, or otherwise the first one the automatic selection
-  would use. Settings shows only its title.
+- The location card names the group in use, or otherwise the selected one. Settings shows only its
+  title.
 - With a subscription, Home offers the presets Smart and Everything through VPN, stored as
   `ConnectionSettings.trafficMode`. A choice while connected reconnects at once without a dialog
   and reads as a reconnect. While a command runs the switch ignores taps. A failed reconnect keeps
   the choice for the next attempt. See
   [provider presets](xray-configuration.md#provider-presets).
+- Home's location card opens Locations, above the tabs. `LocationList` reads the panel's groups in
+  panel order: names starting with `AUTO |` go under Automatic and everything else, services
+  included, under Countries and services. The flag emoji becomes an image and is removed from the
+  name. A tap stores the group as a fixed selection and returns Home; a running tunnel reconnects at
+  once, as with a preset. Until the user chooses, the selection stays automatic, which is the first
+  group.
 - `BrandShell` owns service startup and retry, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published.
 

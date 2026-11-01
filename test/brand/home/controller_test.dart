@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/brand/home/controller.dart';
+import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
@@ -46,6 +48,9 @@ void main() {
   late Future<void> Function() prepareFailure;
   late ConnectionRuntime runtime;
   late List<Object> failures;
+  late List<List<int>> sweeps;
+  late List<bool Function()?> sweepCancels;
+  late Future<void> Function() sweep;
   var status = VpnStatus.disconnected;
   var stopCalls = 0;
 
@@ -61,6 +66,9 @@ void main() {
     stop = Completer();
     prepareFailure = () async {};
     failures = [];
+    sweeps = [];
+    sweepCancels = [];
+    sweep = () async {};
     stopCalls = 0;
     runtime = _runtime();
     statusEvents = StreamController<VpnStatus>.broadcast(sync: true);
@@ -86,7 +94,15 @@ void main() {
     );
     addTearDown(coordinator.dispose);
     await coordinator.initialize(registerReferences: false);
-    controller = HomeController(database: db, coordinator: coordinator);
+    controller = HomeController(
+      database: db,
+      coordinator: coordinator,
+      pingLocations: (rows, {isCancelled}) {
+        sweeps.add([for (final row in rows) row.id]);
+        sweepCancels.add(isCancelled);
+        return sweep();
+      },
+    );
     addTearDown(controller.close);
     await controller.initialize();
     await settle();
@@ -111,6 +127,18 @@ void main() {
         userInfoUpdatedAt: Value(DateTime.utc(2026)),
       ),
     );
+    await settle();
+  }
+
+  /// Ends every connection it starts: a start left waiting would hold the shared
+  /// Geodata queue from the next test.
+  Future<void> connectFully({Future<void> Function()? whileConnecting}) async {
+    final toggled = controller.toggle(run);
+    await settle();
+    await whileConnecting?.call();
+    status = VpnStatus.connected;
+    start.complete(HostConnection(VpnStatus.connected, runtime: runtime));
+    await toggled;
     await settle();
   }
 
@@ -301,7 +329,7 @@ void main() {
       await coordinator.refresh();
       await settle();
 
-      expect(controller.state.location, 'AUTO | Fastest');
+      expect(controller.state.location?.name, 'Fastest');
     });
 
     test('counts the days left, rounding a partial day up', () async {
@@ -327,15 +355,219 @@ void main() {
     });
   });
 
-  group('preset', () {
-    Future<void> connect() async {
+  group('location', () {
+    late int fastest;
+    late int germany;
+
+    Future<int> addGroup(String name) async {
+      final id = await db.coreConfigDao.insertRow(
+        CoreConfigCompanion.insert(
+          name: name,
+          type: CoreConfigType.Remnawave.name,
+          tags: '',
+          delay: PingDelayConstants.unknown,
+          subId: 1,
+          data: Value(
+            base64Encode(
+              utf8.encode(
+                jsonEncode({
+                  'outbounds': [
+                    {'tag': 'proxy', 'protocol': 'vless'},
+                  ],
+                }),
+              ),
+            ),
+          ),
+        ),
+      );
+      await settle();
+      return id;
+    }
+
+    Future<ServerSelection> stored() async =>
+        (await coordinator.configuration).connection.selection;
+
+    setUp(() async {
       await addSubscription();
-      final toggled = controller.toggle(run);
+      fastest = await addGroup('🇪🇺 AUTO | Самые быстрые');
+      germany = await addGroup('🇩🇪 Германия');
+    });
+
+    test('is the first group until the user chooses', () {
+      expect(controller.state.location?.id, fastest);
+    });
+
+    test(
+      'while off, the choice is saved without touching the tunnel',
+      () async {
+        await controller.selectLocation(
+          controller.state.locations.withId(germany)!,
+          run,
+        );
+
+        expect(controller.state.location?.name, 'Германия');
+        expect((await stored()).id, germany);
+        expect((await stored()).kind, SelectionKind.server);
+        expect(stopCalls, 0);
+        expect(failures, isEmpty);
+      },
+    );
+
+    test('survives a restart of the screen', () async {
+      await controller.selectLocation(
+        controller.state.locations.withId(germany)!,
+        run,
+      );
+
+      final reopened = HomeController(database: db, coordinator: coordinator);
+      addTearDown(reopened.close);
+      await reopened.initialize();
+      await settle();
+
+      expect(reopened.state.location?.name, 'Германия');
+    });
+
+    test('while connected, it reconnects at once and says so', () async {
+      await connectFully();
+      start = Completer();
+
+      final selecting = controller.selectLocation(
+        controller.state.locations.withId(germany)!,
+        run,
+      );
+      await settle();
+      expect(controller.state.status, HomeStatus.reconnecting);
+      expect(controller.state.location?.name, 'Германия');
+      expect(stopCalls, 1);
+
+      stop.complete(const HostConnection(VpnStatus.disconnected));
       await settle();
       status = VpnStatus.connected;
       start.complete(HostConnection(VpnStatus.connected, runtime: runtime));
-      await toggled;
+      await selecting;
       await settle();
+
+      expect(controller.state.status, HomeStatus.connected);
+      expect((await stored()).id, germany);
+      expect(failures, isEmpty);
+    });
+
+    test('a failed reconnect keeps the choice for the next attempt', () async {
+      await connectFully();
+      prepareFailure = () async => throw StateError('no route');
+      stop = Completer()
+        ..complete(const HostConnection(VpnStatus.disconnected));
+
+      await controller.selectLocation(
+        controller.state.locations.withId(germany)!,
+        run,
+      );
+      await settle();
+
+      expect(failures, isNotEmpty);
+      expect((await stored()).id, germany);
+    });
+
+    test('cannot change while a connection is in progress', () async {
+      await connectFully(
+        whileConnecting: () async {
+          await controller.selectLocation(
+            controller.state.locations.withId(germany)!,
+            run,
+          );
+          expect((await stored()).kind, SelectionKind.automatic);
+        },
+      );
+    });
+
+    test('shows a selection left on a kept row as its fresh copy', () async {
+      await db.connectionConfigDao.commit(
+        configurationJson: ConnectionConfiguration(
+          connection: ConnectionSettings(
+            selection: ServerSelection.server(germany),
+          ),
+        ).encode(),
+      );
+      final fresh = await addGroup('🇩🇪 Германия');
+      await settle();
+
+      expect(controller.state.location?.id, fresh);
+      expect(controller.state.location?.name, 'Германия');
+    });
+
+    test('follows a selection a refresh has moved', () async {
+      final fresh = await addGroup('🇩🇪 Германия');
+      await db.connectionConfigDao.commit(
+        configurationJson: ConnectionConfiguration(
+          connection: ConnectionSettings(
+            selection: ServerSelection.server(fresh),
+          ),
+        ).encode(),
+      );
+      await settle();
+
+      expect(controller.state.location?.id, fresh);
+      expect(controller.state.location?.name, 'Германия');
+    });
+
+    group('ping', () {
+      test('measures every listed group while off', () async {
+        await controller.measureLocations();
+
+        expect(sweeps, [
+          [fastest, germany],
+        ]);
+      });
+
+      test('measures nothing while connected', () async {
+        await connectFully();
+
+        await controller.measureLocations();
+
+        expect(sweeps, isEmpty);
+      });
+
+      test('runs one sweep at a time', () async {
+        final running = Completer<void>();
+        sweep = () => running.future;
+
+        unawaited(controller.measureLocations());
+        await controller.measureLocations();
+        expect(sweeps, hasLength(1));
+
+        running.complete();
+        await settle();
+        await controller.measureLocations();
+        expect(sweeps, hasLength(2));
+      });
+
+      test('a sweep stops as soon as the tunnel starts', () async {
+        await controller.measureLocations();
+        expect(sweepCancels.single!(), isFalse);
+
+        await connectFully(
+          whileConnecting: () async {
+            expect(sweepCancels.single!(), isTrue);
+          },
+        );
+      });
+
+      test('a failed sweep is not the user\'s problem', () async {
+        sweep = () async => throw StateError('core is busy');
+
+        await controller.measureLocations();
+        await controller.measureLocations();
+
+        expect(sweeps, hasLength(2));
+        expect(failures, isEmpty);
+      });
+    });
+  });
+
+  group('preset', () {
+    Future<void> connect() async {
+      await addSubscription();
+      await connectFully();
       start = Completer();
     }
 

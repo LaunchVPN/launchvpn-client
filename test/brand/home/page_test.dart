@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui' show Tristate;
+
+import 'package:country_flags/country_flags.dart';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -8,7 +11,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/page.dart';
 import 'package:onexray/brand/home/toggle.dart';
+import 'package:onexray/brand/locations/page.dart';
 import 'package:onexray/brand/theme.dart';
+import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
@@ -52,6 +57,7 @@ void main() {
   late Completer<HostConnection> start;
   var status = VpnStatus.disconnected;
   ConnectionRuntime? runtime;
+  var sweeps = 0;
 
   Future<void> pumpHome(WidgetTester tester, {double scale = 1}) async {
     final bus = AppEventBus();
@@ -77,7 +83,11 @@ void main() {
       await coordinator.initialize(registerReferences: false);
     });
     addTearDown(coordinator.dispose);
-    controller = HomeController(database: db, coordinator: coordinator);
+    controller = HomeController(
+      database: db,
+      coordinator: coordinator,
+      pingLocations: (_, {isCancelled}) async => sweeps++,
+    );
     addTearDown(controller.close);
     await tester.pumpWidget(
       MaterialApp(
@@ -117,12 +127,178 @@ void main() {
     await tester.pump();
   }
 
+  Future<int> addGroup(
+    WidgetTester tester,
+    String name, {
+    int delay = PingDelayConstants.unknown,
+  }) async {
+    final id = await tester.runAsync(() async {
+      final id = await db.coreConfigDao.insertRow(
+        CoreConfigCompanion.insert(
+          name: name,
+          type: CoreConfigType.Remnawave.name,
+          tags: '',
+          delay: delay,
+          subId: 1,
+          data: Value(
+            base64Encode(
+              utf8.encode(
+                jsonEncode({
+                  'outbounds': [
+                    {'tag': 'proxy', 'protocol': 'vless'},
+                  ],
+                }),
+              ),
+            ),
+          ),
+        ),
+      );
+      await pumpEventQueue(times: 20);
+      return id;
+    });
+    await tester.pump();
+    return id!;
+  }
+
+  Future<void> openLocations(WidgetTester tester) async {
+    await tester.tap(find.byKey(const ValueKey('home-location')));
+    await tester.pumpAndSettle();
+    expect(find.byType(LocationsPage), findsOneWidget);
+  }
+
   ConnectToggleState toggleState(WidgetTester tester) =>
       tester.widget<ConnectToggle>(find.byType(ConnectToggle)).state;
 
   setUp(() {
     status = VpnStatus.disconnected;
     runtime = null;
+    sweeps = 0;
+  });
+
+  group('locations', () {
+    Future<void> pumpGroups(WidgetTester tester) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+      await addGroup(tester, '🇪🇺 AUTO | Самые быстрые', delay: 860);
+      await addGroup(tester, '🇷🇺 AUTO | Обход глушилок');
+      await addGroup(tester, '🇩🇪 Германия', delay: 516);
+      await addGroup(tester, '🇬🇧 Англия', delay: PingDelayConstants.timeout);
+    }
+
+    testWidgets('the card shows the first group, without its panel prefix', (
+      tester,
+    ) async {
+      await pumpGroups(tester);
+
+      expect(find.text('Самые быстрые'), findsOneWidget);
+      expect(find.text('860 мс'), findsOneWidget);
+      expect(find.textContaining('AUTO'), findsNothing);
+    });
+
+    testWidgets('a tap on the card lists automatic groups above the rest', (
+      tester,
+    ) async {
+      await pumpGroups(tester);
+      await openLocations(tester);
+
+      final above = tester.getTopLeft(find.text('АВТОМАТИЧЕСКИ')).dy;
+      final fastest = tester.getTopLeft(find.text('Самые быстрые').last).dy;
+      final others = tester.getTopLeft(find.text('СТРАНЫ И СЕРВИСЫ')).dy;
+      final germany = tester.getTopLeft(find.text('Германия')).dy;
+      expect(above, lessThan(fastest));
+      expect(fastest, lessThan(others));
+      expect(others, lessThan(germany));
+    });
+
+    testWidgets('countries carry a flag, automatic groups do not', (
+      tester,
+    ) async {
+      await pumpGroups(tester);
+      await openLocations(tester);
+
+      expect(find.byType(CountryFlag), findsNWidgets(2));
+    });
+
+    testWidgets('shows what the last measurement found', (tester) async {
+      await pumpGroups(tester);
+      await openLocations(tester);
+
+      expect(find.text('516 мс'), findsOneWidget);
+      expect(find.text('Нет ответа'), findsOneWidget);
+    });
+
+    testWidgets('opening the list measures it', (tester) async {
+      await pumpGroups(tester);
+      await openLocations(tester);
+
+      expect(sweeps, 1);
+    });
+
+    testWidgets('marks the selected group for sight and for screen readers', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpGroups(tester);
+      await openLocations(tester);
+
+      expect(
+        tester
+            .getSemantics(find.text('Самые быстрые').last)
+            .flagsCollection
+            .isSelected,
+        Tristate.isTrue,
+      );
+      expect(
+        tester.getSemantics(find.text('Германия')).flagsCollection.isSelected,
+        Tristate.isFalse,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('a tap returns home with that location and saves it', (
+      tester,
+    ) async {
+      await pumpGroups(tester);
+      await openLocations(tester);
+
+      await tester.tap(find.text('Германия'));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() => pumpEventQueue(times: 20));
+      await tester.pump();
+
+      expect(find.byType(LocationsPage), findsNothing);
+      expect(find.text('Германия'), findsOneWidget);
+      final stored = await tester.runAsync(() => coordinator.configuration);
+      expect(stored!.connection.selection.kind, SelectionKind.server);
+    });
+
+    testWidgets('the back button keeps the current location', (tester) async {
+      await pumpGroups(tester);
+      await openLocations(tester);
+
+      await tester.tap(find.bySemanticsLabel('Назад'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LocationsPage), findsNothing);
+      expect(find.text('Самые быстрые'), findsOneWidget);
+      final stored = await tester.runAsync(() => coordinator.configuration);
+      expect(stored!.connection.selection.kind, SelectionKind.automatic);
+    });
+
+    testWidgets('fits with the largest system font', (tester) async {
+      tester.view.physicalSize = const Size(1170, 2532);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await pumpHome(tester, scale: _largeScale);
+      await addSubscription(tester);
+      await addGroup(tester, '🇫🇮 Финляндия | Способ 2', delay: 674);
+      await addGroup(tester, '🇷🇺 AUTO | Обход глушилок Способ 2');
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      await openLocations(tester);
+
+      expect(tester.takeException(), isNull);
+    });
   });
 
   testWidgets('without a subscription it says where to get one', (
@@ -196,7 +372,7 @@ void main() {
 
     expect(find.text('Подключено'), findsOneWidget);
     expect(toggleState(tester), ConnectToggleState.on);
-    expect(find.text('AUTO | Fastest'), findsOneWidget);
+    expect(find.text('Fastest'), findsOneWidget);
     expect(find.textContaining('00:12:4'), findsOneWidget);
     expect(find.textContaining('IP скрыт'), findsOneWidget);
 

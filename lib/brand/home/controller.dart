@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
+import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/pigeon/host_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
@@ -8,7 +10,9 @@ import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/catalog.dart';
+import 'package:onexray/service/servers/locations.dart';
 import 'package:onexray/service/servers/subscription/user_info.dart';
+import 'package:onexray/service/shared/ping/service.dart';
 
 enum HomeStatus {
   off,
@@ -22,12 +26,17 @@ enum HomeStatus {
   uncertain,
 }
 
-enum HomeRequest { connect, disconnect, reconnect, savePreset }
+enum HomeRequest { connect, disconnect, reconnect, saveChoice }
 
 /// Runs a connection command and reports its failure to the user.
 typedef ConnectionActionRunner = Future<void> Function(
   Future<void> Function() action,
 );
+
+typedef LocationPing = Future<void> Function(
+  List<CoreConfigData> rows, {
+  bool Function()? isCancelled,
+});
 
 class HomeState {
   HomeState({
@@ -36,6 +45,7 @@ class HomeState {
     this.request,
     this.restoring = false,
     this.preset,
+    this.selection,
   }) : catalog = catalog ?? ServerCatalog();
 
   final ConnectionView view;
@@ -43,6 +53,7 @@ class HomeState {
 
   /// Null until the saved preset is read.
   final TrafficMode? preset;
+  final ServerSelection? selection;
 
   // A command may wait for permission or the serial queue before it publishes
   // a phase. The tap is acknowledged at once without claiming a native state.
@@ -80,14 +91,14 @@ class HomeState {
   SubscriptionData? get subscription => catalog.sources.lastOrNull;
 
   bool get canToggle => switch (status) {
-    _ when request == HomeRequest.savePreset => false,
+    _ when request == HomeRequest.saveChoice => false,
     HomeStatus.disconnecting => false,
     HomeStatus.off || HomeStatus.failed => subscription != null,
     _ => true,
   };
 
   /// A choice made mid-transition would race the command already running.
-  bool get canChangePreset =>
+  bool get canChangeConnection =>
       preset != null &&
       request == null &&
       const {
@@ -96,13 +107,40 @@ class HomeState {
         HomeStatus.connected,
       }.contains(status);
 
-  String? get location {
+  /// A measurement taken through a running tunnel would describe the tunnel.
+  bool get canMeasure =>
+      request == null &&
+      const {HomeStatus.off, HomeStatus.failed}.contains(status);
+
+  late final LocationList locations = LocationList.from(catalog);
+
+  /// The location the next connection uses. A connection that was starting
+  /// during a refresh can leave the selection on a row the list has replaced.
+  Location? get selectedLocation {
+    final current = selection;
+    if (current?.kind != SelectionKind.server) return locations.first;
+    final row = catalog.servers.firstWhereOrNull(
+      (row) => row.id == current!.id,
+    );
+    return (row == null ? null : locations.named(catalog.display(row).name)) ??
+        locations.first;
+  }
+
+  /// The location to show: the running one, unless a choice is replacing it.
+  Location? get location {
     final runtime = view.runtime;
     final running =
         runtime?.profile?.name ?? runtime?.entries.firstOrNull?.name;
-    if (running != null) return running;
-    final first = catalog.servers.firstOrNull;
-    return first == null ? null : catalog.display(first).name;
+    if (running == null || request == HomeRequest.reconnect) {
+      return selectedLocation;
+    }
+    // A refresh may have replaced the running row, or the panel dropped it.
+    return locations.named(running) ??
+        Location.parse(
+          id: runtime!.profile?.id ?? runtime.entries.first.id,
+          label: running,
+          delay: PingDelayConstants.unknown,
+        );
   }
 
   DateTime? get connectedSince => view.runtime?.startedAt;
@@ -123,12 +161,14 @@ class HomeState {
     ServerCatalog? catalog,
     bool? restoring,
     TrafficMode? preset,
+    ServerSelection? selection,
   }) => HomeState(
     view: view ?? this.view,
     catalog: catalog ?? this.catalog,
     request: request,
     restoring: restoring ?? this.restoring,
     preset: preset ?? this.preset,
+    selection: selection ?? this.selection,
   );
 
   HomeState _withRequest(HomeRequest? request) => HomeState(
@@ -137,6 +177,7 @@ class HomeState {
     request: request,
     restoring: restoring,
     preset: preset,
+    selection: selection,
   );
 }
 
@@ -145,10 +186,12 @@ class HomeController extends PageCubit<HomeState> {
     AppDatabase? database,
     ConnectionCoordinator? coordinator,
     Future<PlatformPermissionResult> Function()? requestPermission,
+    LocationPing? pingLocations,
   }) : _db = database ?? AppDatabase(),
        coordinator = coordinator ?? ConnectionCoordinator.instance,
        _requestPermission =
            requestPermission ?? AppHostApi().requestPlatformPermission,
+       _pingLocations = pingLocations ?? PingService().pingLocations,
        super(HomeState()) {
     this.coordinator.state.addListener(_connectionChanged);
     _connectionChanged();
@@ -157,7 +200,10 @@ class HomeController extends PageCubit<HomeState> {
   final AppDatabase _db;
   final ConnectionCoordinator coordinator;
   final Future<PlatformPermissionResult> Function() _requestPermission;
+  final LocationPing _pingLocations;
   StreamSubscription<ServerCatalog>? _catalog;
+  StreamSubscription<void>? _settings;
+  bool _measuring = false;
 
   void _connectionChanged() {
     final view = coordinator.state.value;
@@ -180,15 +226,27 @@ class HomeController extends PageCubit<HomeState> {
       onError: (Object error) =>
           ygLogger('read home catalog failed (${error.runtimeType})'),
     );
-    await _showStoredPreset();
+    // A subscription refresh moves the stored selection.
+    _settings ??= coordinator.configurationChanges.listen(
+      (_) => unawaited(_showStoredChoices()),
+      onError: (Object error) =>
+          ygLogger('watch home settings failed (${error.runtimeType})'),
+    );
+    await _showStoredChoices();
   }
 
-  Future<void> _showStoredPreset() async {
+  Future<void> _showStoredChoices() async {
     try {
       final stored = await coordinator.configuration;
-      emit(state.copyWith(preset: stored.connection.trafficMode));
+      if (isClosed) return;
+      emit(
+        state.copyWith(
+          preset: stored.connection.trafficMode,
+          selection: stored.connection.selection,
+        ),
+      );
     } catch (error) {
-      ygLogger('read home preset failed (${error.runtimeType})');
+      ygLogger('read home settings failed (${error.runtimeType})');
     }
   }
 
@@ -198,13 +256,49 @@ class HomeController extends PageCubit<HomeState> {
     TrafficMode preset,
     ConnectionActionRunner run,
   ) async {
-    if (!state.canChangePreset || preset == state.preset) return;
-    final request = state.status == HomeStatus.connected
-        ? HomeRequest.reconnect
-        : HomeRequest.savePreset;
+    if (!state.canChangeConnection || preset == state.preset) return;
+    final request = _choiceRequest;
     emit(state.copyWith(preset: preset));
     await _perform(request, run, () => coordinator.applyTrafficMode(preset));
-    await _showStoredPreset();
+    await _showStoredChoices();
+  }
+
+  /// Saves the location, with the same immediate reconnect as a preset.
+  Future<void> selectLocation(
+    Location location,
+    ConnectionActionRunner run,
+  ) async {
+    if (!state.canChangeConnection ||
+        location.id == state.selectedLocation?.id) {
+      return;
+    }
+    final request = _choiceRequest;
+    final selection = ServerSelection.server(location.id);
+    emit(state.copyWith(selection: selection));
+    await _perform(request, run, () => coordinator.applySelection(selection));
+    await _showStoredChoices();
+  }
+
+  HomeRequest get _choiceRequest => state.status == HomeStatus.connected
+      ? HomeRequest.reconnect
+      : HomeRequest.saveChoice;
+
+  /// Measures the listed locations unless the tunnel is up. The results reach
+  /// the screen through the catalog as each batch is saved.
+  Future<void> measureLocations() async {
+    if (_measuring || !state.canMeasure) return;
+    _measuring = true;
+    try {
+      final listed = {for (final item in state.locations.all) item.id};
+      await _pingLocations(
+        state.catalog.servers.where((row) => listed.contains(row.id)).toList(),
+        isCancelled: () => isClosed || !state.canMeasure,
+      );
+    } catch (error) {
+      ygLogger('measure locations failed (${error.runtimeType})');
+    } finally {
+      _measuring = false;
+    }
   }
 
   /// Connects from off, cancels a connection in progress, otherwise disconnects.
@@ -249,5 +343,6 @@ class HomeController extends PageCubit<HomeState> {
   Future<void> disposePageResources() async {
     coordinator.state.removeListener(_connectionChanged);
     await _catalog?.cancel();
+    await _settings?.cancel();
   }
 }
