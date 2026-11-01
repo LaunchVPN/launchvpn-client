@@ -9,11 +9,18 @@ inputs:
 runs:
   using: composite
   steps:
+    # The generator also uses the rolling Dart and clang, so the week in the key
+    # lets the bindings follow them.
+    - name: Read the current week
+      id: week
+      shell: bash
+      run: echo "value=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+
     - id: cache
       uses: actions/cache@v6
       with:
         path: ${{ inputs.app-path }}/lib/core/ffi/generated_bindings.dart
-        key: ffi-${{ runner.os }}-${{ hashFiles(format('{0}/c/include/**', inputs.app-path), format('{0}/tool/ffigen.dart', inputs.app-path), format('{0}/pubspec.lock', inputs.app-path)) }}
+        key: ffi-${{ runner.os }}-${{ hashFiles(format('{0}/c/include/**', inputs.app-path), format('{0}/tool/ffigen.dart', inputs.app-path), format('{0}/pubspec.lock', inputs.app-path)) }}-${{ steps.week.outputs.value }}
 
     - if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
