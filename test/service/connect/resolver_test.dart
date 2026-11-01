@@ -359,6 +359,16 @@ void main() {
       );
     }
 
+    test('automatic selection takes the fresh copy of a kept group', () async {
+      final target = await _oneShot([
+        _profile(1, name: 'Fastest'),
+        _profile(5, name: 'Fastest'),
+        _profile(6, name: 'Germany'),
+      ]).resolveTarget(ConnectionSettings());
+
+      expect(target.profile?.id, 5);
+    });
+
     test(
       'source fallback stays within its source and excludes manual scope',
       () async {
@@ -480,9 +490,10 @@ void main() {
   });
 }
 
-CoreConfigData _profile(int id, {int source = 7}) => _row(
+CoreConfigData _profile(int id, {int source = 7, String? name}) => _row(
   id,
   source: source,
+  name: name ?? 'Group $id',
   type: 'Remnawave',
   delay: PingDelayConstants.unknown,
 );
