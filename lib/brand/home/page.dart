@@ -6,12 +6,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/toggle.dart';
+import 'package:onexray/brand/locations/page.dart';
 import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/core/brand.dart';
+import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
 import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/servers/locations.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, this.controller});
@@ -42,6 +45,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _toggle() => _controller.toggle(_run);
+
+  // Above the tab bar, as the mockup has it.
+  Future<void> _openLocations() async {
+    final chosen = await Navigator.of(context, rootNavigator: true)
+        .push<Location>(
+          MaterialPageRoute(
+            builder: (_) => LocationsPage(controller: _controller),
+          ),
+        );
+    if (chosen != null && mounted) {
+      await _controller.selectLocation(chosen, _run);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
@@ -74,12 +90,15 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       if (state.location case final location?)
-                        _LocationCard(name: location),
+                        _LocationCard(
+                          location: location,
+                          onTap: _openLocations,
+                        ),
                       if (state.subscription != null) ...[
                         const SizedBox(height: 20),
                         _PresetSwitch(
                           selected: state.preset,
-                          onSelect: state.canChangePreset
+                          onSelect: state.canChangeConnection
                               ? (preset) =>
                                     _controller.selectPreset(preset, _run)
                               : null,
@@ -272,41 +291,61 @@ class _ConnectedHintState extends State<_ConnectedHint> {
 }
 
 class _LocationCard extends StatelessWidget {
-  const _LocationCard({required this.name});
+  const _LocationCard({required this.location, required this.onTap});
 
-  final String name;
+  final Location location;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    constraints: const BoxConstraints(minHeight: 72),
-    padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
-    decoration: BoxDecoration(
-      color: BrandColors.surface,
-      borderRadius: BorderRadius.circular(BrandRadii.card),
-      border: Border.all(color: BrandColors.line),
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: BrandColors.surfaceRaised,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            LucideIcons.zap,
-            size: 20,
-            color: BrandColors.accent,
+  Widget build(BuildContext context) {
+    // "No answer" here would contradict a tunnel that works.
+    final delay = PingDelayConstants.isSuccessful(location.delay)
+        ? locationDelayLabel(AppLocalizations.of(context)!, location)
+        : null;
+    return Semantics(
+      container: true,
+      button: true,
+      label: delay == null ? location.name : '${location.name}, $delay',
+      child: GestureDetector(
+        key: const ValueKey('home-location'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ExcludeSemantics(
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 72),
+            padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
+            decoration: BoxDecoration(
+              color: BrandColors.surface,
+              borderRadius: BorderRadius.circular(BrandRadii.card),
+              border: Border.all(color: BrandColors.line),
+            ),
+            child: Row(
+              children: [
+                LocationBadge(location: location),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(location.name, style: BrandText.cardTitle),
+                      if (delay != null) Text(delay, style: BrandText.caption),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Icon(
+                  LucideIcons.chevronRight,
+                  size: 20,
+                  color: BrandColors.muted,
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(child: Text(name, style: BrandText.cardTitle)),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _PresetSwitch extends StatelessWidget {

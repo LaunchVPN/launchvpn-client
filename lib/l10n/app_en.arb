@@ -3166,5 +3166,18 @@
   "homeStatusUncertain": "VPN may still be on",
   "homeHintUncertain": "Tap to turn it off",
   "homePresetSmart": "Smart",
-  "homePresetAllVpn": "Everything through VPN"
+  "homePresetAllVpn": "Everything through VPN",
+  "locationsTitle": "Locations",
+  "locationsAutomatic": "Automatic",
+  "locationsOthers": "Countries and services",
+  "locationsDelay": "{ms} ms",
+  "@locationsDelay": {
+    "description": "How long a request through a location took",
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "locationsNoAnswer": "No answer"
 }

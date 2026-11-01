@@ -23,6 +23,7 @@ abstract final class BrandColors {
 
 abstract final class BrandRadii {
   static const segment = 10.0;
+  static const iconButton = 12.0;
   static const control = 14.0;
   static const md = 16.0;
   static const card = 20.0;
@@ -87,11 +88,27 @@ abstract final class BrandText {
     height: 18 / 13,
     color: BrandColors.ink,
   );
-  static const preset = TextStyle(
+  static const caption = TextStyle(
     fontFamily: _body,
     fontWeight: FontWeight.w500,
     fontSize: 13,
     height: 18 / 13,
+    color: BrandColors.muted,
+  );
+  static const preset = caption;
+  static const topBar = TextStyle(
+    fontFamily: _display,
+    fontWeight: FontWeight.w500,
+    fontSize: 17,
+    height: 22 / 17,
+    color: BrandColors.ink,
+  );
+  static const sectionLabel = TextStyle(
+    fontFamily: _body,
+    fontWeight: FontWeight.w700,
+    fontSize: 11,
+    height: 14 / 11,
+    letterSpacing: 0.66,
     color: BrandColors.muted,
   );
   static const selectedPreset = TextStyle(

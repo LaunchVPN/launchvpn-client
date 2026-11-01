@@ -988,5 +988,10 @@
   "homeStatusUncertain": "ممکن است VPN هنوز روشن باشد",
   "homeHintUncertain": "برای خاموش کردن ضربه بزنید",
   "homePresetSmart": "هوشمند",
-  "homePresetAllVpn": "همه از طریق VPN"
+  "homePresetAllVpn": "همه از طریق VPN",
+  "locationsTitle": "مکان‌ها",
+  "locationsAutomatic": "خودکار",
+  "locationsOthers": "کشورها و سرویس‌ها",
+  "locationsDelay": "{ms} میلی‌ثانیه",
+  "locationsNoAnswer": "بدون پاسخ"
 }

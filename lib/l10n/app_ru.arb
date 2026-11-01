@@ -988,5 +988,10 @@
   "homeStatusUncertain": "VPN может быть включён",
   "homeHintUncertain": "Нажмите, чтобы отключить",
   "homePresetSmart": "Умный",
-  "homePresetAllVpn": "Всё через VPN"
+  "homePresetAllVpn": "Всё через VPN",
+  "locationsTitle": "Локации",
+  "locationsAutomatic": "Автоматически",
+  "locationsOthers": "Страны и сервисы",
+  "locationsDelay": "{ms} мс",
+  "locationsNoAnswer": "Нет ответа"
 }
