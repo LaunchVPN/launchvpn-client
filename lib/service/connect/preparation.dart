@@ -9,9 +9,11 @@ import 'package:onexray/core/pigeon/constants.dart';
 import 'package:onexray/core/pigeon/host_api.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/service/advanced/local_api/service.dart';
+import 'package:onexray/service/connect/first_server.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/advanced/platform_policy.dart';
 import 'package:onexray/service/advanced/xray/geodata/service.dart';
+import 'package:onexray/service/shared/ping/service.dart';
 import 'package:onexray/service/shared/share/configuration_transfer.dart';
 import 'package:onexray/service/connect/platform_requirements.dart';
 import 'package:onexray/service/connect/resolver.dart';
@@ -129,6 +131,7 @@ class ConnectionPreparation {
   getFreePorts;
   final LocalApiService _localApi;
   final Future<void> Function(Map<String, GeoDataType>) _requireDependencies;
+  final FirstServerPicker _firstServer;
 
   ConnectionPreparation({
     AppDatabase? db,
@@ -136,8 +139,12 @@ class ConnectionPreparation {
     this.getFreePorts,
     LocalApiService? localApi,
     Future<void> Function(Map<String, GeoDataType>)? requireDependencies,
+    FirstServerPicker? firstServer,
   }) : db = db ?? AppDatabase(),
        _localApi = localApi ?? LocalApiService.instance,
+       _firstServer =
+           firstServer ??
+           FirstServerPicker(measure: PingService().measureBeforeStart),
        _requireDependencies =
            requireDependencies ?? GeoDataService().requireDependencies,
        resolver =
@@ -345,6 +352,9 @@ class ConnectionPreparation {
       throw const FormatException(
         'LAN proxy port conflicts with the HTTP API port',
       );
+    }
+    if (profile != null) {
+      profile = await _firstServer.pick(profile, cancelled: cancelled);
     }
     final ports = await allocateRuntimePorts(
       userInbounds.cast<Map<String, dynamic>>(),

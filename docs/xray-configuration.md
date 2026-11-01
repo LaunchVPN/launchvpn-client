@@ -325,6 +325,26 @@ The preset removes rules and adds none. A first outbound of `freedom` with no fi
 balancer that selects a `freedom` outbound therefore still sends traffic direct, and a graph with no
 local-network rule sends that traffic into the tunnel. The panel delivers none of these today.
 
+### First server of a provider group
+
+A `leastLoad` or `leastPing` balancer has no measurements when the core starts, so it selects
+nothing and the core uses the graph's first outbound. The first answers take about a second, and
+device DNS arrives within milliseconds. The core keeps one UDP flow per DNS server, so that flow stays
+on the first outbound after the balancer starts working. A dead first server stalls DNS for as long
+as the dial takes, about 20 seconds in testing.
+
+Preparation therefore measures up to five random servers from the balancer of the group's catch-all
+last rule, in one native batch with a 2-second timeout. A native call holds a process-wide lock, so
+the batch is the only way to race servers, and it returns when all of them finish. The fastest to
+answer moves to the head of the session graph. A batch can wait behind one already running, so the
+check gives up after 3 seconds, or when the connection is cancelled, and the panel order then stays.
+The stored row does not change, and the balancer chooses as the panel configured it once it has
+measurements. Groups with one candidate, a narrower last rule or no measuring balancer are not
+checked. The check runs after any running tunnel has stopped, so it measures the device's own
+network; a batch that outlives the give-up time may still finish after the tunnel is up, and its
+result is ignored. Starts that reuse the last configuration (widget, Quick Settings tile, automation,
+Apple on-demand) skip preparation, so they keep the server chosen when it was written.
+
 ## Raw JSON
 
 Raw 保存原文，不经过 `XrayJson` 或常规 State，运行只改深副本。
