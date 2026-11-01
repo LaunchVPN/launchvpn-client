@@ -144,10 +144,13 @@ jobs:
         with:
           app-path: launchvpn-client
 
-      - name: Generate sources
-        run: |
-          flutter pub get
-          dart run tool/ffigen.dart
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate FFI bindings
+        uses: ./launchvpn-client/.github/actions/generate-ffi
+        with:
+          app-path: launchvpn-client
 
       # Without this key Gradle signs with the debug key of the runner, which
       # differs in every run, so such an APK cannot update a previous install.
@@ -184,9 +187,10 @@ jobs:
           mv build/app/outputs/flutter-apk/app-release.apk \
             build/LaunchVPN-android-universal.apk
 
+      # Kotlin unit tests do not run Dart, so skip compiling it.
       - name: Test Android native code
         working-directory: launchvpn-client/android
-        run: ./gradlew :app:testDebugUnitTest
+        run: ./gradlew :app:testDebugUnitTest -x :app:compileFlutterBuildDebug
 
       - name: Upload the APK
         uses: actions/upload-artifact@v7
@@ -224,10 +228,13 @@ jobs:
         with:
           app-path: launchvpn-client
 
-      - name: Generate sources
-        run: |
-          flutter pub get
-          dart run tool/ffigen.dart
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate FFI bindings
+        uses: ./launchvpn-client/.github/actions/generate-ffi
+        with:
+          app-path: launchvpn-client
 
       - name: Build without signing
         run: flutter build ios --release --no-codesign --build-number "$BUILD_NUMBER"

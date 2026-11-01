@@ -1,0 +1,21 @@
+name: Generate FFI bindings
+description: Generate the ignored FFI bindings, or restore them when their inputs are unchanged
+
+# The validate job always generates them, so a bad cached file cannot hide there.
+inputs:
+  app-path:
+    description: Directory of the Flutter App inside the workspace
+
+runs:
+  using: composite
+  steps:
+    - id: cache
+      uses: actions/cache@v6
+      with:
+        path: ${{ inputs.app-path }}/lib/core/ffi/generated_bindings.dart
+        key: ffi-${{ runner.os }}-${{ hashFiles(format('{0}/c/include/**', inputs.app-path), format('{0}/tool/ffigen.dart', inputs.app-path), format('{0}/pubspec.lock', inputs.app-path)) }}
+
+    - if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{ inputs.app-path }}
+      run: dart run tool/ffigen.dart
