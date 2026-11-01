@@ -35,12 +35,14 @@ class HomeState {
     ServerCatalog? catalog,
     this.request,
     this.restoring = false,
-    this.preset = TrafficMode.smart,
+    this.preset,
   }) : catalog = catalog ?? ServerCatalog();
 
   final ConnectionView view;
   final ServerCatalog catalog;
-  final TrafficMode preset;
+
+  /// Null until the saved preset is read.
+  final TrafficMode? preset;
 
   // A command may wait for permission or the serial queue before it publishes
   // a phase. The tap is acknowledged at once without claiming a native state.
@@ -86,6 +88,7 @@ class HomeState {
 
   /// A choice made mid-transition would race the command already running.
   bool get canChangePreset =>
+      preset != null &&
       request == null &&
       const {
         HomeStatus.off,
@@ -181,8 +184,12 @@ class HomeController extends PageCubit<HomeState> {
   }
 
   Future<void> _showStoredPreset() async {
-    final stored = await coordinator.configuration;
-    emit(state.copyWith(preset: stored.connection.trafficMode));
+    try {
+      final stored = await coordinator.configuration;
+      emit(state.copyWith(preset: stored.connection.trafficMode));
+    } catch (error) {
+      ygLogger('read home preset failed (${error.runtimeType})');
+    }
   }
 
   /// Saves the preset. A running tunnel reconnects at once, because a preset

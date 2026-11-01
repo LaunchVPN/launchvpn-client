@@ -312,7 +312,7 @@ class _LocationCard extends StatelessWidget {
 class _PresetSwitch extends StatelessWidget {
   const _PresetSwitch({required this.selected, required this.onSelect});
 
-  final TrafficMode selected;
+  final TrafficMode? selected;
   final ValueChanged<TrafficMode>? onSelect;
 
   @override
