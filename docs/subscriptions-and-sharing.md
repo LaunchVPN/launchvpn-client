@@ -98,20 +98,26 @@ panel/mode 变化同样使旧导入失效，迟到响应不得覆盖编辑、切
 
 ### Panel info
 
-Every successful download also saves three response headers on the subscription, committed
+Every successful download also saves these response headers on the subscription, committed
 with its servers:
 
 | Header | Accepted values |
 |---|---|
 | `Profile-Update-Interval` | Whole hours above zero. See [automatic updates](data-management.md#自动更新). |
 | `Profile-Title` | Plain text or `base64:` followed by UTF-8 text. |
+| `Announce` | Same as `Profile-Title`. Line breaks are kept. |
 | `Support-Url` | An `https` URL with a host. |
 
 A missing, repeated or invalid header is unknown and does not affect the others or the import.
-A successful download without a header clears its saved value, and a failed one keeps all three.
+A successful download without a header clears its saved value, and a failed one keeps them all.
 Renaming keeps them, while a change to the URL, Age keys, HWID or User-Agent clears them.
 The title and support link are stored only: no screen shows them yet. The values stay out of
 shares and backups, and the next download after a restore fetches them again.
+
+Home shows the announcement as plain text, without opening links in it. Closing the card stores
+the closed text on the subscription, in the same way out of shares and backups, and only that
+exact text stays hidden. A download that fails or has no valid header changes nothing about it,
+and any other text shows the card again. A change to the request source forgets it.
 
 ### Device identity (HWID)
 

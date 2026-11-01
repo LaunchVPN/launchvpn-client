@@ -117,6 +117,13 @@ class _HomePageState extends State<HomePage> {
                               : null,
                         ),
                       ],
+                      if (state.announcement case final text?) ...[
+                        const SizedBox(height: 20),
+                        _AnnouncementBanner(
+                          text: text,
+                          onClose: _controller.dismissAnnouncement,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -301,6 +308,68 @@ class _ConnectedHintState extends State<_ConnectedHint> {
       style: BrandText.timer,
     );
   }
+}
+
+class _AnnouncementBanner extends StatelessWidget {
+  const _AnnouncementBanner({required this.text, required this.onClose});
+
+  final String text;
+  final VoidCallback onClose;
+
+  /// Inside the 1 px border, which makes the mockup's 15.
+  static const _padding = 14.0;
+
+  /// The icon lines up with the padding while its touch area stays comfortable.
+  static const _closeTarget = 44.0;
+  static const _closeIcon = 18.0;
+  static const _closeInset = (_closeTarget - _closeIcon) / 2;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey('home-announcement'),
+    width: double.infinity,
+    padding: const EdgeInsetsDirectional.only(
+      start: _padding,
+      top: _padding - _closeInset,
+      end: _padding - _closeInset,
+      bottom: _padding - _closeInset,
+    ),
+    decoration: BoxDecoration(
+      color: BrandColors.accentSoft,
+      borderRadius: BorderRadius.circular(BrandRadii.md),
+      border: Border.all(color: BrandColors.accent),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(top: _closeInset),
+          child: Icon(LucideIcons.bell, size: 20, color: BrandColors.accent),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: _closeInset),
+            child: Text(text, style: BrandText.banner),
+          ),
+        ),
+        IconButton(
+          tooltip: AppLocalizations.of(context)!.homeAnnouncementClose,
+          onPressed: onClose,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(
+            width: _closeTarget,
+            height: _closeTarget,
+          ),
+          icon: const Icon(
+            LucideIcons.x,
+            size: _closeIcon,
+            color: BrandColors.muted,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _PresetSwitch extends StatelessWidget {

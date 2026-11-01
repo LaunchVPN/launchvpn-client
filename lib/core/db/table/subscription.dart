@@ -28,4 +28,9 @@ class Subscription extends Table {
   TextColumn get profileTitle => text().nullable()();
   TextColumn get supportUrl => text().nullable()();
   IntColumn get updateIntervalHours => integer().nullable()();
+
+  TextColumn get announce => text().nullable()();
+
+  /// The text the user closed. Any other announcement still shows.
+  TextColumn get dismissedAnnounce => text().nullable()();
 }

@@ -39,6 +39,12 @@ class SubscriptionDao extends DatabaseAccessor<AppDatabase>
     return result;
   }
 
+  /// Writes only this column, so it cannot undo a refresh that finished meanwhile.
+  Future<void> dismissAnnounce(int id, String announce) =>
+      (update(subscription)..where((tbl) => tbl.id.equals(id))).write(
+        SubscriptionCompanion(dismissedAnnounce: Value(announce)),
+      );
+
   Future<int> insertRow(SubscriptionCompanion entry) async {
     final result = await into(subscription).insert(entry);
     return result;

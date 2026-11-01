@@ -27,10 +27,26 @@ void main() {
     );
   });
 
+  test('reads an announcement with its line breaks', () {
+    expect(
+      parse({
+        'announce': ['base64:0KDQsNCx0L7RgtGLCtCyIDAyOjAw'],
+      }).announce,
+      'Работы\nв 02:00',
+    );
+    expect(
+      parse({
+        'announce': ['  Plain text  '],
+      }).announce,
+      'Plain text',
+    );
+  });
+
   test('no headers leave every value unknown', () {
     final info = parse({});
 
     expect(info.title, isNull);
+    expect(info.announce, isNull);
     expect(info.updateIntervalHours, isNull);
     expect(info.supportUrl, isNull);
   });
@@ -56,6 +72,15 @@ void main() {
       );
     });
   }
+
+  test('an announcement that does not decode is unknown', () {
+    expect(
+      parse({
+        'announce': ['base64:not base64!'],
+      }).announce,
+      isNull,
+    );
+  });
 
   for (final value in [
     'http://t.me/support',

@@ -11,6 +11,7 @@ import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/catalog.dart';
 import 'package:onexray/service/servers/locations.dart';
+import 'package:onexray/service/servers/subscription/service.dart';
 import 'package:onexray/service/servers/subscription/user_info.dart';
 import 'package:onexray/service/shared/ping/service.dart';
 
@@ -37,6 +38,8 @@ typedef LocationPing = Future<void> Function(
   List<CoreConfigData> rows, {
   bool Function()? isCancelled,
 });
+
+typedef AnnouncementDismissal = Future<void> Function(int subId, String text);
 
 class HomeState {
   HomeState({
@@ -89,6 +92,12 @@ class HomeState {
   /// The newest row, which is the one the latest deep link asked for even if
   /// removing the previous subscription has not finished.
   SubscriptionData? get subscription => catalog.sources.lastOrNull;
+
+  /// What the panel announced, unless the user closed this text.
+  String? get announcement {
+    final row = subscription;
+    return row?.announce == row?.dismissedAnnounce ? null : row?.announce;
+  }
 
   bool get canToggle => switch (status) {
     _ when request == HomeRequest.saveChoice => false,
@@ -187,11 +196,14 @@ class HomeController extends PageCubit<HomeState> {
     ConnectionCoordinator? coordinator,
     Future<PlatformPermissionResult> Function()? requestPermission,
     LocationPing? pingLocations,
+    AnnouncementDismissal? dismissAnnounce,
   }) : _db = database ?? AppDatabase(),
        coordinator = coordinator ?? ConnectionCoordinator.instance,
        _requestPermission =
            requestPermission ?? AppHostApi().requestPlatformPermission,
        _pingLocations = pingLocations ?? PingService().pingLocations,
+       _dismissAnnounce =
+           dismissAnnounce ?? SubscriptionService().dismissAnnounce,
        super(HomeState()) {
     this.coordinator.state.addListener(_connectionChanged);
     _connectionChanged();
@@ -201,6 +213,7 @@ class HomeController extends PageCubit<HomeState> {
   final ConnectionCoordinator coordinator;
   final Future<PlatformPermissionResult> Function() _requestPermission;
   final LocationPing _pingLocations;
+  final AnnouncementDismissal _dismissAnnounce;
   StreamSubscription<ServerCatalog>? _catalog;
   StreamSubscription<void>? _settings;
   bool _measuring = false;
@@ -282,6 +295,18 @@ class HomeController extends PageCubit<HomeState> {
   HomeRequest get _choiceRequest => state.status == HomeStatus.connected
       ? HomeRequest.reconnect
       : HomeRequest.saveChoice;
+
+  /// Closes the shown text. The card leaves when the catalog sees the saved row.
+  Future<void> dismissAnnouncement() async {
+    final row = state.subscription;
+    final text = state.announcement;
+    if (row == null || text == null) return;
+    try {
+      await _dismissAnnounce(row.id, text);
+    } catch (error) {
+      ygLogger('dismiss announcement failed (${error.runtimeType})');
+    }
+  }
 
   /// Measures the listed locations unless the tunnel is up. The results reach
   /// the screen through the catalog as each batch is saved.

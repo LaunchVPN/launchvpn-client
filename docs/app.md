@@ -27,6 +27,8 @@ upstream pages kept for merging. They are not reachable in this build.
   and reads as a reconnect. While a command runs the switch ignores taps. A failed reconnect keeps
   the choice for the next attempt. See
   [provider presets](xray-configuration.md#provider-presets).
+- When the panel sends an announcement, Home shows it in a card below the presets until the user
+  closes it. See [panel info](subscriptions-and-sharing.md#panel-info).
 - Home's location card opens Locations, above the tabs. `LocationList` reads the panel's groups in
   panel order: names starting with `AUTO |` go under Automatic and everything else, services
   included, under Countries and services. The flag emoji becomes an image and is removed from the
