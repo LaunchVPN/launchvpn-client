@@ -282,6 +282,7 @@ class SubscriptionService {
           expireTimestamp: Value(loaded.userInfo?.expireTimestamp),
           userInfoUpdatedAt: Value(loaded.userInfo?.updatedAt),
           profileTitle: Value(loaded.panelInfo?.title),
+          announce: Value(loaded.panelInfo?.announce),
           supportUrl: Value(loaded.panelInfo?.supportUrl),
           updateIntervalHours: Value(loaded.panelInfo?.updateIntervalHours),
         );
@@ -308,6 +309,10 @@ class SubscriptionService {
   }
 
   /// Editing a source changes future downloads, not its current node assets.
+  /// Remembers the announcement text the user closed.
+  Future<void> dismissAnnounce(int subId, String text) =>
+      _database.subscriptionDao.dismissAnnounce(subId, text);
+
   Future<SubscriptionUpdateResult> saveSubscriptionInput(
     int id,
     SubscriptionInput input,
@@ -350,6 +355,8 @@ class SubscriptionService {
             expireTimestamp: const Value(null),
             userInfoUpdatedAt: const Value(null),
             profileTitle: const Value(null),
+            announce: const Value(null),
+            dismissedAnnounce: const Value(null),
             supportUrl: const Value(null),
             updateIntervalHours: const Value(null),
           );
@@ -635,6 +642,7 @@ class SubscriptionService {
         expireTimestamp: Value(loaded.userInfo?.expireTimestamp),
         userInfoUpdatedAt: Value(loaded.userInfo?.updatedAt),
         profileTitle: Value(loaded.panelInfo?.title),
+        announce: Value(loaded.panelInfo?.announce),
         supportUrl: Value(loaded.panelInfo?.supportUrl),
         updateIntervalHours: Value(loaded.panelInfo?.updateIntervalHours),
       );

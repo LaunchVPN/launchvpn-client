@@ -26,6 +26,7 @@ void main() {
   );
   const firstInfo = SubscriptionPanelInfo(
     title: 'LaunchVPN',
+    announce: 'Maintenance',
     supportUrl: 'https://example.com/help',
     updateIntervalHours: 12,
   );
@@ -62,13 +63,16 @@ void main() {
 
   void expectNoInfo(SubscriptionData source) {
     expect(source.profileTitle, isNull);
+    expect(source.announce, isNull);
+    expect(source.dismissedAnnounce, isNull);
     expect(source.supportUrl, isNull);
     expect(source.updateIntervalHours, isNull);
   }
 
-  test('every download replaces all three values from its headers', () async {
+  test('every download replaces all values from its headers', () async {
     var headers = <String, List<String>>{
       'profile-title': ['base64:TGF1bmNoVlBO'],
+      'announce': ['Maintenance'],
       'support-url': ['https://example.com/help'],
       'profile-update-interval': ['12'],
     };
@@ -108,6 +112,7 @@ void main() {
     );
     final first = await stored(inserted.subId);
     expect(first.profileTitle, 'LaunchVPN');
+    expect(first.announce, 'Maintenance');
     expect(first.supportUrl, 'https://example.com/help');
     expect(first.updateIntervalHours, 12);
 
@@ -117,8 +122,53 @@ void main() {
     expect((await subject.refreshSubscriptionResult(first)).success, isTrue);
     final second = await stored(first.id);
     expect(second.profileTitle, isNull);
+    expect(second.announce, isNull);
     expect(second.supportUrl, isNull);
     expect(second.updateIntervalHours, 6);
+  });
+
+  group('a closed announcement', () {
+    late SubscriptionLoadResult response;
+
+    Future<SubscriptionData> closedSource(SubscriptionService subject) async {
+      final inserted = await subject.insertSubscription(input);
+      expect((await stored(inserted.subId)).announce, 'Maintenance');
+      await subject.dismissAnnounce(inserted.subId, 'Maintenance');
+      return stored(inserted.subId);
+    }
+
+    setUp(() => response = loaded(firstInfo));
+
+    test('a download remembers it whatever the panel sends', () async {
+      final subject = service((_) async => response);
+      final source = await closedSource(subject);
+
+      for (final info in [
+        firstInfo,
+        const SubscriptionPanelInfo(announce: 'New'),
+        const SubscriptionPanelInfo(),
+        null,
+      ]) {
+        response = loaded(info);
+        await subject.refreshSubscriptionResult(await stored(source.id));
+
+        final refreshed = await stored(source.id);
+        expect(refreshed.announce, info?.announce);
+        expect(refreshed.dismissedAnnounce, 'Maintenance');
+      }
+    });
+
+    test('a new request source forgets it', () async {
+      final subject = service((_) async => response);
+      final source = await closedSource(subject);
+
+      await subject.saveSubscriptionInput(
+        source.id,
+        const SubscriptionInput(name: 'Panel', url: 'https://example.com/new'),
+      );
+
+      expectNoInfo(await stored(source.id));
+    });
   });
 
   test('a failed download keeps the saved values', () async {

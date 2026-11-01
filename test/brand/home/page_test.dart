@@ -87,6 +87,7 @@ void main() {
       database: db,
       coordinator: coordinator,
       pingLocations: (_, {isCancelled}) async => sweeps++,
+      dismissAnnounce: db.subscriptionDao.dismissAnnounce,
     );
     addTearDown(controller.close);
     await tester.pumpWidget(
@@ -298,6 +299,91 @@ void main() {
       await openLocations(tester);
 
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('announcement', () {
+    const notice = 'Сегодня с 02:00 до 03:00 плановые работы';
+
+    Future<void> setAnnounce(WidgetTester tester, String? text) async {
+      await tester.runAsync(() async {
+        final row = (await db.subscriptionDao.allRows).single;
+        await db.subscriptionDao.updateRow(row.copyWith(announce: Value(text)));
+        await pumpEventQueue(times: 20);
+      });
+      await tester.pump();
+    }
+
+    void usePhoneScreen(WidgetTester tester) {
+      tester.view.physicalSize = const Size(1170, 2532);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+    }
+
+    Future<void> close(WidgetTester tester) async {
+      await tester.tap(find.byTooltip('Закрыть объявление'));
+      await tester.runAsync(() => pumpEventQueue(times: 20));
+      await tester.pump();
+    }
+
+    testWidgets('shows what the panel sent below the presets', (tester) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+      expect(find.byKey(const ValueKey('home-announcement')), findsNothing);
+
+      await setAnnounce(tester, notice);
+
+      expect(find.text(notice), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text(notice)).dy,
+        greaterThan(tester.getBottomLeft(find.text('Умный')).dy),
+      );
+    });
+
+    testWidgets('stays closed while the panel has no other text', (
+      tester,
+    ) async {
+      usePhoneScreen(tester);
+      await pumpHome(tester);
+      await addSubscription(tester);
+      await setAnnounce(tester, notice);
+
+      await close(tester);
+      expect(find.text(notice), findsNothing);
+
+      await setAnnounce(tester, null);
+      await setAnnounce(tester, notice);
+      expect(find.text(notice), findsNothing);
+    });
+
+    testWidgets('a new text shows it again', (tester) async {
+      usePhoneScreen(tester);
+      await pumpHome(tester);
+      await addSubscription(tester);
+      await setAnnounce(tester, notice);
+      await close(tester);
+
+      await setAnnounce(tester, 'Работы закончены');
+
+      expect(find.text('Работы закончены'), findsOneWidget);
+    });
+
+    testWidgets('a long text fits with the largest system font', (
+      tester,
+    ) async {
+      usePhoneScreen(tester);
+      await pumpHome(tester, scale: _largeScale);
+      await addSubscription(tester);
+      await setAnnounce(tester, List.filled(12, notice).join(' '));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.byTooltip('Закрыть объявление'));
+      await tester.pumpAndSettle();
+      await close(tester);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey('home-announcement')), findsNothing);
     });
   });
 

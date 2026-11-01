@@ -813,6 +813,29 @@ class $SubscriptionTable extends Subscription
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _announceMeta = const VerificationMeta(
+    'announce',
+  );
+  @override
+  late final GeneratedColumn<String> announce = GeneratedColumn<String>(
+    'announce',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dismissedAnnounceMeta = const VerificationMeta(
+    'dismissedAnnounce',
+  );
+  @override
+  late final GeneratedColumn<String> dismissedAnnounce =
+      GeneratedColumn<String>(
+        'dismissed_announce',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -834,6 +857,8 @@ class $SubscriptionTable extends Subscription
     profileTitle,
     supportUrl,
     updateIntervalHours,
+    announce,
+    dismissedAnnounce,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -991,6 +1016,21 @@ class $SubscriptionTable extends Subscription
         ),
       );
     }
+    if (data.containsKey('announce')) {
+      context.handle(
+        _announceMeta,
+        announce.isAcceptableOrUnknown(data['announce']!, _announceMeta),
+      );
+    }
+    if (data.containsKey('dismissed_announce')) {
+      context.handle(
+        _dismissedAnnounceMeta,
+        dismissedAnnounce.isAcceptableOrUnknown(
+          data['dismissed_announce']!,
+          _dismissedAnnounceMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1076,6 +1116,14 @@ class $SubscriptionTable extends Subscription
         DriftSqlType.int,
         data['${effectivePrefix}update_interval_hours'],
       ),
+      announce: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}announce'],
+      ),
+      dismissedAnnounce: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}dismissed_announce'],
+      ),
     );
   }
 
@@ -1106,6 +1154,10 @@ class SubscriptionData extends DataClass
   final String? profileTitle;
   final String? supportUrl;
   final int? updateIntervalHours;
+  final String? announce;
+
+  /// The text the user closed. Any other announcement still shows.
+  final String? dismissedAnnounce;
   const SubscriptionData({
     required this.id,
     required this.name,
@@ -1126,6 +1178,8 @@ class SubscriptionData extends DataClass
     this.profileTitle,
     this.supportUrl,
     this.updateIntervalHours,
+    this.announce,
+    this.dismissedAnnounce,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1173,6 +1227,12 @@ class SubscriptionData extends DataClass
     if (!nullToAbsent || updateIntervalHours != null) {
       map['update_interval_hours'] = Variable<int>(updateIntervalHours);
     }
+    if (!nullToAbsent || announce != null) {
+      map['announce'] = Variable<String>(announce);
+    }
+    if (!nullToAbsent || dismissedAnnounce != null) {
+      map['dismissed_announce'] = Variable<String>(dismissedAnnounce);
+    }
     return map;
   }
 
@@ -1219,6 +1279,12 @@ class SubscriptionData extends DataClass
       updateIntervalHours: updateIntervalHours == null && nullToAbsent
           ? const Value.absent()
           : Value(updateIntervalHours),
+      announce: announce == null && nullToAbsent
+          ? const Value.absent()
+          : Value(announce),
+      dismissedAnnounce: dismissedAnnounce == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dismissedAnnounce),
     );
   }
 
@@ -1251,6 +1317,10 @@ class SubscriptionData extends DataClass
       updateIntervalHours: serializer.fromJson<int?>(
         json['updateIntervalHours'],
       ),
+      announce: serializer.fromJson<String?>(json['announce']),
+      dismissedAnnounce: serializer.fromJson<String?>(
+        json['dismissedAnnounce'],
+      ),
     );
   }
   @override
@@ -1276,6 +1346,8 @@ class SubscriptionData extends DataClass
       'profileTitle': serializer.toJson<String?>(profileTitle),
       'supportUrl': serializer.toJson<String?>(supportUrl),
       'updateIntervalHours': serializer.toJson<int?>(updateIntervalHours),
+      'announce': serializer.toJson<String?>(announce),
+      'dismissedAnnounce': serializer.toJson<String?>(dismissedAnnounce),
     };
   }
 
@@ -1299,6 +1371,8 @@ class SubscriptionData extends DataClass
     Value<String?> profileTitle = const Value.absent(),
     Value<String?> supportUrl = const Value.absent(),
     Value<int?> updateIntervalHours = const Value.absent(),
+    Value<String?> announce = const Value.absent(),
+    Value<String?> dismissedAnnounce = const Value.absent(),
   }) => SubscriptionData(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -1327,6 +1401,10 @@ class SubscriptionData extends DataClass
     updateIntervalHours: updateIntervalHours.present
         ? updateIntervalHours.value
         : this.updateIntervalHours,
+    announce: announce.present ? announce.value : this.announce,
+    dismissedAnnounce: dismissedAnnounce.present
+        ? dismissedAnnounce.value
+        : this.dismissedAnnounce,
   );
   SubscriptionData copyWithCompanion(SubscriptionCompanion data) {
     return SubscriptionData(
@@ -1371,6 +1449,10 @@ class SubscriptionData extends DataClass
       updateIntervalHours: data.updateIntervalHours.present
           ? data.updateIntervalHours.value
           : this.updateIntervalHours,
+      announce: data.announce.present ? data.announce.value : this.announce,
+      dismissedAnnounce: data.dismissedAnnounce.present
+          ? data.dismissedAnnounce.value
+          : this.dismissedAnnounce,
     );
   }
 
@@ -1395,13 +1477,15 @@ class SubscriptionData extends DataClass
           ..write('userInfoUpdatedAt: $userInfoUpdatedAt, ')
           ..write('profileTitle: $profileTitle, ')
           ..write('supportUrl: $supportUrl, ')
-          ..write('updateIntervalHours: $updateIntervalHours')
+          ..write('updateIntervalHours: $updateIntervalHours, ')
+          ..write('announce: $announce, ')
+          ..write('dismissedAnnounce: $dismissedAnnounce')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     name,
     url,
@@ -1421,7 +1505,9 @@ class SubscriptionData extends DataClass
     profileTitle,
     supportUrl,
     updateIntervalHours,
-  );
+    announce,
+    dismissedAnnounce,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1444,7 +1530,9 @@ class SubscriptionData extends DataClass
           other.userInfoUpdatedAt == this.userInfoUpdatedAt &&
           other.profileTitle == this.profileTitle &&
           other.supportUrl == this.supportUrl &&
-          other.updateIntervalHours == this.updateIntervalHours);
+          other.updateIntervalHours == this.updateIntervalHours &&
+          other.announce == this.announce &&
+          other.dismissedAnnounce == this.dismissedAnnounce);
 }
 
 class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
@@ -1467,6 +1555,8 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
   final Value<String?> profileTitle;
   final Value<String?> supportUrl;
   final Value<int?> updateIntervalHours;
+  final Value<String?> announce;
+  final Value<String?> dismissedAnnounce;
   const SubscriptionCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -1487,6 +1577,8 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
     this.profileTitle = const Value.absent(),
     this.supportUrl = const Value.absent(),
     this.updateIntervalHours = const Value.absent(),
+    this.announce = const Value.absent(),
+    this.dismissedAnnounce = const Value.absent(),
   });
   SubscriptionCompanion.insert({
     this.id = const Value.absent(),
@@ -1508,6 +1600,8 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
     this.profileTitle = const Value.absent(),
     this.supportUrl = const Value.absent(),
     this.updateIntervalHours = const Value.absent(),
+    this.announce = const Value.absent(),
+    this.dismissedAnnounce = const Value.absent(),
   }) : name = Value(name),
        url = Value(url),
        timestamp = Value(timestamp);
@@ -1531,6 +1625,8 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
     Expression<String>? profileTitle,
     Expression<String>? supportUrl,
     Expression<int>? updateIntervalHours,
+    Expression<String>? announce,
+    Expression<String>? dismissedAnnounce,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1553,6 +1649,8 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
       if (supportUrl != null) 'support_url': supportUrl,
       if (updateIntervalHours != null)
         'update_interval_hours': updateIntervalHours,
+      if (announce != null) 'announce': announce,
+      if (dismissedAnnounce != null) 'dismissed_announce': dismissedAnnounce,
     });
   }
 
@@ -1576,6 +1674,8 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
     Value<String?>? profileTitle,
     Value<String?>? supportUrl,
     Value<int?>? updateIntervalHours,
+    Value<String?>? announce,
+    Value<String?>? dismissedAnnounce,
   }) {
     return SubscriptionCompanion(
       id: id ?? this.id,
@@ -1597,6 +1697,8 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
       profileTitle: profileTitle ?? this.profileTitle,
       supportUrl: supportUrl ?? this.supportUrl,
       updateIntervalHours: updateIntervalHours ?? this.updateIntervalHours,
+      announce: announce ?? this.announce,
+      dismissedAnnounce: dismissedAnnounce ?? this.dismissedAnnounce,
     );
   }
 
@@ -1660,6 +1762,12 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
     if (updateIntervalHours.present) {
       map['update_interval_hours'] = Variable<int>(updateIntervalHours.value);
     }
+    if (announce.present) {
+      map['announce'] = Variable<String>(announce.value);
+    }
+    if (dismissedAnnounce.present) {
+      map['dismissed_announce'] = Variable<String>(dismissedAnnounce.value);
+    }
     return map;
   }
 
@@ -1684,7 +1792,9 @@ class SubscriptionCompanion extends UpdateCompanion<SubscriptionData> {
           ..write('userInfoUpdatedAt: $userInfoUpdatedAt, ')
           ..write('profileTitle: $profileTitle, ')
           ..write('supportUrl: $supportUrl, ')
-          ..write('updateIntervalHours: $updateIntervalHours')
+          ..write('updateIntervalHours: $updateIntervalHours, ')
+          ..write('announce: $announce, ')
+          ..write('dismissedAnnounce: $dismissedAnnounce')
           ..write(')'))
         .toString();
   }
@@ -3308,6 +3418,8 @@ typedef $$SubscriptionTableCreateCompanionBuilder =
       Value<String?> profileTitle,
       Value<String?> supportUrl,
       Value<int?> updateIntervalHours,
+      Value<String?> announce,
+      Value<String?> dismissedAnnounce,
     });
 typedef $$SubscriptionTableUpdateCompanionBuilder =
     SubscriptionCompanion Function({
@@ -3330,6 +3442,8 @@ typedef $$SubscriptionTableUpdateCompanionBuilder =
       Value<String?> profileTitle,
       Value<String?> supportUrl,
       Value<int?> updateIntervalHours,
+      Value<String?> announce,
+      Value<String?> dismissedAnnounce,
     });
 
 class $$SubscriptionTableFilterComposer
@@ -3433,6 +3547,16 @@ class $$SubscriptionTableFilterComposer
 
   ColumnFilters<int> get updateIntervalHours => $composableBuilder(
     column: $table.updateIntervalHours,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get announce => $composableBuilder(
+    column: $table.announce,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dismissedAnnounce => $composableBuilder(
+    column: $table.dismissedAnnounce,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3540,6 +3664,16 @@ class $$SubscriptionTableOrderingComposer
     column: $table.updateIntervalHours,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get announce => $composableBuilder(
+    column: $table.announce,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dismissedAnnounce => $composableBuilder(
+    column: $table.dismissedAnnounce,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SubscriptionTableAnnotationComposer
@@ -3629,6 +3763,14 @@ class $$SubscriptionTableAnnotationComposer
     column: $table.updateIntervalHours,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get announce =>
+      $composableBuilder(column: $table.announce, builder: (column) => column);
+
+  GeneratedColumn<String> get dismissedAnnounce => $composableBuilder(
+    column: $table.dismissedAnnounce,
+    builder: (column) => column,
+  );
 }
 
 class $$SubscriptionTableTableManager
@@ -3681,6 +3823,8 @@ class $$SubscriptionTableTableManager
                 Value<String?> profileTitle = const Value.absent(),
                 Value<String?> supportUrl = const Value.absent(),
                 Value<int?> updateIntervalHours = const Value.absent(),
+                Value<String?> announce = const Value.absent(),
+                Value<String?> dismissedAnnounce = const Value.absent(),
               }) => SubscriptionCompanion(
                 id: id,
                 name: name,
@@ -3701,6 +3845,8 @@ class $$SubscriptionTableTableManager
                 profileTitle: profileTitle,
                 supportUrl: supportUrl,
                 updateIntervalHours: updateIntervalHours,
+                announce: announce,
+                dismissedAnnounce: dismissedAnnounce,
               ),
           createCompanionCallback:
               ({
@@ -3723,6 +3869,8 @@ class $$SubscriptionTableTableManager
                 Value<String?> profileTitle = const Value.absent(),
                 Value<String?> supportUrl = const Value.absent(),
                 Value<int?> updateIntervalHours = const Value.absent(),
+                Value<String?> announce = const Value.absent(),
+                Value<String?> dismissedAnnounce = const Value.absent(),
               }) => SubscriptionCompanion.insert(
                 id: id,
                 name: name,
@@ -3743,6 +3891,8 @@ class $$SubscriptionTableTableManager
                 profileTitle: profileTitle,
                 supportUrl: supportUrl,
                 updateIntervalHours: updateIntervalHours,
+                announce: announce,
+                dismissedAnnounce: dismissedAnnounce,
               ),
           withReferenceMapper: (p0) => p0
               .map(

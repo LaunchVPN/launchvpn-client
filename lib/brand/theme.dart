@@ -88,6 +88,7 @@ abstract final class BrandText {
     height: 18 / 13,
     color: BrandColors.ink,
   );
+  static const banner = pill;
   static const caption = TextStyle(
     fontFamily: _body,
     fontWeight: FontWeight.w500,

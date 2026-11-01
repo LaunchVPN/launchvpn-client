@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 class SubscriptionPanelInfo {
   const SubscriptionPanelInfo({
     this.title,
+    this.announce,
     this.supportUrl,
     this.updateIntervalHours,
   });
@@ -18,7 +19,8 @@ class SubscriptionPanelInfo {
     }
 
     return SubscriptionPanelInfo(
-      title: _parseTitle(single('profile-title')),
+      title: _parseText(single('profile-title')),
+      announce: _parseText(single('announce')),
       supportUrl: _parseSupportUrl(single('support-url')),
       updateIntervalHours: _parseIntervalHours(
         single('profile-update-interval'),
@@ -27,6 +29,9 @@ class SubscriptionPanelInfo {
   }
 
   final String? title;
+
+  /// A notice for the user, such as planned maintenance.
+  final String? announce;
   final String? supportUrl;
 
   /// How often the panel asks clients to refresh.
@@ -34,7 +39,7 @@ class SubscriptionPanelInfo {
 
   static const _base64Prefix = 'base64:';
 
-  static String? _parseTitle(String? value) {
+  static String? _parseText(String? value) {
     if (value == null) return null;
     if (!value.startsWith(_base64Prefix)) return value.isEmpty ? null : value;
     try {
