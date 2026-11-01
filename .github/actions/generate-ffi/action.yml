@@ -1,0 +1,28 @@
+name: Generate FFI bindings
+description: Generate the ignored FFI bindings, or restore them when their inputs are unchanged
+
+# The validate job always generates them, so a bad cached file cannot hide there.
+inputs:
+  app-path:
+    description: Directory of the Flutter App inside the workspace
+
+runs:
+  using: composite
+  steps:
+    # The generator also uses the rolling Dart and clang, so the week in the key
+    # lets the bindings follow them.
+    - name: Read the current week
+      id: week
+      shell: bash
+      run: echo "value=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+
+    - id: cache
+      uses: actions/cache@v6
+      with:
+        path: ${{ inputs.app-path }}/lib/core/ffi/generated_bindings.dart
+        key: ffi-${{ runner.os }}-${{ hashFiles(format('{0}/c/include/**', inputs.app-path), format('{0}/tool/ffigen.dart', inputs.app-path), format('{0}/pubspec.lock', inputs.app-path)) }}-${{ steps.week.outputs.value }}
+
+    - if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{ inputs.app-path }}
+      run: dart run tool/ffigen.dart
