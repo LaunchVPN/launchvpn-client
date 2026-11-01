@@ -27,8 +27,9 @@ _Avoid_: engine, backend, VPN service
 
 **Preset**:
 An operation on the routing delivered in the xray-json: "Smart" (as in the
-subscription), "Everything through VPN" (direct rules are removed), "Per app" (tunnel
-only for selected apps, Android). The user sees no other modes.
+subscription), "Everything through VPN" (internet rules that go direct are removed, the
+local network stays direct and torrents are blocked), "Per app" (tunnel only for selected
+apps, Android). The user sees no other modes.
 _Avoid_: routing mode, routing profile, rule
 
 **HWID**:

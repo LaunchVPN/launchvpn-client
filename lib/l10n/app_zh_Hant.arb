@@ -986,5 +986,7 @@
   "homeNoSubscription": "請從機器人或網站開啟訂閱連結",
   "homeDaysLeft": "{days, plural, other {{days} 天}}",
   "homeStatusUncertain": "VPN 可能仍在執行",
-  "homeHintUncertain": "點擊關閉"
+  "homeHintUncertain": "點擊關閉",
+  "homePresetSmart": "智慧",
+  "homePresetAllVpn": "全部走 VPN"
 }

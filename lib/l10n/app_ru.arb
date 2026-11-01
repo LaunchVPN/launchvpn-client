@@ -986,5 +986,7 @@
   "homeNoSubscription": "Откройте ссылку на подписку из бота или с сайта",
   "homeDaysLeft": "{days, plural, one {{days} день} few {{days} дня} many {{days} дней} other {{days} дня}}",
   "homeStatusUncertain": "VPN может быть включён",
-  "homeHintUncertain": "Нажмите, чтобы отключить"
+  "homeHintUncertain": "Нажмите, чтобы отключить",
+  "homePresetSmart": "Умный",
+  "homePresetAllVpn": "Всё через VPN"
 }

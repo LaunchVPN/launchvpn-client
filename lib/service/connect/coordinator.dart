@@ -468,6 +468,25 @@ class ConnectionCoordinator with WidgetsBindingObserver {
     await apply(next, connect: true);
   }
 
+  /// Stores the mode before a running session restarts with it, so a failed or
+  /// cancelled reconnect does not take back the user's choice.
+  Future<void> applyTrafficMode(TrafficMode mode) async {
+    final current = await configuration;
+    final next = ConnectionConfiguration(
+      connection: ConnectionSettings.fromJson({
+        ...current.connection.toJson(),
+        'trafficMode': mode.name,
+      }),
+      policy: current.policy,
+    );
+    await apply(
+      next,
+      affectsRuntime: false,
+      expectedConfiguration: current.encode(),
+    );
+    await apply(next);
+  }
+
   /// UI has already confirmed a disruptive change before calling this method.
   /// Metadata/unselected-asset edits use affectsRuntime:false and still commit
   /// asset plus connection values in one transaction.

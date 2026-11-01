@@ -6,6 +6,7 @@ import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/catalog.dart';
 import 'package:onexray/service/servers/subscription/user_info.dart';
 
@@ -21,7 +22,7 @@ enum HomeStatus {
   uncertain,
 }
 
-enum HomeRequest { connect, disconnect }
+enum HomeRequest { connect, disconnect, reconnect, savePreset }
 
 /// Runs a connection command and reports its failure to the user.
 typedef ConnectionActionRunner = Future<void> Function(
@@ -34,10 +35,14 @@ class HomeState {
     ServerCatalog? catalog,
     this.request,
     this.restoring = false,
+    this.preset,
   }) : catalog = catalog ?? ServerCatalog();
 
   final ConnectionView view;
   final ServerCatalog catalog;
+
+  /// Null until the saved preset is read.
+  final TrafficMode? preset;
 
   // A command may wait for permission or the serial queue before it publishes
   // a phase. The tap is acknowledged at once without claiming a native state.
@@ -50,6 +55,7 @@ class HomeState {
   HomeStatus get status {
     if (request == HomeRequest.disconnect) return HomeStatus.disconnecting;
     if (request == HomeRequest.connect) return HomeStatus.connecting;
+    if (request == HomeRequest.reconnect) return HomeStatus.reconnecting;
     return switch (view.phase) {
       ConnectionPhase.connected => HomeStatus.connected,
       ConnectionPhase.disconnecting => HomeStatus.disconnecting,
@@ -74,10 +80,21 @@ class HomeState {
   SubscriptionData? get subscription => catalog.sources.lastOrNull;
 
   bool get canToggle => switch (status) {
+    _ when request == HomeRequest.savePreset => false,
     HomeStatus.disconnecting => false,
     HomeStatus.off || HomeStatus.failed => subscription != null,
     _ => true,
   };
+
+  /// A choice made mid-transition would race the command already running.
+  bool get canChangePreset =>
+      preset != null &&
+      request == null &&
+      const {
+        HomeStatus.off,
+        HomeStatus.failed,
+        HomeStatus.connected,
+      }.contains(status);
 
   String? get location {
     final runtime = view.runtime;
@@ -105,11 +122,13 @@ class HomeState {
     ConnectionView? view,
     ServerCatalog? catalog,
     bool? restoring,
+    TrafficMode? preset,
   }) => HomeState(
     view: view ?? this.view,
     catalog: catalog ?? this.catalog,
     request: request,
     restoring: restoring ?? this.restoring,
+    preset: preset ?? this.preset,
   );
 
   HomeState _withRequest(HomeRequest? request) => HomeState(
@@ -117,6 +136,7 @@ class HomeState {
     catalog: catalog,
     request: request,
     restoring: restoring,
+    preset: preset,
   );
 }
 
@@ -160,6 +180,31 @@ class HomeController extends PageCubit<HomeState> {
       onError: (Object error) =>
           ygLogger('read home catalog failed (${error.runtimeType})'),
     );
+    await _showStoredPreset();
+  }
+
+  Future<void> _showStoredPreset() async {
+    try {
+      final stored = await coordinator.configuration;
+      emit(state.copyWith(preset: stored.connection.trafficMode));
+    } catch (error) {
+      ygLogger('read home preset failed (${error.runtimeType})');
+    }
+  }
+
+  /// Saves the preset. A running tunnel reconnects at once, because a preset
+  /// that only applies later would show a mode that is not in effect.
+  Future<void> selectPreset(
+    TrafficMode preset,
+    ConnectionActionRunner run,
+  ) async {
+    if (!state.canChangePreset || preset == state.preset) return;
+    final request = state.status == HomeStatus.connected
+        ? HomeRequest.reconnect
+        : HomeRequest.savePreset;
+    emit(state.copyWith(preset: preset));
+    await _perform(request, run, () => coordinator.applyTrafficMode(preset));
+    await _showStoredPreset();
   }
 
   /// Connects from off, cancels a connection in progress, otherwise disconnects.

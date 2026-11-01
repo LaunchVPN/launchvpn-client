@@ -22,6 +22,8 @@ abstract final class BrandColors {
 }
 
 abstract final class BrandRadii {
+  static const segment = 10.0;
+  static const control = 14.0;
   static const md = 16.0;
   static const card = 20.0;
   static const full = 999.0;
@@ -81,6 +83,20 @@ abstract final class BrandText {
   static const pill = TextStyle(
     fontFamily: _body,
     fontWeight: FontWeight.w500,
+    fontSize: 13,
+    height: 18 / 13,
+    color: BrandColors.ink,
+  );
+  static const preset = TextStyle(
+    fontFamily: _body,
+    fontWeight: FontWeight.w500,
+    fontSize: 13,
+    height: 18 / 13,
+    color: BrandColors.muted,
+  );
+  static const selectedPreset = TextStyle(
+    fontFamily: _body,
+    fontWeight: FontWeight.w700,
     fontSize: 13,
     height: 18 / 13,
     color: BrandColors.ink,
