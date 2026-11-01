@@ -613,11 +613,12 @@ class SubscriptionService {
       _ensureCurrent(expected.id, generation);
       final selected = await _selectedGroup(current.id);
       final rows = await _withLastDelays(current.id, loaded.rows);
+      final groups = await _groupIds(current.id);
       await db.subscriptionDao.deleteConfigs(
         current.id,
         protectedIds: {
-          ...references.protectedIds.where((id) => id != selected?.id),
-          ...references.runningIds,
+          ...references.protectedIds.where((id) => !groups.contains(id)),
+          ...references.startingIds,
         },
       );
       await ConfigWriter.writeRowsBatchInTransaction(db, rows, current.id);
@@ -648,6 +649,14 @@ class SubscriptionService {
       );
     });
   }
+
+  /// Provider groups are not kept for what is selected or running: a started
+  /// session no longer reads its row, and a kept copy would hold old servers.
+  Future<Set<int>> _groupIds(int subId) async => {
+    for (final row in await _database.coreConfigDao.allActiveServerRows())
+      if (row.subId == subId && row.type == CoreConfigType.Remnawave.name)
+        row.id,
+  };
 
   /// A group cannot be measured while the tunnel is up, so a refreshed one keeps
   /// the last delay of its old row until it can.

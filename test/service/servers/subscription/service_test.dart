@@ -941,18 +941,44 @@ void main() {
       },
     );
 
-    test('keeps the row a running session uses, yet still moves on', () async {
+    test(
+      'a running session gives up its row, yet the selection moves on',
+      () async {
+        await refreshed(
+          [_provider('Germany')],
+          references: SubscriptionNodeReferences(
+            fixedId: germany,
+            runningIds: {germany},
+          ),
+        ).refreshSubscriptionResult(source);
+
+        expect(await database.coreConfigDao.searchRow(germany), isNull);
+        expect((await storedSelection()).id, (await rowNamed('Germany')).id);
+      },
+    );
+
+    test('a group the panel dropped leaves even while it runs', () async {
+      await refreshed(
+        [_provider('Poland')],
+        references: SubscriptionNodeReferences(runningIds: {germany}),
+      ).refreshSubscriptionResult(source);
+
+      expect(await database.coreConfigDao.searchRow(germany), isNull);
+      expect((await storedSelection()).kind, SelectionKind.automatic);
+    });
+
+    test('a connection still starting keeps the row it reads', () async {
       await refreshed(
         [_provider('Germany')],
         references: SubscriptionNodeReferences(
           fixedId: germany,
           runningIds: {germany},
+          startingIds: {germany},
         ),
       ).refreshSubscriptionResult(source);
 
       expect(await database.coreConfigDao.searchRow(germany), isNotNull);
       expect((await storedSelection()).id, (await rowNamed('Germany')).id);
-      expect((await storedSelection()).id, isNot(germany));
     });
 
     test('falls back to automatic when the panel dropped the group', () async {
@@ -1022,8 +1048,7 @@ void main() {
       _node('Old exit', subId: source.id),
     );
     var references = SubscriptionNodeReferences(
-      runningIds: {old[0].id},
-      fixedId: old[1].id,
+      startingIds: {old[0].id, old[1].id},
       finalExitId: exitId,
     );
     final pings = <int>[];

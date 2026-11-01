@@ -110,9 +110,13 @@ final class SubscriptionNodeReferences {
     this.runningIds = const {},
     this.fixedId,
     this.finalExitId,
+    this.startingIds = const {},
   });
 
   final Set<int> runningIds;
+
+  /// Rows a connection in progress still reads. A started one no longer does.
+  final Set<int> startingIds;
   final int? fixedId;
   final int? finalExitId;
 
