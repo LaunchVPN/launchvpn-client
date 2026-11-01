@@ -1156,7 +1156,7 @@ class SubscriptionData extends DataClass
   final int? updateIntervalHours;
   final String? announce;
 
-  /// The announcement the user closed, which stays hidden until the text changes.
+  /// The text the user closed. Any other announcement still shows.
   final String? dismissedAnnounce;
   const SubscriptionData({
     required this.id,
