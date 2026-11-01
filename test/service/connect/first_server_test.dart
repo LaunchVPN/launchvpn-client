@@ -308,6 +308,26 @@ void main() {
       },
     );
 
+    test('do not exist when the last rule leaves out a network', () async {
+      final profile = _graph({
+        'outbounds': [_server('a'), _server('b')],
+        'routing': {
+          'balancers': [
+            {
+              'tag': 'auto',
+              'selector': ['a', 'b'],
+              'strategy': {'type': 'leastLoad'},
+            },
+          ],
+          'rules': [
+            {'network': 'tcp', 'balancerTag': 'auto'},
+          ],
+        },
+      });
+
+      expect(await _checked(profile), isEmpty);
+    });
+
     test('do not exist when the balancer needs no measurements', () async {
       final profile = _graph({
         'outbounds': [_server('a'), _server('b')],

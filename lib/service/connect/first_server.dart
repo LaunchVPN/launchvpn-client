@@ -67,7 +67,7 @@ class FirstServerPicker {
             'balancers': final List<dynamic> balancers,
           },
         }
-        when _catchAllRuleKeys.containsAll(rule.keys)) {
+        when _matchesAllTraffic(rule)) {
       final balancer = balancers
           .whereType<Map<String, dynamic>>()
           .firstWhereOrNull(
@@ -90,6 +90,13 @@ class FirstServerPicker {
       }
     }
     return const [];
+  }
+
+  bool _matchesAllTraffic(Map<String, dynamic> rule) {
+    if (!_catchAllRuleKeys.containsAll(rule.keys)) return false;
+    final network = rule['network'];
+    return network == null ||
+        ('$network'.contains('tcp') && '$network'.contains('udp'));
   }
 
   /// A failed check must never fail the connection it serves.
