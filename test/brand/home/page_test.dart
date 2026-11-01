@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Tristate;
 
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -282,5 +283,60 @@ void main() {
       greaterThan(lineHeight * 1.5),
     );
     expect(find.byType(Scrollable), findsOneWidget);
+  });
+
+  testWidgets('offers Smart and Everything through VPN, Smart first', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+    await addSubscription(tester);
+
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('Умный'))
+          .flagsCollection
+          .isSelected,
+      Tristate.isTrue,
+    );
+    expect(find.text('Всё через VPN'), findsOneWidget);
+  });
+
+  testWidgets('has no preset switch without a subscription', (tester) async {
+    await pumpHome(tester);
+
+    expect(find.text('Умный'), findsNothing);
+  });
+
+  testWidgets('a tap selects the preset and saves it', (tester) async {
+    await pumpHome(tester);
+    await addSubscription(tester);
+
+    await tester.tap(find.text('Всё через VPN'));
+    await tester.runAsync(() => pumpEventQueue(times: 20));
+    await tester.pump();
+
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('Всё через VPN'))
+          .flagsCollection
+          .isSelected,
+      Tristate.isTrue,
+    );
+    await tester.runAsync(() async {
+      expect(
+        (await coordinator.configuration).connection.trafficMode,
+        TrafficMode.allVpn,
+      );
+    });
+  });
+
+  testWidgets('the preset switch fits with the largest system font', (
+    tester,
+  ) async {
+    await pumpHome(tester, scale: _largeScale);
+    await addSubscription(tester);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Всё через VPN'), findsOneWidget);
   });
 }

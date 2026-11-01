@@ -22,6 +22,11 @@ upstream pages kept for merging. They are not reachable in this build.
   subscription the toggle is disabled.
 - The location card names the server in use, or otherwise the first one the automatic selection
   would use. Settings shows only its title.
+- With a subscription, Home offers the presets Smart and Everything through VPN, stored as
+  `ConnectionSettings.trafficMode`. A choice while connected reconnects at once without a dialog
+  and reads as a reconnect. While a command runs the switch ignores taps. A failed reconnect keeps
+  the choice for the next attempt. See
+  [provider presets](xray-configuration.md#provider-presets).
 - `BrandShell` owns service startup and retry, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published.
 

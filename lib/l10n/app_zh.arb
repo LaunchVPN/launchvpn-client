@@ -986,5 +986,7 @@
   "homeNoSubscription": "请从机器人或网站打开订阅链接",
   "homeDaysLeft": "{days, plural, other {{days} 天}}",
   "homeStatusUncertain": "VPN 可能仍在运行",
-  "homeHintUncertain": "点击关闭"
+  "homeHintUncertain": "点击关闭",
+  "homePresetSmart": "智能",
+  "homePresetAllVpn": "全部走 VPN"
 }

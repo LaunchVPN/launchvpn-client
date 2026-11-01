@@ -3164,5 +3164,7 @@
     "placeholders": {"days": {"type": "int"}}
   },
   "homeStatusUncertain": "VPN may still be on",
-  "homeHintUncertain": "Tap to turn it off"
+  "homeHintUncertain": "Tap to turn it off",
+  "homePresetSmart": "Smart",
+  "homePresetAllVpn": "Everything through VPN"
 }

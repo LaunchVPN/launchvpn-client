@@ -11,6 +11,7 @@ import 'package:onexray/brand/theme.dart';
 import 'package:onexray/core/brand.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
+import 'package:onexray/service/connect/settings.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, this.controller});
@@ -36,9 +37,11 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  Future<void> _toggle() => _controller.toggle((action) async {
+  Future<void> _run(Future<void> Function() action) async {
     await runConnectionAction(context, _controller.coordinator, action);
-  });
+  }
+
+  Future<void> _toggle() => _controller.toggle(_run);
 
   @override
   Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
@@ -72,6 +75,16 @@ class _HomePageState extends State<HomePage> {
                       ),
                       if (state.location case final location?)
                         _LocationCard(name: location),
+                      if (state.subscription != null) ...[
+                        const SizedBox(height: 20),
+                        _PresetSwitch(
+                          selected: state.preset,
+                          onSelect: state.canChangePreset
+                              ? (preset) =>
+                                    _controller.selectPreset(preset, _run)
+                              : null,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -292,6 +305,84 @@ class _LocationCard extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(child: Text(name, style: BrandText.cardTitle)),
       ],
+    ),
+  );
+}
+
+class _PresetSwitch extends StatelessWidget {
+  const _PresetSwitch({required this.selected, required this.onSelect});
+
+  final TrafficMode selected;
+  final ValueChanged<TrafficMode>? onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    Widget segment(TrafficMode preset, String label) => Expanded(
+      child: _PresetSegment(
+        label: label,
+        selected: preset == selected,
+        onTap: onSelect == null ? null : () => onSelect!(preset),
+      ),
+    );
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: BrandColors.surface,
+        borderRadius: BorderRadius.circular(BrandRadii.control),
+        border: Border.all(color: BrandColors.line),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            segment(TrafficMode.smart, l.homePresetSmart),
+            const SizedBox(width: 4),
+            segment(TrafficMode.allVpn, l.homePresetAllVpn),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PresetSegment extends StatelessWidget {
+  const _PresetSegment({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    button: true,
+    enabled: onTap != null,
+    selected: selected,
+    label: label,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 34),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? BrandColors.accentSoft : null,
+            borderRadius: BorderRadius.circular(BrandRadii.segment),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: selected ? BrandText.selectedPreset : BrandText.preset,
+          ),
+        ),
+      ),
     ),
   );
 }
