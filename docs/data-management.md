@@ -53,7 +53,7 @@ v1–v2 创建新结构时不新增退休地区列，v3–v6 删除已有列，�
 同名、同延迟或同一非成功类别均按 ID 升序确定顺序。筛选只取子集，不重新排序，订阅分组次序不变。
 
 Locations measures provider groups with `PingService.pingLocations`, on the same queue and through
-the same native batch as ordinary nodes. A group stores the delay of its first server that answers,
+the same native batch as ordinary servers. A group stores the delay of its first server that answers,
 trying at most three, so a sweep of the real panel takes seconds. "No answer" therefore means those
 three were silent, not every server of the group. Opening the screen starts a sweep only while the
 tunnel is down, because a measurement through it would describe the tunnel; starting a connection

@@ -114,12 +114,15 @@ class HomeState {
 
   late final LocationList locations = LocationList.from(catalog);
 
-  /// The location the next connection uses.
+  /// The location the next connection uses. A connection that was starting
+  /// during a refresh can leave the selection on a row the list has replaced.
   Location? get selectedLocation {
     final current = selection;
-    return (current?.kind == SelectionKind.server
-            ? locations.withId(current!.id!)
-            : null) ??
+    if (current?.kind != SelectionKind.server) return locations.first;
+    final row = catalog.servers.firstWhereOrNull(
+      (row) => row.id == current!.id,
+    );
+    return (row == null ? null : locations.named(catalog.display(row).name)) ??
         locations.first;
   }
 
@@ -131,14 +134,13 @@ class HomeState {
     if (running == null || request == HomeRequest.reconnect) {
       return selectedLocation;
     }
-    final parsed = Location.parse(
-      id: runtime!.profile?.id ?? runtime.entries.first.id,
-      label: running,
-      delay: PingDelayConstants.unknown,
-    );
-    // A refresh may have replaced the running row, so its copy is found by name.
-    return locations.all.firstWhereOrNull((item) => item.name == parsed.name) ??
-        parsed;
+    // A refresh may have replaced the running row, or the panel dropped it.
+    return locations.named(running) ??
+        Location.parse(
+          id: runtime!.profile?.id ?? runtime.entries.first.id,
+          label: running,
+          delay: PingDelayConstants.unknown,
+        );
   }
 
   DateTime? get connectedSince => view.runtime?.startedAt;
@@ -225,7 +227,7 @@ class HomeController extends PageCubit<HomeState> {
           ygLogger('read home catalog failed (${error.runtimeType})'),
     );
     // A subscription refresh moves the stored selection.
-    _settings ??= _db.connectionConfigDao.watch().listen(
+    _settings ??= coordinator.configurationChanges.listen(
       (_) => unawaited(_showStoredChoices()),
       onError: (Object error) =>
           ygLogger('watch home settings failed (${error.runtimeType})'),

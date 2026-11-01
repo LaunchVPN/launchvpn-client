@@ -90,9 +90,22 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       if (state.location case final location?)
-                        _LocationCard(
+                        LocationCard(
+                          key: const ValueKey('home-location'),
                           location: location,
+                          // "No answer" would contradict a tunnel that works.
+                          delay: PingDelayConstants.isSuccessful(location.delay)
+                              ? locationDelayLabel(
+                                  AppLocalizations.of(context)!,
+                                  location,
+                                )
+                              : null,
                           onTap: _openLocations,
+                          trailing: const Icon(
+                            LucideIcons.chevronRight,
+                            size: 20,
+                            color: BrandColors.muted,
+                          ),
                         ),
                       if (state.subscription != null) ...[
                         const SizedBox(height: 20),
@@ -286,64 +299,6 @@ class _ConnectedHintState extends State<_ConnectedHint> {
       since == null ? hidden : '${_elapsed(since)} · $hidden',
       textAlign: TextAlign.center,
       style: BrandText.timer,
-    );
-  }
-}
-
-class _LocationCard extends StatelessWidget {
-  const _LocationCard({required this.location, required this.onTap});
-
-  final Location location;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    // "No answer" here would contradict a tunnel that works.
-    final delay = PingDelayConstants.isSuccessful(location.delay)
-        ? locationDelayLabel(AppLocalizations.of(context)!, location)
-        : null;
-    return Semantics(
-      container: true,
-      button: true,
-      label: delay == null ? location.name : '${location.name}, $delay',
-      child: GestureDetector(
-        key: const ValueKey('home-location'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: ExcludeSemantics(
-          child: Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 72),
-            padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
-            decoration: BoxDecoration(
-              color: BrandColors.surface,
-              borderRadius: BorderRadius.circular(BrandRadii.card),
-              border: Border.all(color: BrandColors.line),
-            ),
-            child: Row(
-              children: [
-                LocationBadge(location: location),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(location.name, style: BrandText.cardTitle),
-                      if (delay != null) Text(delay, style: BrandText.caption),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Icon(
-                  LucideIcons.chevronRight,
-                  size: 20,
-                  color: BrandColors.muted,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -242,11 +242,11 @@ class PingService {
     final pingState = PingState();
     await pingState.readFromPreferences();
     final servers = {for (final row in rows) row: _locationServers(row)};
-    final silent = <CoreConfigData, PingBatchResult>{
+    final unanswered = <CoreConfigData, PingBatchResult>{
       for (final row in rows) row: PingBatchResult.failed(),
     };
     for (var attempt = 0; attempt < _locationAttempts; attempt++) {
-      final round = silent.keys
+      final round = unanswered.keys
           .where((row) => attempt < servers[row]!.length)
           .toList();
       for (final slice in round.slices(PingBatchRunner.maxBatchSize)) {
@@ -256,17 +256,17 @@ class PingService {
         ], pingState);
         await db.transaction(() async {
           for (var index = 0; index < results.length; index++) {
-            silent[slice[index]] = results[index];
+            unanswered[slice[index]] = results[index];
             if (results[index].success) {
               await _updateRow(db, slice[index], results[index].delay);
-              silent.remove(slice[index]);
+              unanswered.remove(slice[index]);
             }
           }
         });
       }
     }
     await db.transaction(() async {
-      for (final entry in silent.entries) {
+      for (final entry in unanswered.entries) {
         await _updateRow(db, entry.key, _storedDelay(entry.value));
       }
     });
@@ -284,7 +284,10 @@ class PingService {
           ResolvedProfile.fromRow(row).config['outbounds'] as List;
       return [
         for (final outbound in outbounds.cast<Map<String, dynamic>>())
-          if (!_notServers.contains(outbound['protocol']))
+          // A chained server cannot be reached on its own.
+          if (!_notServers.contains(outbound['protocol']) &&
+              outboundDialerProxy(outbound)?.isNotEmpty != true &&
+              outboundProxyTag(outbound)?.isNotEmpty != true)
             encodeSingleOutbound(outbound),
       ];
     } on FormatException catch (error) {

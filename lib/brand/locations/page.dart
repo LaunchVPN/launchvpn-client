@@ -162,8 +162,42 @@ class _LocationRow extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
+  Widget build(BuildContext context) => Opacity(
+    opacity: onTap == null && !selected ? 0.5 : 1,
+    child: LocationCard(
+      location: location,
+      delay: locationDelayLabel(AppLocalizations.of(context)!, location),
+      selected: selected,
+      onTap: onTap,
+      trailing: selected
+          ? const Icon(LucideIcons.check, size: 18, color: BrandColors.accent)
+          : null,
+    ),
+  );
+}
+
+/// The card of one location, on Home and in the list.
+class LocationCard extends StatelessWidget {
+  const LocationCard({
+    super.key,
+    required this.location,
+    required this.delay,
+    required this.onTap,
+    this.selected,
+    this.trailing,
+  });
+
+  final Location location;
+  final String? delay;
+  final VoidCallback? onTap;
+
+  /// Null where the card is not one of several choices.
+  final bool? selected;
+  final Widget? trailing;
+
+  @override
   Widget build(BuildContext context) {
-    final delay = locationDelayLabel(AppLocalizations.of(context)!, location);
+    final highlighted = selected ?? false;
     return Semantics(
       container: true,
       button: true,
@@ -174,42 +208,32 @@ class _LocationRow extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: ExcludeSemantics(
-          child: Opacity(
-            opacity: onTap == null && !selected ? 0.5 : 1,
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 72),
-              padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
-              decoration: BoxDecoration(
-                color: selected ? BrandColors.accentSoft : BrandColors.surface,
-                borderRadius: BorderRadius.circular(BrandRadii.card),
-                border: Border.all(
-                  color: selected ? BrandColors.accent : BrandColors.line,
-                ),
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 72),
+            padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
+            decoration: BoxDecoration(
+              color: highlighted ? BrandColors.accentSoft : BrandColors.surface,
+              borderRadius: BorderRadius.circular(BrandRadii.card),
+              border: Border.all(
+                color: highlighted ? BrandColors.accent : BrandColors.line,
               ),
-              child: Row(
-                children: [
-                  LocationBadge(location: location),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(location.name, style: BrandText.cardTitle),
-                        if (delay != null)
-                          Text(delay, style: BrandText.caption),
-                      ],
-                    ),
+            ),
+            child: Row(
+              children: [
+                LocationBadge(location: location),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(location.name, style: BrandText.cardTitle),
+                      if (delay != null) Text(delay!, style: BrandText.caption),
+                    ],
                   ),
-                  if (selected) ...[
-                    const SizedBox(width: 12),
-                    const Icon(
-                      LucideIcons.check,
-                      size: 18,
-                      color: BrandColors.accent,
-                    ),
-                  ],
-                ],
-              ),
+                ),
+                if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+              ],
             ),
           ),
         ),

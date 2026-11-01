@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/service/servers/catalog.dart';
@@ -60,7 +61,7 @@ class Location {
 class LocationList {
   LocationList.from(ServerCatalog catalog)
     : all = List.unmodifiable([
-        for (final row in currentRows(catalog.servers))
+        for (final row in currentRows(_inPanelOrder(catalog.servers)))
           if (catalog.display(row).readable)
             Location.parse(
               id: row.id,
@@ -75,14 +76,18 @@ class LocationList {
   Iterable<Location> get others => all.where((item) => !item.automatic);
   Location? get first => all.firstOrNull;
 
-  Location? withId(int id) {
-    for (final item in all) {
-      if (item.id == id) return item;
-    }
-    return null;
+  Location? withId(int id) => all.firstWhereOrNull((item) => item.id == id);
+
+  /// The entry for a panel label, whichever of its rows is the current one.
+  Location? named(String label) {
+    final name = Location.parse(id: 0, label: label, delay: 0).name;
+    return all.firstWhereOrNull((item) => item.name == name);
   }
 
-  /// A refresh keeps the rows a running session uses next to their new copies,
+  static List<CoreConfigData> _inPanelOrder(List<CoreConfigData> rows) =>
+      rows.sortedBy<num>((row) => row.id);
+
+  /// A refresh keeps the row a starting connection reads next to its new copy,
   /// so the newest row of a provider group is the current one. Expects rows in
   /// ascending ID order.
   static List<CoreConfigData> currentRows(Iterable<CoreConfigData> rows) {

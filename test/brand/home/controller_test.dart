@@ -480,6 +480,21 @@ void main() {
       );
     });
 
+    test('shows a selection left on a kept row as its fresh copy', () async {
+      await db.connectionConfigDao.commit(
+        configurationJson: ConnectionConfiguration(
+          connection: ConnectionSettings(
+            selection: ServerSelection.server(germany),
+          ),
+        ).encode(),
+      );
+      final fresh = await addGroup('🇩🇪 Германия');
+      await settle();
+
+      expect(controller.state.location?.id, fresh);
+      expect(controller.state.location?.name, 'Германия');
+    });
+
     test('follows a selection a refresh has moved', () async {
       final fresh = await addGroup('🇩🇪 Германия');
       await db.connectionConfigDao.commit(
