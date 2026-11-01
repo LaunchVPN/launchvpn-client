@@ -92,6 +92,17 @@ String? outboundDialerProxy(Map<String, dynamic> outbound) {
   return outboundString(sockopt, 'dialerProxy');
 }
 
+/// A server that can be reached on its own, without another outbound.
+bool isStandaloneServer(Map<String, dynamic> outbound) =>
+    !const {
+      'freedom',
+      'blackhole',
+      'dns',
+      'loopback',
+    }.contains(outbound['protocol']) &&
+    outboundDialerProxy(outbound)?.isNotEmpty != true &&
+    outboundProxyTag(outbound)?.isNotEmpty != true;
+
 void setOutboundDialerProxy(Map<String, dynamic> outbound, String dialerProxy) {
   final stream = _objectField(outbound, 'streamSettings');
   final sockopt = _objectField(stream, 'sockopt');

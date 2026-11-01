@@ -61,6 +61,9 @@ class ResolvedProfile {
 
   String get type => CoreConfigType.Remnawave.name;
   Map<String, dynamic> get config => JsonTool.copyMap(_config);
+
+  ResolvedProfile withConfig(Map<String, dynamic> config) =>
+      ResolvedProfile(id: id, sourceId: sourceId, name: name, config: config);
 }
 
 class ResolvedServer {

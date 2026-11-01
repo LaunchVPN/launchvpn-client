@@ -147,6 +147,11 @@ refresh and sweep cases of the subscription and ping service tests. On a device 
 subscription, check that the list matches the panel, that a chosen group is what the session runs,
 and that a refresh during a session neither interrupts it nor duplicates a row.
 
+The first server of a provider group is covered by `test/service/connect/first_server_test.dart` and
+`preparation_test.dart`, which runs only on macOS, iOS and Android. On a device with a real
+subscription, send a request right after each cold start in each preset, ten times in a row: the
+first request must pass, and the session's first outbound must be one the observatory reports alive.
+
 目标测试分别位于 `test/core/db/subscription_migration_test.dart`、`test/service/servers/subscription/`、
 `test/service/shared/xray/remnawave_test.dart`、`test/service/connect/`、`test/pages/servers/`、
 `test/pages/connect/` 和 `test/service/shared/menu/tray/`，按负责层验证业务结果，不复制测试实现。

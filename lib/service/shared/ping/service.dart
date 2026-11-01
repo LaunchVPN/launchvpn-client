@@ -272,8 +272,21 @@ class PingService {
     });
   });
 
+  /// Measures servers for a connection about to start. This stays out of the
+  /// queue, so it waits for a batch in progress but not for the rest of a sweep.
+  Future<List<PingBatchResult>> measureBeforeStart(
+    List<String> outboundJsons, {
+    required int timeoutSeconds,
+  }) async {
+    final pingState = PingState();
+    await pingState.readFromPreferences();
+    pingState.timeout = timeoutSeconds.toDouble();
+    return (_batchOverride ?? PingBatchRunner.run)([
+      for (final outbound in outboundJsons) PingBatchSource(outbound),
+    ], pingState);
+  }
+
   static const _locationAttempts = 3;
-  static const _notServers = {'freedom', 'blackhole', 'dns', 'loopback'};
 
   List<String> _locationServers(CoreConfigData row) {
     try {
@@ -284,11 +297,7 @@ class PingService {
           ResolvedProfile.fromRow(row).config['outbounds'] as List;
       return [
         for (final outbound in outbounds.cast<Map<String, dynamic>>())
-          // A chained server cannot be reached on its own.
-          if (!_notServers.contains(outbound['protocol']) &&
-              outboundDialerProxy(outbound)?.isNotEmpty != true &&
-              outboundProxyTag(outbound)?.isNotEmpty != true)
-            encodeSingleOutbound(outbound),
+          if (isStandaloneServer(outbound)) encodeSingleOutbound(outbound),
       ];
     } on FormatException catch (error) {
       ygLogger('Read location servers failed (${error.runtimeType})');

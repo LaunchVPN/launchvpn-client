@@ -14,6 +14,8 @@ import 'package:onexray/core/pigeon/host_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/service/advanced/local_api/service.dart';
 import 'package:onexray/service/advanced/local_api/settings.dart';
+import 'package:onexray/service/connect/first_server.dart';
+import 'package:onexray/service/shared/ping/batch.dart';
 import 'package:onexray/service/connect/preparation.dart';
 import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/routing/custom/advanced.dart';
@@ -178,6 +180,49 @@ void main() {
       );
       await db.coreConfigDao.updateRow(profile);
     }
+
+    test('leads the session with a server that answers', () async {
+      final data = base64Encode(
+        utf8.encode(
+          jsonEncode({
+            ..._providerConfig,
+            'outbounds': [
+              {'tag': 'dead', 'protocol': 'vless'},
+              {'tag': 'live', 'protocol': 'vless'},
+            ],
+            'routing': {
+              'balancers': [
+                {
+                  'tag': 'auto',
+                  'selector': ['dead', 'live'],
+                  'strategy': {'type': 'leastLoad'},
+                },
+              ],
+              'rules': [
+                {'network': 'tcp,udp', 'balancerTag': 'auto'},
+              ],
+            },
+          }),
+        ),
+      );
+      await db.coreConfigDao.updateRow(profile.copyWith(data: Value(data)));
+
+      final runtime = await _providerPreparation(
+        db,
+        firstServer: FirstServerPicker(
+          measure: (outbounds, {required timeoutSeconds}) async => [
+            for (final outbound in outbounds)
+              outbound.contains('live')
+                  ? const PingBatchResult(true, 100, '')
+                  : PingBatchResult.failed(),
+          ],
+        ),
+      ).prepare(_providerInput(profile.id));
+
+      final compiled = jsonDecode(runtime.xrayJson) as Map<String, dynamic>;
+      expect((compiled['outbounds'] as List).first['tag'], 'live');
+      expect((await db.coreConfigDao.searchRow(profile.id))!.data, data);
+    });
 
     group('HTTP API inbound conflicts', () {
       for (final collision in [
@@ -1105,12 +1150,14 @@ ConnectionPreparation _providerPreparation(
   Future<List<int>> Function(int count, {List<int>? excludePorts})?
   getFreePorts,
   Future<void> Function(Map<String, GeoDataType>)? requireDependencies,
+  FirstServerPicker? firstServer,
 }) => ConnectionPreparation(
   db: db,
   localApi: localApi,
   resolver: _unavailableResolver(),
   getFreePorts: getFreePorts ?? (count, {excludePorts}) async => [18002, 18003],
   requireDependencies: requireDependencies ?? (_) async {},
+  firstServer: firstServer,
 );
 
 LocalApiService _localApi({bool enabled = false, int port = 18587}) =>
