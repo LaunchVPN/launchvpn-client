@@ -137,6 +137,11 @@ Panel info and its refresh interval are covered by `test/service/servers/subscri
 and `panel_info_service_test.dart`. On a device, check that a real panel's values are saved and that
 returning to the app after the interval downloads the subscription again.
 
+Presets are covered by `test/service/connect/everything_through_vpn_test.dart` and `test/brand/home/`.
+On a device with a real panel subscription, compare the exit address of a service from the panel's
+direct rules under each preset. With logging on, also check that torrents reach the block outbound,
+the local network stays direct and a TXT query to the DNS server shows no real address.
+
 目标测试分别位于 `test/core/db/subscription_migration_test.dart`、`test/service/servers/subscription/`、
 `test/service/shared/xray/remnawave_test.dart`、`test/service/connect/`、`test/pages/servers/`、
 `test/pages/connect/` 和 `test/service/shared/menu/tray/`，按负责层验证业务结果，不复制测试实现。

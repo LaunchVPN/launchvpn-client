@@ -297,6 +297,34 @@ Raw 管理资源路径、Geodata、日志、metrics、stats/policy、IPv6 DNS �
 Smart/Custom 保存只更新未应用偏好，不为提供方会话重连；平台隧道等有效设置仍沿原确认重连规则。
 提供方内部 balancer/observatory 由 Core 执行，不显示为 App 手动延迟或普通自动链路观察。
 
+### Provider presets
+
+Smart (`TrafficMode.smart`) runs the provider graph as described above. Everything through VPN
+(`TrafficMode.allVpn`) applies `EverythingThroughVpn` to the finished runtime graph of that
+session, never to the stored one, so it is the exception to the rule-preservation statements above.
+Home's preset switch also reconnects a provider session, unlike upstream's routing controls.
+
+A rule whose `outboundTag` names a `freedom` outbound changes as follows:
+
+- `ip` entries that are `geoip:private` or inside a special-use range stay direct, and the rule
+  loses any other entries. This traffic never reaches the internet, and iOS leaves the local
+  network outside the tunnel by default.
+- A rule whose `protocol` includes `bittorrent`, narrowed to that protocol, or whose `domain`
+  includes a DHT bootstrap host moves to the first `blackhole` outbound, so neither the provider's
+  servers nor the user's real address carry the traffic. The protocol is recognized from sniffing,
+  so traffic it misses, such as DHT over UDP, goes through the VPN. A graph with no `blackhole`
+  outbound loses the rule instead.
+- Any other rule is removed, and its traffic reaches the graph's own proxy rules.
+
+DNS follows. Removing the direct rule sends the core's default DNS through the graph's rules, and
+a `dns` outbound that would dial directly dials a loopback into those rules instead. Names of the
+provider's servers do not take this path unless a server sets `sockopt.domainStrategy`, in which
+case its tunnel would depend on itself. The panel sets none today.
+
+The preset removes rules and adds none. A first outbound of `freedom` with no final proxy rule or a
+balancer that selects a `freedom` outbound therefore still sends traffic direct, and a graph with no
+local-network rule sends that traffic into the tunnel. The panel delivers none of these today.
+
 ## Raw JSON
 
 Raw 保存原文，不经过 `XrayJson` 或常规 State，运行只改深副本。

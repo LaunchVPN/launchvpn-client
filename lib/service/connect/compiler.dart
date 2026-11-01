@@ -22,6 +22,7 @@ import 'package:onexray/service/shared/xray/runtime_inbounds.dart';
 import 'package:onexray/service/shared/xray/runtime_outbounds.dart';
 import 'package:onexray/service/shared/xray/fake_dns.dart';
 import 'package:onexray/service/shared/xray/fragment.dart';
+import 'package:onexray/service/shared/xray/everything_through_vpn.dart';
 import 'package:onexray/service/shared/xray/remnawave.dart';
 import 'package:onexray/service/shared/xray/vpn_config.dart';
 import 'package:onexray/service/shared/xray/server_dialing.dart';
@@ -287,7 +288,10 @@ class ConnectionCompiler {
         );
       }
       final adapted = RemnawaveAdapter.adapt(profile.config);
-      config = _fullRuntimeMap(adapted, options);
+      final runtime = _fullRuntimeMap(adapted, options);
+      config = settings.trafficMode == TrafficMode.allVpn
+          ? EverythingThroughVpn.apply(runtime)
+          : runtime;
     } else if (settings.expert) {
       if (raw == null || entries.isNotEmpty || finalExit != null) {
         throw const FormatException(
