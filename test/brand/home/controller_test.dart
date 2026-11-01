@@ -342,6 +342,18 @@ void main() {
     Future<TrafficMode> stored() async =>
         (await coordinator.configuration).connection.trafficMode;
 
+    test('takes no choice before the saved preset is known', () async {
+      await controller.selectPreset(TrafficMode.allVpn, run);
+
+      final reopened = HomeController(database: db, coordinator: coordinator);
+      addTearDown(reopened.close);
+      expect(reopened.state.preset, isNull);
+
+      await reopened.selectPreset(TrafficMode.smart, run);
+
+      expect(await stored(), TrafficMode.allVpn);
+    });
+
     test('is Smart until the user chooses', () {
       expect(controller.state.preset, TrafficMode.smart);
     });
