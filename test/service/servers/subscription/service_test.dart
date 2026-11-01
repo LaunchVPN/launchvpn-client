@@ -878,6 +878,122 @@ void main() {
     );
   }
 
+  group('a stored provider selection across a refresh', () {
+    late SubscriptionData source;
+    late int germany;
+
+    SubscriptionService refreshed(
+      List<CoreConfigCompanion> rows, {
+      SubscriptionNodeReferences references =
+          const SubscriptionNodeReferences(),
+    }) => _service(
+      database,
+      (_) async => SubscriptionLoadResult(
+        status: SubscriptionUpdateResult.success,
+        mode: SubscriptionMode.providerManaged,
+        rows: rows,
+      ),
+      readReferences: () => references,
+    );
+
+    Future<ServerSelection> storedSelection() async =>
+        ConnectionConfiguration.fromJson(
+          jsonDecode(
+            (await database.connectionConfigDao.read()).configurationJson,
+          ) as Map<String, dynamic>,
+        ).connection.selection;
+
+    setUp(() async {
+      source = (await _source(database)).copyWith(mode: 'providerManaged');
+      await database.subscriptionDao.updateRow(source);
+      germany = await database.coreConfigDao.insertRow(
+        _provider('Germany', subId: source.id),
+      );
+      await database.connectionConfigDao.commit(
+        configurationJson: ConnectionConfiguration(
+          connection: ConnectionSettings(
+            selection: ServerSelection.server(germany),
+            trafficMode: TrafficMode.allVpn,
+          ),
+        ).encode(),
+      );
+    });
+
+    Future<CoreConfigData> rowNamed(String name) async =>
+        (await database.coreConfigDao.allActiveServerRows()).lastWhere(
+          (row) => row.name == name,
+        );
+
+    test(
+      'moves to the fresh row of that group and drops the old one',
+      () async {
+        final result = await refreshed(
+          [_provider('Poland'), _provider('Germany')],
+          references: SubscriptionNodeReferences(fixedId: germany),
+        ).refreshSubscriptionResult(source);
+
+        expect(result.success, isTrue);
+        final fresh = await rowNamed('Germany');
+        expect(fresh.id, isNot(germany));
+        expect((await storedSelection()).id, fresh.id);
+        expect((await storedSelection()).kind, SelectionKind.server);
+        expect(await database.coreConfigDao.searchRow(germany), isNull);
+      },
+    );
+
+    test('keeps the row a running session uses, yet still moves on', () async {
+      await refreshed(
+        [_provider('Germany')],
+        references: SubscriptionNodeReferences(
+          fixedId: germany,
+          runningIds: {germany},
+        ),
+      ).refreshSubscriptionResult(source);
+
+      expect(await database.coreConfigDao.searchRow(germany), isNotNull);
+      expect((await storedSelection()).id, (await rowNamed('Germany')).id);
+      expect((await storedSelection()).id, isNot(germany));
+    });
+
+    test('falls back to automatic when the panel dropped the group', () async {
+      await refreshed(
+        [_provider('Poland')],
+        references: SubscriptionNodeReferences(fixedId: germany),
+      ).refreshSubscriptionResult(source);
+
+      expect((await storedSelection()).kind, SelectionKind.automatic);
+      expect(await database.coreConfigDao.searchRow(germany), isNull);
+    });
+
+    test('leaves the other connection settings alone', () async {
+      await refreshed(
+        [_provider('Germany')],
+        references: SubscriptionNodeReferences(fixedId: germany),
+      ).refreshSubscriptionResult(source);
+
+      final stored = ConnectionConfiguration.fromJson(
+        jsonDecode(
+          (await database.connectionConfigDao.read()).configurationJson,
+        ) as Map<String, dynamic>,
+      );
+      expect(stored.connection.trafficMode, TrafficMode.allVpn);
+    });
+
+    test('ignores a selected ordinary server', () async {
+      final manual = await database.coreConfigDao.insertRow(_node('Manual'));
+      final selection = ServerSelection.server(manual);
+      await database.connectionConfigDao.commit(
+        configurationJson: ConnectionConfiguration(
+          connection: ConnectionSettings(selection: selection),
+        ).encode(),
+      );
+
+      await refreshed([_provider('Germany')]).refreshSubscriptionResult(source);
+
+      expect((await storedSelection()).id, manual);
+    });
+  });
+
   test('provider refresh preserves old references and favorites alongside every new cache', () async {
     final source = (await _source(database)).copyWith(mode: 'providerManaged');
     await database.subscriptionDao.updateRow(source);
