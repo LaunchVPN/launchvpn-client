@@ -142,6 +142,11 @@ On a device with a real panel subscription, compare the exit address of a servic
 direct rules under each preset. With logging on, also check that torrents reach the block outbound,
 the local network stays direct and a TXT query to the DNS server shows no real address.
 
+Locations are covered by `test/service/servers/locations_test.dart`, `test/brand/home/` and the
+refresh and sweep cases of the subscription and ping service tests. On a device with a real
+subscription, check that the list matches the panel, that a chosen group is what the session runs,
+and that a refresh during a session neither interrupts it nor duplicates a row.
+
 目标测试分别位于 `test/core/db/subscription_migration_test.dart`、`test/service/servers/subscription/`、
 `test/service/shared/xray/remnawave_test.dart`、`test/service/connect/`、`test/pages/servers/`、
 `test/pages/connect/` 和 `test/service/shared/menu/tray/`，按负责层验证业务结果，不复制测试实现。

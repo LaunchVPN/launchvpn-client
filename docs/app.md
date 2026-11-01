@@ -27,6 +27,12 @@ upstream pages kept for merging. They are not reachable in this build.
   and reads as a reconnect. While a command runs the switch ignores taps. A failed reconnect keeps
   the choice for the next attempt. See
   [provider presets](xray-configuration.md#provider-presets).
+- Home's location card opens Locations, above the tabs. `LocationList` reads the panel's groups in
+  panel order: names starting with `AUTO |` go under Automatic and everything else, services
+  included, under Countries and services. The flag emoji becomes an image and is removed from the
+  name. A tap stores the group as a fixed selection and returns Home; a running tunnel reconnects at
+  once, as with a preset. Until the user chooses, the selection stays automatic, which is the first
+  group.
 - `BrandShell` owns service startup and retry, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published.
 

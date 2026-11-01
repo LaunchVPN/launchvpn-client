@@ -20,6 +20,11 @@ A single connection point, shown to the user as a location or group
 xray-json.
 _Avoid_: node, config, outbound
 
+**Location**:
+What the user chooses on the locations screen: a group the panel delivers, shown
+without its flag emoji or `AUTO |` prefix. Automatic groups are listed first.
+_Avoid_: profile, row
+
 **Core**:
 Xray-core built through libXray. Xray brings up TUN itself (the `tun` inbound), with
 no separate tun2socks.

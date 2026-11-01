@@ -52,6 +52,13 @@ v1–v2 创建新结构时不新增退休地区列，v3–v6 删除已有列，�
 延迟排序先放成功结果并按耗时升序，再放未测、失败，最后为不参加普通测速的提供方完整配置；
 同名、同延迟或同一非成功类别均按 ID 升序确定顺序。筛选只取子集，不重新排序，订阅分组次序不变。
 
+Locations measures provider groups with `PingService.pingLocations`, on the same queue and through
+the same native batch as ordinary nodes. A group stores the delay of its first server that answers,
+trying at most three, so a sweep of the real panel takes seconds. "No answer" therefore means those
+three were silent, not every server of the group. Opening the screen starts a sweep only while the
+tunnel is down, because a measurement through it would describe the tunnel; starting a connection
+stops the sweep after its current batch. Otherwise the screen shows the last stored delays.
+
 名称、延迟等显示排序是设备偏好，保存后通过共享事件同步，重启沿用；缺失或未知值回到默认。
 显示排序不改写手动顺序，切回默认时使用已保存的位置。手动分组和顺序进入资产备份，显示排序偏好不进入备份。
 订阅刷新仍沿用正常替换与保护合同，新节点依据当前保存后的 ID/名称/延迟重新参与排序，
