@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show Color;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onexray/brand/theme.dart';
 import 'package:onexray/core/brand.dart';
 
 const _upstreamId = 'net.yuandev.onexray';
@@ -156,6 +158,22 @@ void main() {
         contains("app_identifier '${Brand.iosId}'"),
       );
       expect(_read('ios/fastlane/Fastfile'), contains("'${Brand.iosId}.tun'"));
+    });
+
+    test('the launch screen has the background of the app', () {
+      final match = RegExp(
+        r'<color key="backgroundColor" red="([\d.]+)" green="([\d.]+)" blue="([\d.]+)" alpha="([\d.]+)"',
+      ).firstMatch(_read('ios/Runner/Base.lproj/LaunchScreen.storyboard'))!;
+
+      expect(
+        Color.from(
+          alpha: double.parse(match[4]!),
+          red: double.parse(match[1]!),
+          green: double.parse(match[2]!),
+          blue: double.parse(match[3]!),
+        ).toARGB32(),
+        BrandColors.bg.toARGB32(),
+      );
     });
 
     test('no upstream identity is left in iOS sources', () {
