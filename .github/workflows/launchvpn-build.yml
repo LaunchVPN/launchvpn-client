@@ -199,9 +199,9 @@ jobs:
         run: |
           aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
           test -x "$aapt2"
-          permissions=$("$aapt2" dump permissions build/LaunchVPN-android-universal.apk)
-          grep -q 'android.permission.INTERNET' <<< "$permissions"
-          ! grep -E 'android\.permission\.(CAMERA|READ_MEDIA_IMAGES|READ_MEDIA_VISUAL_USER_SELECTED|READ_EXTERNAL_STORAGE)' <<< "$permissions"
+          badging=$("$aapt2" dump badging build/LaunchVPN-android-universal.apk)
+          grep -q "uses-permission: name='android.permission.INTERNET'" <<< "$badging"
+          ! grep -E "name='android\.(permission\.(CAMERA|READ_MEDIA_IMAGES|READ_MEDIA_VISUAL_USER_SELECTED|READ_EXTERNAL_STORAGE)|hardware\.camera)" <<< "$badging"
 
       # Kotlin unit tests do not run Dart, so skip compiling it.
       - name: Test Android native code
