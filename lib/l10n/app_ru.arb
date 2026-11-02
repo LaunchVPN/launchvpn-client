@@ -994,5 +994,11 @@
   "locationsAutomatic": "Автоматически",
   "locationsOthers": "Страны и сервисы",
   "locationsDelay": "{ms} мс",
-  "locationsNoAnswer": "Нет ответа"
+  "locationsNoAnswer": "Нет ответа",
+  "settingsConnection": "Подключение",
+  "settingsPresets": "Режим",
+  "settingsConnectOnLaunch": "Подключать при запуске",
+  "settingsPresetSmartHint": "Сайты, которым VPN не нужен, открываются напрямую",
+  "settingsPresetAllVpnHint": "Весь трафик идёт через сервер",
+  "settingsPresetFootnote": "Режим можно сменить и на главном экране."
 }

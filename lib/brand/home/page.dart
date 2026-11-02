@@ -18,9 +18,9 @@ import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/locations.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, this.controller});
+  const HomePage({super.key, required this.controller});
 
-  final HomeController? controller;
+  final HomeController controller;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -35,18 +35,12 @@ class _HomePageState extends State<HomePage> {
   static const _contentWithAnnouncementHeight = 528.0;
   static const _minToggleGap = 24.0;
 
-  late final HomeController _controller = widget.controller ?? HomeController();
+  HomeController get _controller => widget.controller;
 
   @override
   void initState() {
     super.initState();
     unawaited(_controller.initialize());
-  }
-
-  @override
-  void dispose() {
-    if (widget.controller == null) unawaited(_controller.close());
-    super.dispose();
   }
 
   Future<void> _run(Future<void> Function() action) async {

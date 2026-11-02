@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/theme.dart';
+import 'package:onexray/brand/top_bar.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/service/servers/locations.dart';
@@ -39,7 +40,7 @@ class _LocationsPageState extends State<LocationsPage> {
           bottom: false,
           child: Column(
             children: [
-              const _TopBar(),
+              BrandTopBar(title: l.locationsTitle),
               Expanded(
                 child: BlocBuilder<HomeController, HomeState>(
                   bloc: widget.controller,
@@ -81,50 +82,6 @@ class _LocationsPageState extends State<LocationsPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        BrandSpacing.page,
-        8,
-        BrandSpacing.page,
-        16,
-      ),
-      child: Row(
-        children: [
-          Semantics(
-            button: true,
-            label: MaterialLocalizations.of(context).backButtonTooltip,
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: BrandColors.surface,
-                  borderRadius: BorderRadius.circular(BrandRadii.iconButton),
-                ),
-                child: const Icon(
-                  LucideIcons.chevronLeft,
-                  size: 20,
-                  color: BrandColors.ink,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(l.locationsTitle, style: BrandText.topBar)),
-        ],
       ),
     );
   }

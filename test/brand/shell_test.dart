@@ -36,6 +36,7 @@ void main() {
 
   GoRouter router() => createBrandRouter(
     home: const Text('home-body'),
+    settings: const Text('settings-body'),
     shareService: share,
     initializeServices: (_) async {
       await share.init();
@@ -77,7 +78,7 @@ void main() {
 
     await tester.tap(find.text('Настройки'));
     await tester.pumpAndSettle();
-    expect(find.text('Настройки'), findsNWidgets(2));
+    expect(find.text('settings-body'), findsOneWidget);
 
     await tester.tap(find.text('Главная'));
     await tester.pumpAndSettle();
@@ -87,6 +88,7 @@ void main() {
   for (final path in [
     '/connect/servers-import',
     '/servers',
+    '/settings/backup',
     '/setup',
     '/splash',
   ]) {

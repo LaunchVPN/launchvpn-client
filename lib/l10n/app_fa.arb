@@ -994,5 +994,11 @@
   "locationsAutomatic": "خودکار",
   "locationsOthers": "کشورها و سرویس‌ها",
   "locationsDelay": "{ms} میلی‌ثانیه",
-  "locationsNoAnswer": "بدون پاسخ"
+  "locationsNoAnswer": "بدون پاسخ",
+  "settingsConnection": "اتصال",
+  "settingsPresets": "حالت",
+  "settingsConnectOnLaunch": "اتصال هنگام اجرا",
+  "settingsPresetSmartHint": "سایت‌هایی که به VPN نیاز ندارند مستقیم باز می‌شوند",
+  "settingsPresetAllVpnHint": "همهٔ ترافیک از سرور عبور می‌کند",
+  "settingsPresetFootnote": "حالت را در صفحهٔ اصلی هم می‌توانید تغییر دهید."
 }

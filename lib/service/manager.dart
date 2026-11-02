@@ -85,12 +85,18 @@ abstract final class ServiceManager {
       "AppStartupService",
       () => AppStartupService().handleServicesReady(),
     );
+    _initialized = true;
+    unawaited(_runInit('Background work', _startBackgroundWork));
+  }
+
+  /// Follows the launch connection, so the first update check can use the tunnel.
+  static Future<void> _startBackgroundWork() async {
+    await AppStartupService().launchConnection;
     BackgroundTaskService().init(
       vpnConnected:
           ConnectionCoordinator.instance.state.value.phase ==
           ConnectionPhase.connected,
     );
-    _initialized = true;
     await _runInit('LocalApiService', LocalApiService.instance.start);
     PingService().startAutomatic();
     unawaited(_checkUpdate());

@@ -3180,5 +3180,11 @@
       }
     }
   },
-  "locationsNoAnswer": "No answer"
+  "locationsNoAnswer": "No answer",
+  "settingsConnection": "Connection",
+  "settingsPresets": "Mode",
+  "settingsConnectOnLaunch": "Connect at launch",
+  "settingsPresetSmartHint": "Sites that don't need a VPN open directly",
+  "settingsPresetAllVpnHint": "All traffic goes through the server",
+  "settingsPresetFootnote": "You can also change the mode on the home screen."
 }

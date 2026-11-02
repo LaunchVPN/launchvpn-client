@@ -994,5 +994,11 @@
   "locationsAutomatic": "自動",
   "locationsOthers": "國家和服務",
   "locationsDelay": "{ms} 毫秒",
-  "locationsNoAnswer": "無回應"
+  "locationsNoAnswer": "無回應",
+  "settingsConnection": "連線",
+  "settingsPresets": "模式",
+  "settingsConnectOnLaunch": "啟動時連線",
+  "settingsPresetSmartHint": "不需要 VPN 的網站直接開啟",
+  "settingsPresetAllVpnHint": "所有流量都透過伺服器",
+  "settingsPresetFootnote": "也可以在主畫面上變更模式。"
 }

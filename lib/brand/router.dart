@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
+import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/page.dart';
 import 'package:onexray/brand/settings/page.dart';
 import 'package:onexray/brand/shell.dart';
@@ -15,12 +16,17 @@ abstract final class BrandRoutes {
 /// The whole navigable app. Upstream's pages are not registered, so nothing can
 /// open them, including its manual import.
 GoRouter createBrandRouter({
-  Widget home = const HomePage(),
+  HomeController? controller,
+  Widget? home,
+  Widget? settings,
   Future<void> Function(BuildContext context)? initializeServices,
   ShareService? shareService,
   Future<void> Function(BuildContext, Uri)? openLink,
 }) {
   final modals = AppModalRouteObserver();
+  // Both tabs share it, so a mode chosen on either is one choice and one
+  // reconnect. It lives as long as the app.
+  late final shared = controller ?? HomeController();
   return GoRouter(
     initialLocation: BrandRoutes.home,
     observers: [modals],
@@ -38,13 +44,19 @@ GoRouter createBrandRouter({
         ),
         branches: [
           StatefulShellBranch(
-            routes: [GoRoute(path: BrandRoutes.home, builder: (_, _) => home)],
+            routes: [
+              GoRoute(
+                path: BrandRoutes.home,
+                builder: (_, _) => home ?? HomePage(controller: shared),
+              ),
+            ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: BrandRoutes.settings,
-                builder: (_, _) => const BrandSettingsPage(),
+                builder: (_, _) =>
+                    settings ?? BrandSettingsPage(controller: shared),
               ),
             ],
           ),

@@ -85,7 +85,10 @@ class HomeState {
     };
   }
 
+  /// Without a subscription there was nothing to connect to, which is what the
+  /// screen says instead.
   bool get _attemptFailed =>
+      subscription != null &&
       view.failed &&
       !const {'cancelled', 'permissionRequired'}.contains(view.issue);
 

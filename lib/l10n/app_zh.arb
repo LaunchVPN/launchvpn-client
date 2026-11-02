@@ -994,5 +994,11 @@
   "locationsAutomatic": "自动",
   "locationsOthers": "国家和服务",
   "locationsDelay": "{ms} 毫秒",
-  "locationsNoAnswer": "无响应"
+  "locationsNoAnswer": "无响应",
+  "settingsConnection": "连接",
+  "settingsPresets": "模式",
+  "settingsConnectOnLaunch": "启动时连接",
+  "settingsPresetSmartHint": "无需 VPN 的网站直接打开",
+  "settingsPresetAllVpnHint": "所有流量都通过服务器",
+  "settingsPresetFootnote": "也可以在主屏幕上更改模式。"
 }

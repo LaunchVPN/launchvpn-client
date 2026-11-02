@@ -12,8 +12,21 @@ final class AppStartupService {
 
   factory AppStartupService() => _singleton;
 
-  AppStartupService._internal();
+  AppStartupService._internal()
+    : _testCoordinator = null,
+      _hasTray = AppPlatform.isDesktop;
 
+  AppStartupService.forTesting({required ConnectionCoordinator coordinator})
+    : _testCoordinator = coordinator,
+      _hasTray = false;
+
+  final ConnectionCoordinator? _testCoordinator;
+  final bool _hasTray;
+
+  // Read late: the coordinator opens the database, which this service's first
+  // use in main() precedes.
+  ConnectionCoordinator get _coordinator =>
+      _testCoordinator ?? ConnectionCoordinator.instance;
   final _platform = DesktopStartupPlatform();
   var _startHidden = false;
   var _connectOnAppLaunch = false;
@@ -21,6 +34,17 @@ final class AppStartupService {
   var _windowReady = false;
   var _windowShouldBeVisible = true;
   var _appLaunchHandled = false;
+
+  /// Ends when the connection this launch started has succeeded or failed.
+  Future<void> get launchConnection => _launchConnection;
+  Future<void> _launchConnection = Future.value();
+
+  /// Applies from the next launch.
+  Future<bool> readConnectOnAppLaunch() =>
+      PreferencesKey().readConnectOnAppLaunch();
+
+  Future<void> saveConnectOnAppLaunch(bool value) =>
+      PreferencesKey().saveConnectOnAppLaunch(value);
 
   Future<void> prepare() async {
     final preferences = PreferencesKey();
@@ -76,7 +100,7 @@ final class AppStartupService {
     }
     _appLaunchHandled = true;
 
-    if (AppPlatform.isDesktop) {
+    if (_hasTray) {
       try {
         await TrayService().refreshTrayManager();
       } catch (error, stackTrace) {
@@ -90,16 +114,20 @@ final class AppStartupService {
       return;
     }
 
-    if (ConnectionCoordinator.instance.state.value.issue ==
-        'permissionRequired') {
+    if (_coordinator.state.value.issue == 'permissionRequired') {
       await showMainWindow();
       return;
     }
 
+    // Not awaited: Home, behind the loading indicator, is what shows this
+    // attempt and can stop it.
+    _launchConnection = _connectOnLaunch();
+  }
+
+  Future<void> _connectOnLaunch() async {
     try {
-      await ConnectionCoordinator.instance.connect();
-      if (ConnectionCoordinator.instance.state.value.phase !=
-          ConnectionPhase.connected) {
+      await _coordinator.connect();
+      if (_coordinator.state.value.phase != ConnectionPhase.connected) {
         await showMainWindow();
       }
     } catch (error, stackTrace) {
