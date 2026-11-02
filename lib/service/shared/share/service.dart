@@ -4,9 +4,7 @@ import 'dart:io';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
-import 'package:onexray/core/tools/platform.dart';
 import 'package:image/image.dart' as img;
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/shared/apple_widget/service.dart';
 import 'package:zxing2/qrcode.dart';
@@ -95,27 +93,13 @@ final class ShareService {
   }
 
   /// Decode only; callers own preview and explicit import confirmation.
+  ///
+  /// LaunchVPN decodes in Dart on every platform, so no build carries a
+  /// camera plugin.
   Future<String?> readImageFile(String path) async {
     if (await File(path).length() > 16 * 1024 * 1024) {
       throw const FormatException('Image is too large');
     }
-    if (AppPlatform.isIOS || AppPlatform.isMacOS || AppPlatform.isAndroid) {
-      return _readImageFileByMobileScanner(path);
-    }
-    return _readImageFileByZxing(path);
-  }
-
-  Future<String?> _readImageFileByMobileScanner(String path) async {
-    final controller = MobileScannerController();
-    try {
-      final capture = await controller.analyzeImage(path);
-      return capture?.barcodes.firstOrNull?.rawValue;
-    } finally {
-      await controller.dispose();
-    }
-  }
-
-  Future<String?> _readImageFileByZxing(String path) async {
     final image = await img.decodeImageFile(path);
     if (image != null) {
       final source = RGBLuminanceSource(

@@ -6,7 +6,6 @@ import 'package:onexray/core/errors/json_diagnostic.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/network/client.dart';
 import 'package:onexray/core/pigeon/host_api.dart';
@@ -634,24 +633,31 @@ class ServerImportService {
       '.jpeg',
       '.webp',
     ].contains(p.extension(file.path!).toLowerCase())) {
-      final text = await ShareService().readImageFile(file.path!);
-      if (text == null || text.trim().isEmpty) {
-        throw const FormatException('No QR code recognized');
-      }
-      _checkSize(text);
-      return text;
+      return _readQrImage(file.path!);
     }
     return input.readAsString();
   }
 
+  /// The system picker needs no photo library access. iOS converts HEIC
+  /// photos to a format the Dart decoder reads.
   static Future<String?> pickQrImage() async {
-    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final image = await FilePicker.pickFile(
+      type: FileType.image,
+      darwinOptions: const DarwinOptions(
+        assetRepresentationMode: DarwinAssetRepresentationMode.compatible,
+      ),
+    );
     if (image == null) return null;
-    if (await File(image.path).length() > 16 * 1024 * 1024) {
-      throw const FormatException('Invalid import size');
+    final path = image.path;
+    if (path == null) throw const FormatException('Cannot read selected file');
+    return _readQrImage(path);
+  }
+
+  static Future<String> _readQrImage(String path) async {
+    final text = await ShareService().readImageFile(path);
+    if (text == null || text.trim().isEmpty) {
+      throw const FormatException('No QR code recognized');
     }
-    final text = await ShareService().readImageFile(image.path);
-    if (text == null) throw const FormatException('No QR code recognized');
     _checkSize(text);
     return text;
   }

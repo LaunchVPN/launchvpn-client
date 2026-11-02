@@ -3,12 +3,10 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/core/errors/json_diagnostic.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/connect/dialogs.dart';
 import 'package:onexray/pages/servers/import/controller.dart';
 import 'package:onexray/pages/servers/subscription/form_view.dart';
-import 'package:onexray/pages/shared/widgets/page_app_bar.dart';
 import 'package:onexray/pages/theme/color.dart';
 import 'package:onexray/pages/theme/font.dart';
 import 'package:onexray/pages/theme/layout.dart';
@@ -702,46 +700,6 @@ class _PreviewItem extends StatelessWidget {
       ),
     );
   }
-}
-
-class ServerImportScannerPage extends StatelessWidget {
-  final ServerImportController controller;
-  final void Function(BarcodeCapture) onDetect;
-  final Future<void> Function() onPickImage;
-  const ServerImportScannerPage({
-    super.key,
-    required this.controller,
-    required this.onDetect,
-    required this.onPickImage,
-  });
-
-  @override
-  Widget build(BuildContext context) => BlocProvider.value(
-    value: controller,
-    child: BlocBuilder<ServerImportController, ServerImportPageState>(
-      builder: (context, state) => Scaffold(
-        appBar: PageAppBar(
-          title: Text(AppLocalizations.of(context)!.prototypeScanQrCode),
-          actions: [
-            IconButton(
-              tooltip: AppLocalizations.of(context)!.menuPickImage,
-              onPressed: state.scannerPickingImage ? null : onPickImage,
-              icon: state.scannerPickingImage
-                  ? const ButtonProgressIndicator()
-                  : const Icon(LucideIcons.image),
-            ),
-          ],
-        ),
-        body: SafeArea(
-          // mobile_scanner still uses the SDK's Material widgets.
-          // ignore: deprecated_member_use
-          child: MaterialUiCompatibilityBridge(
-            child: MobileScanner(onDetect: onDetect),
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 class _ImportFeedback extends StatelessWidget {

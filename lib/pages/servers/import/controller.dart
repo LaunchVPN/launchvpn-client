@@ -18,7 +18,6 @@ import 'package:onexray/service/servers/subscription/failure.dart';
 import 'package:onexray/service/servers/subscription/model.dart';
 import 'package:onexray/service/servers/subscription/service.dart';
 import 'package:onexray/service/servers/subscription/validator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:re_editor/re_editor.dart';
 
 enum ServerImportAction { scan, paste, subscription, file, json }
@@ -52,7 +51,6 @@ class ServerImportPageState {
     this.committedResult,
     this.ageExpanded = false,
     this.hasAgeKeys = false,
-    this.scannerPickingImage = false,
     this.hwidEnabled = false,
     this.panel = SubscriptionPanel.generic,
     this.mode,
@@ -81,7 +79,6 @@ class ServerImportPageState {
   final ServerImportResult? committedResult;
   final bool ageExpanded;
   final bool hasAgeKeys;
-  final bool scannerPickingImage;
   final bool hwidEnabled;
   final SubscriptionPanel panel;
   final SubscriptionMode? mode;
@@ -120,7 +117,6 @@ class ServerImportPageState {
     Object? committedResult = _unset,
     bool? ageExpanded,
     bool? hasAgeKeys,
-    bool? scannerPickingImage,
     bool? hwidEnabled,
     SubscriptionPanel? panel,
     Object? mode = _unset,
@@ -160,7 +156,6 @@ class ServerImportPageState {
         : committedResult as ServerImportResult?,
     ageExpanded: ageExpanded ?? this.ageExpanded,
     hasAgeKeys: hasAgeKeys ?? this.hasAgeKeys,
-    scannerPickingImage: scannerPickingImage ?? this.scannerPickingImage,
     hwidEnabled: hwidEnabled ?? this.hwidEnabled,
     panel: panel ?? this.panel,
     mode: identical(mode, _unset) ? this.mode : mode as SubscriptionMode?,
@@ -444,7 +439,7 @@ class ServerImportController extends PageCubit<ServerImportPageState> {
         try {
           input = action == ServerImportAction.file
               ? await ServerImportService.pickTextFile()
-              : await _scan(context);
+              : await ServerImportService.pickQrImage();
         } finally {
           emit(state.copyWith(busy: false, openingAction: null));
         }
@@ -635,62 +630,6 @@ class ServerImportController extends PageCubit<ServerImportPageState> {
       }
     }
     return result;
-  }
-
-  Future<String?> _scan(BuildContext context) async {
-    if (!supportsScan) return null;
-    final permission = await Permission.camera.request();
-    if (!context.mounted) return null;
-    if (!permission.isGranted) {
-      await ContextAlert.showPermissionDialog(context);
-      return null;
-    }
-    var completed = false;
-    return Navigator.of(context).push<String>(
-      MaterialPageRoute(
-        builder: (scannerContext) => ServerImportScannerPage(
-          controller: this,
-          onDetect: (capture) {
-            final value = capture.barcodes.firstOrNull?.rawValue;
-            if (completed || state.scannerPickingImage || value == null) {
-              return;
-            }
-            completed = true;
-            Navigator.of(scannerContext).pop(value);
-          },
-          onPickImage: () async {
-            if (completed || state.scannerPickingImage) return;
-            emit(state.copyWith(scannerPickingImage: true));
-            try {
-              final value = await pickQrImage(scannerContext);
-              if (completed || value == null || !scannerContext.mounted) return;
-              completed = true;
-              Navigator.of(scannerContext).pop(value);
-            } finally {
-              emit(state.copyWith(scannerPickingImage: false));
-            }
-          },
-        ),
-      ),
-    );
-  }
-
-  Future<String?> pickQrImage(BuildContext context) async {
-    try {
-      return await ServerImportService.pickQrImage();
-    } catch (error) {
-      if (context.mounted) {
-        ContextAlert.showToast(
-          context,
-          appFailureMessage(
-            AppLocalizations.of(context)!,
-            error,
-            operation: AppLocalizations.of(context)!.prototypeCannotReadContent,
-          ),
-        );
-      }
-      return null;
-    }
   }
 
   Future<void> readClipboard(BuildContext context) async {

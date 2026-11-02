@@ -14,6 +14,9 @@ upstream pages kept for merging. They are not reachable in this build.
   desktop, and iOS builds only the primary icon. The desktop folders, `msix_config`, that artwork
   and internal identifiers such as the `onexray` package name stay, because removing them would
   only add conflicts to upstream merges.
+- Phone builds ask for neither the camera nor photos. Upstream's QR scanner and photo picker are
+  gone. Its import page, kept for merging, reads QR codes from an image chosen in the system
+  picker, and all platforms decode them in Dart.
 - The interface has one dark theme, `lib/brand/theme.dart`, and one language, Russian.
   `BrandTheme.palette` also feeds upstream's Material and Shad themes, so shared dialogs and
   toasts match. Manrope and Unbounded are bundled with their licenses in `assets/fonts/`.
@@ -269,7 +272,7 @@ Windows/Linux 网卡不默认选第一张，必须存在；其他平台隐藏。
 - 原生初始化必须提供非空绝对数据根目录，Apple App Group 不可用时在访问存储前失败，不能退化为相对路径。
 - Android/Apple 检查 VPN 授权；需要的 Android 版本另检查局域网权限，macOS SE 检查扩展授权。
   正常首页初始化对尚未就绪项申请一次，拒绝或待系统批准仍允许进入首页，保留连接时重试。
-  回前台和普通状态刷新只查询，不重复弹框；通知和相机分别由对应功能管理。
+  回前台和普通状态刷新只查询，不重复弹框；通知由对应功能管理。
 - iOS 模拟器由 Swift 返回权限“不需要”，安装检查通过，不调用 NetworkExtension preferences IPC。
   iOS 真机 Debug 和正式构建都走正常授权。
 - Windows 按编译模式检查相应 Core/Wintun 或包身份/Vole；Linux 检查 Core 执行权限、TUN 和 capabilities。
