@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/app.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/router.dart';
+import 'package:onexray/brand/settings/controller.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
@@ -18,6 +19,7 @@ import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/shared/share/service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 // ignore: depend_on_referenced_packages
@@ -175,6 +177,19 @@ void main() {
       await tester.tap(find.byType(ShadSwitch));
       await settle(tester);
       expect(toggled(tester), Tristate.isFalse);
+    });
+
+    test('a second tap during a save is ignored', () async {
+      final settings = SettingsController();
+      addTearDown(settings.close);
+      await settings.initialize();
+
+      final first = settings.setConnectOnLaunch(true);
+      await settings.setConnectOnLaunch(false);
+      await first;
+
+      expect(settings.state.connectOnLaunch, isTrue);
+      expect(await AppStartupService().readConnectOnAppLaunch(), isTrue);
     });
 
     testWidgets('is remembered for the next launch', (tester) async {
