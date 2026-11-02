@@ -9,6 +9,7 @@ upstream pages kept for merging. They are not reachable in this build.
 
 - The app opens directly on Home. Upstream's privacy and first-run flags are not read, so there
   is no Setup. Normal service startup still shows the system VPN and notification prompts.
+- The launch screens on both platforms use the background of the theme.
 - The interface has one dark theme, `lib/brand/theme.dart`, and one language, Russian.
   `BrandTheme.palette` also feeds upstream's Material and Shad themes, so shared dialogs and
   toasts match. Manrope and Unbounded are bundled with their licenses in `assets/fonts/`.
