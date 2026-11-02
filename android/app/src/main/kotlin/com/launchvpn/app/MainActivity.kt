@@ -17,6 +17,7 @@ import com.launchvpn.app.pigeon.BridgeHostApi
 import com.launchvpn.app.pigeon.BackupHostApi
 import com.launchvpn.app.pigeon.BackupApi
 import com.launchvpn.app.vpn.OneVpnService
+import com.launchvpn.app.vpn.VpnController
 import com.launchvpn.app.automation.AutomationApi
 import com.launchvpn.app.pigeon.AndroidAutomationHostApi
 
@@ -28,6 +29,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
+        VpnController.dropReplayedStart(intent, restored = savedInstanceState != null)
         super.onCreate(savedInstanceState)
         registerVpnStatusReceiver()
     }

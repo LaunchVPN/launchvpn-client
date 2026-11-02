@@ -8,7 +8,6 @@ import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ShortcutManager
 import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
@@ -35,6 +34,8 @@ object VpnController {
     var lastError: String? = null
     private val lastStartRequestId = AtomicLong(0)
     private const val stopRequestRelativePath = "run/vpn.stop"
+    // The quick_actions plugin's package-private QuickActions.EXTRA_ACTION.
+    private const val quickActionExtra = "some unique action key"
     private val vpnAddresses by lazy {
         setOf(
             InetAddress.getByName(OneVpnService.IPV4_ADDRESS),
@@ -64,18 +65,28 @@ object VpnController {
         return false
     }
 
-    fun buildShortcutStartIntent(context: Context): Intent {
-        // Missing configuration or permission still goes through the App coordinator.
-        val shortcutIntent = try {
-            context.getSystemService(ShortcutManager::class.java)
-                ?.dynamicShortcuts?.firstOrNull { it.id == "startVpn" }
-                ?.intent?.let { Intent(it) }
-        } catch (_: RuntimeException) {
-            XLog.w("VpnController: unable to read start shortcut; opening App")
-            null
-        }
-        return (shortcutIntent ?: Intent(context, MainActivity::class.java)).apply {
+    /**
+     * Opens the App to connect when the Tile or Widget cannot start on its own,
+     * so a missing configuration or permission goes through the App coordinator.
+     * The quick_actions plugin delivers the action to Dart, where it must match
+     * `ShortCutAction.startVpn`. LaunchVPN publishes no launcher shortcuts, so
+     * the intent carries the action itself.
+     */
+    fun buildShortcutStartIntent(context: Context): Intent =
+        Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_RUN
+            putExtra(quickActionExtra, "startVpn")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+
+    /**
+     * A start belongs to the tap that sent it. Android replays the task's first
+     * intent when the App reopens from Recents or after process death, so
+     * MainActivity drops the start there before the plugin reads it.
+     */
+    fun dropReplayedStart(intent: Intent, restored: Boolean) {
+        if (restored || intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) {
+            intent.removeExtra(quickActionExtra)
         }
     }
 

@@ -53,7 +53,10 @@ upstream pages kept for merging. They are not reachable in this build.
   another check. Without a subscription Home asks for one
   rather than reporting a failed attempt.
 - `BrandShell` owns service startup and retry, incoming deep links and the iOS Widget's
-  foreground actions. Launcher quick actions are not published.
+  foreground actions. Launcher quick actions are not published, but when the Android Tile or
+  Widget lacks a permission or a saved configuration, it opens the App with the `startVpn` quick
+  action, which `BrandShell` handles like a connect from Home. Reopening the App from Recents
+  does not repeat it.
 
 本文记录页面、启动和平台交互的当前边界。配置编译与连接运行见
 [Xray 配置](xray-configuration.md)，存储、后台更新与清理见 [数据管理](data-management.md)。
