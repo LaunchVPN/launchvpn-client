@@ -194,6 +194,15 @@ jobs:
           grep -q 'flutter_assets/assets/dat/' <<< "$contents"
           ! grep -E 'flutter_assets/assets/(logo\.png|icon/|app_icon/|macos_icon/)' <<< "$contents"
 
+      # An upstream merge can bring back its QR scanner and photo picker.
+      - name: Check the APK asks for no camera or photos
+        run: |
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          test -x "$aapt2"
+          permissions=$("$aapt2" dump permissions build/LaunchVPN-android-universal.apk)
+          grep -q 'android.permission.INTERNET' <<< "$permissions"
+          ! grep -E 'android\.permission\.(CAMERA|READ_MEDIA_IMAGES|READ_MEDIA_VISUAL_USER_SELECTED|READ_EXTERNAL_STORAGE)' <<< "$permissions"
+
       # Kotlin unit tests do not run Dart, so skip compiling it.
       - name: Test Android native code
         working-directory: launchvpn-client/android
@@ -257,3 +266,17 @@ jobs:
           done
           info=$(plutil -p "$app/Info.plist")
           ! grep CFBundleAlternateIcons <<< "$info"
+
+      # An upstream merge can bring back its QR scanner and photo picker.
+      - name: Check the app asks for no camera or photos
+        run: |
+          info=$(plutil -p build/ios/iphoneos/Runner.app/Info.plist)
+          grep -q CFBundleIdentifier <<< "$info"
+          if grep -E 'NSCameraUsageDescription|NSPhotoLibrary(Add)?UsageDescription' <<< "$info"; then
+            exit 1
+          fi
+          # Without the descriptions above, a plugin that still reaches the
+          # camera or photos gets the build rejected.
+          plugins=$(jq -r '.plugins.ios[].name' .flutter-plugins-dependencies)
+          grep -qx url_launcher_ios <<< "$plugins"
+          ! grep -xE 'mobile_scanner|image_picker_ios' <<< "$plugins"
