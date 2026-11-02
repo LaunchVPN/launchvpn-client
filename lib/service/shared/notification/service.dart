@@ -43,14 +43,16 @@ final class NotificationService {
       settings: initializationSettings,
       onDidReceiveNotificationResponse: _onReceiveNotification,
     );
+  }
 
-    if (AppPlatform.isAndroid) {
-      await _localNotification
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >()
-          ?.requestNotificationsPermission();
-    }
+  /// Asks Android 13+ for notifications, which carry the VPN status. LaunchVPN
+  /// asks with the first connection, never at launch. Other platforms ignore it.
+  Future<void> requestPermission() async {
+    await _localNotification
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.requestNotificationsPermission();
   }
 
   Future<void> _onReceiveNotification(

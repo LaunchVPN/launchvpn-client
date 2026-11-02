@@ -8,7 +8,11 @@ import cannot be opened, and any other path leads Home. The rest of this documen
 upstream pages kept for merging. They are not reachable in this build.
 
 - The app opens directly on Home. Upstream's privacy and first-run flags are not read, so there
-  is no Setup. Normal service startup still shows the system VPN and notification prompts.
+  is no Setup, and launch shows no system prompts. `ConnectionPermissions` asks on the first
+  connection from Home or the Android Tile: the VPN consent first, then, once it is granted,
+  notifications on Android 13 and later. A refused VPN consent is asked again on the next
+  connection; notifications are asked only alongside it. Without notifications the VPN still runs,
+  only its status line is hidden.
 - The launch screens on both platforms use the background of the theme.
 - Phone builds carry none of upstream's artwork: `pubspec.yaml` limits its logo and icons to
   desktop, and iOS builds only the primary icon. The desktop folders, `msix_config`, that artwork
@@ -51,7 +55,8 @@ upstream pages kept for merging. They are not reachable in this build.
   opens at once and shows it, and a tap there stops it. Background updates start after the attempt
   ends, so their first check normally goes through the tunnel. A tunnel that comes up later triggers
   another check. Without a subscription Home asks for one
-  rather than reporting a failed attempt.
+  rather than reporting a failed attempt. Without VPN consent the launch makes no attempt, since
+  only a tap may bring up the prompt.
 - `BrandShell` owns service startup and retry, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published, but when the Android Tile or
   Widget lacks a permission or a saved configuration, it opens the App with the `startVpn` quick

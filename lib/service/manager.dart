@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:onexray/core/network/client.dart';
-import 'package:onexray/core/pigeon/host_api.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/settings/app_update/service.dart';
@@ -69,9 +68,8 @@ abstract final class ServiceManager {
     await ConnectionPlatformRequirements().ensureRuntime();
     // Recovery must succeed before external commands or automatic connection
     // are enabled. The legacy Profile runtime must not initialize alongside it.
-    await ConnectionCoordinator.instance.initialize(
-      requestPermission: AppHostApi().requestPlatformPermission,
-    );
+    // LaunchVPN asks for permissions with the first connection, not here.
+    await ConnectionCoordinator.instance.initialize();
     // Recover only the admission marker after storage and runtime are ready.
     await AndroidAutomationService().setStartBlocked(false);
     await _runInit(

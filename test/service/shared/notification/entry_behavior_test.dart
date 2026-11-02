@@ -21,9 +21,35 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  const channel = MethodChannel('dexterous.com/flutter/local_notifications');
+
+  test(
+    'Android asks for notifications only when the App requests it',
+    () async {
+      final calls = <String>[];
+      final previousTarget = debugDefaultTargetPlatformOverride;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      AndroidFlutterLocalNotificationsPlugin.registerWith();
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        calls.add(call.method);
+        return true;
+      });
+      addTearDown(() {
+        binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+        debugDefaultTargetPlatformOverride = previousTarget;
+      });
+
+      await NotificationService().asyncInit();
+      expect(calls, ['initialize']);
+
+      await NotificationService().requestPermission();
+      expect(calls, ['initialize', 'requestNotificationsPermission']);
+    },
+  );
 
   group('public notification entry behavior', () {
-    const channel = MethodChannel('dexterous.com/flutter/local_notifications');
     final calls = <MethodCall>[];
     TargetPlatform? previousTarget;
 
