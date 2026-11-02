@@ -595,6 +595,24 @@ void main() {
     expect(toggleState(tester), ConnectToggleState.off);
   });
 
+  testWidgets(
+    'a failed launch connection without a subscription asks for one',
+    (tester) async {
+      await pumpHome(tester);
+
+      coordinator.state.value = const ConnectionView(
+        phase: ConnectionPhase.failed,
+        issue: 'startFailed',
+      );
+      await tester.pump();
+
+      expect(
+        find.text('Откройте ссылку на подписку из бота или с сайта'),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('a failed stop warns instead of claiming the VPN is off', (
     tester,
   ) async {

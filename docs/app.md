@@ -22,8 +22,7 @@ upstream pages kept for merging. They are not reachable in this build.
   subscription the toggle is disabled.
 - No status or announcement moves the toggle. It sits as centered in the mockup, and higher only on
   a screen too short for an announcement.
-- The location card names the group in use, or otherwise the selected one. Settings shows only its
-  title.
+- The location card names the group in use, or otherwise the selected one.
 - With a subscription, Home offers the presets Smart and Everything through VPN, stored as
   `ConnectionSettings.trafficMode`. A choice while connected reconnects at once without a dialog
   and reads as a reconnect. While a command runs the switch ignores taps. A failed reconnect keeps
@@ -37,6 +36,13 @@ upstream pages kept for merging. They are not reachable in this build.
   name. A tap stores the group as a fixed selection and returns Home; a running tunnel reconnects at
   once, as with a preset. Until the user chooses, the selection stays automatic, which is the first
   group.
+- Settings has two rows so far. Mode opens a screen above the tabs with the same presets as Home,
+  through the same `HomeController`, so both tabs show one value and a choice while connected
+  reconnects and reads as a reconnect on Home. A tap returns to Settings. Connect at launch is off
+  by default and applies from the next launch. The attempt does not hold the loading screen: Home
+  opens at once and shows it, and a tap there stops it. Background updates start after the attempt
+  ends, so their first check goes through the tunnel. Without a subscription Home asks for one
+  rather than reporting a failed attempt.
 - `BrandShell` owns service startup and retry, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published.
 
