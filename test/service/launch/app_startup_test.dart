@@ -45,9 +45,13 @@ void main() {
   late Completer<HostConnection> started;
   late int starts;
 
+  // PreferencesKey keeps the first platform it sees, so tests share one store.
+  setUpAll(
+    () => SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty(),
+  );
+
   setUp(() async {
-    SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.empty();
     db = AppDatabase.forTesting(NativeDatabase.memory());
     statusEvents = StreamController<VpnStatus>.broadcast(sync: true);
     started = Completer();

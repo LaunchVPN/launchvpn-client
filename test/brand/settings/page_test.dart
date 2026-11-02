@@ -22,6 +22,7 @@ import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/shared/share/service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 // ignore: depend_on_referenced_packages
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 // ignore: depend_on_referenced_packages
@@ -54,12 +55,17 @@ void main() {
   var status = VpnStatus.disconnected;
   ConnectionRuntime? runtime;
 
-  setUp(() {
+  // PreferencesKey keeps the first platform it sees, so tests share one store.
+  setUpAll(
+    () => SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty(),
+  );
+
+  setUp(() async {
+    await SharedPreferencesAsync().clear();
     start = Completer();
     status = VpnStatus.disconnected;
     runtime = null;
-    SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.empty();
   });
 
   Future<void> settle(WidgetTester tester) async {
