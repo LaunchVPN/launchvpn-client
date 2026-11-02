@@ -3,10 +3,9 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/db/database/database.dart';
-import 'package:onexray/core/pigeon/host_api.dart';
-import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/pages/shared/page_cubit.dart';
+import 'package:onexray/service/connect/connection_permissions.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/catalog.dart';
@@ -197,13 +196,10 @@ class HomeController extends PageCubit<HomeState> {
   HomeController({
     AppDatabase? database,
     ConnectionCoordinator? coordinator,
-    Future<PlatformPermissionResult> Function()? requestPermission,
     LocationPing? pingLocations,
     AnnouncementDismissal? dismissAnnounce,
   }) : _db = database ?? AppDatabase(),
        coordinator = coordinator ?? ConnectionCoordinator.instance,
-       _requestPermission =
-           requestPermission ?? AppHostApi().requestPlatformPermission,
        _pingLocations = pingLocations ?? PingService().pingLocations,
        _dismissAnnounce =
            dismissAnnounce ?? SubscriptionService().dismissAnnounce,
@@ -214,7 +210,7 @@ class HomeController extends PageCubit<HomeState> {
 
   final AppDatabase _db;
   final ConnectionCoordinator coordinator;
-  final Future<PlatformPermissionResult> Function() _requestPermission;
+  late final _permissions = ConnectionPermissions(coordinator);
   final LocationPing _pingLocations;
   final AnnouncementDismissal _dismissAnnounce;
   StreamSubscription<ServerCatalog>? _catalog;
@@ -338,20 +334,12 @@ class HomeController extends PageCubit<HomeState> {
       case HomeStatus.connecting when state.request == HomeRequest.connect:
         coordinator.cancel();
       case HomeStatus.off || HomeStatus.failed:
-        await _perform(HomeRequest.connect, run, _connect);
+        await _perform(HomeRequest.connect, run, _permissions.connect);
       case HomeStatus.disconnecting:
         break;
       default:
         await _perform(HomeRequest.disconnect, run, coordinator.disconnect);
     }
-  }
-
-  Future<void> _connect() async {
-    final view = state.view;
-    if (view.issue == 'permissionRequired' && view.permission != null) {
-      await _requestPermission();
-    }
-    await coordinator.connect();
   }
 
   Future<void> _perform(

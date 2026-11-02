@@ -9,6 +9,7 @@ import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/main/modal_route_observer.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
+import 'package:onexray/service/connect/connection_permissions.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/manager.dart';
 import 'package:onexray/service/shared/apple_widget/service.dart';
@@ -107,7 +108,7 @@ class _BrandShellState extends State<BrandShell> {
     widget.navigationShell.goBranch(BrandRoutes.homeBranch);
     final coordinator = ConnectionCoordinator.instance;
     final command = switch (action) {
-      ShortCutAction.startVpn => coordinator.connect,
+      ShortCutAction.startVpn => ConnectionPermissions(coordinator).connect,
       ShortCutAction.stopVpn => coordinator.disconnect,
       _ => null,
     };
