@@ -10,7 +10,8 @@ projects can use the same source artwork.
 - `IconBlue.icon`: Icon Composer source document for the primary icon, in the brand
   accent color despite the upstream name.
 - `IconBlack.icon`, `IconGreen.icon`, `IconOrange.icon`, `IconPurple.icon`,
-  `IconRed.icon`: Icon Composer source documents for the iOS alternate icons.
+  `IconRed.icon`: Icon Composer source documents for upstream's iOS alternate icons.
+  They stay for merges, but the iOS project no longer builds them.
 
 ## Colors
 
