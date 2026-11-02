@@ -89,8 +89,7 @@ abstract final class ServiceManager {
     unawaited(_runInit('Background work', _startBackgroundWork));
   }
 
-  /// Follows the launch connection, so the first update check sees its result
-  /// and goes through the tunnel.
+  /// Follows the launch connection, so the first update check can use the tunnel.
   static Future<void> _startBackgroundWork() async {
     await AppStartupService().launchConnection;
     BackgroundTaskService().init(

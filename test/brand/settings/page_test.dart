@@ -27,6 +27,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 // ignore: depend_on_referenced_packages
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+// ignore: depend_on_referenced_packages
+import 'package:shared_preferences_platform_interface/types.dart';
+
+final class _Store extends InMemorySharedPreferencesAsync {
+  _Store() : super.empty();
+
+  bool failReads = false;
+
+  @override
+  Future<bool?> getBool(String key, SharedPreferencesOptions options) async {
+    if (failReads) throw StateError('unreadable');
+    return super.getBool(key, options);
+  }
+}
 
 ConnectionRuntime _runtime() => ConnectionRuntime.create(
   configuration: ConnectionConfiguration(),
@@ -56,12 +70,11 @@ void main() {
   ConnectionRuntime? runtime;
 
   // PreferencesKey keeps the first platform it sees, so tests share one store.
-  setUpAll(
-    () => SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.empty(),
-  );
+  final store = _Store();
+  setUpAll(() => SharedPreferencesAsyncPlatform.instance = store);
 
   setUp(() async {
+    store.failReads = false;
     await SharedPreferencesAsync().clear();
     start = Completer();
     status = VpnStatus.disconnected;
@@ -183,6 +196,19 @@ void main() {
       await tester.tap(find.byType(ShadSwitch));
       await settle(tester);
       expect(toggled(tester), Tristate.isFalse);
+    });
+
+    testWidgets('an unreadable value reads as off and can still be changed', (
+      tester,
+    ) async {
+      store.failReads = true;
+      await pumpApp(tester);
+      await openTab(tester, 1);
+      expect(toggled(tester), Tristate.isFalse);
+
+      await tester.tap(find.text(title));
+      await settle(tester);
+      expect(toggled(tester), Tristate.isTrue);
     });
 
     test('a second tap during a save is ignored', () async {

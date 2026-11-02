@@ -20,6 +20,8 @@ class SettingsController extends PageCubit<SettingsState> {
       emit(SettingsState(connectOnLaunch: value));
     } catch (error) {
       ygLogger('read connect at launch failed (${error.runtimeType})');
+      // What the launch itself assumes, and the row stays usable.
+      emit(const SettingsState(connectOnLaunch: false));
     }
   }
 

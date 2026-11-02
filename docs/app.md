@@ -41,7 +41,8 @@ upstream pages kept for merging. They are not reachable in this build.
   reconnects and reads as a reconnect on Home. A tap returns to Settings. Connect at launch is off
   by default and applies from the next launch. The attempt does not hold the loading screen: Home
   opens at once and shows it, and a tap there stops it. Background updates start after the attempt
-  ends, so their first check goes through the tunnel. Without a subscription Home asks for one
+  ends, so their first check normally goes through the tunnel. A tunnel that comes up later triggers
+  another check. Without a subscription Home asks for one
   rather than reporting a failed attempt.
 - `BrandShell` owns service startup and retry, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published.
