@@ -638,9 +638,15 @@ class ServerImportService {
     return input.readAsString();
   }
 
-  /// The system picker needs no photo library access.
+  /// The system picker needs no photo library access. iOS converts HEIC
+  /// photos to a format the Dart decoder reads.
   static Future<String?> pickQrImage() async {
-    final image = await FilePicker.pickFile(type: FileType.image);
+    final image = await FilePicker.pickFile(
+      type: FileType.image,
+      darwinOptions: const DarwinOptions(
+        assetRepresentationMode: DarwinAssetRepresentationMode.compatible,
+      ),
+    );
     if (image == null) return null;
     final path = image.path;
     if (path == null) throw const FormatException('Cannot read selected file');
