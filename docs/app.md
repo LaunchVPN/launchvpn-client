@@ -20,6 +20,8 @@ upstream pages kept for merging. They are not reachable in this build.
 - A failed attempt shows a toast with the reason and a persistent short message. If a command
   failed and the tunnel may still be up, the screen says so and a tap disconnects. Without a
   subscription the toggle is disabled.
+- No status or announcement moves the toggle. It sits as centered in the mockup, and higher only on
+  a screen too short for an announcement.
 - The location card names the group in use, or otherwise the selected one. Settings shows only its
   title.
 - With a subscription, Home offers the presets Smart and Everything through VPN, stored as
