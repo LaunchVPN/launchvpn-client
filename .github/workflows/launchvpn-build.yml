@@ -187,6 +187,13 @@ jobs:
           mv build/app/outputs/flutter-apk/app-release.apk \
             build/LaunchVPN-android-universal.apk
 
+      # An upstream merge can bring its artwork back into the build.
+      - name: Check the APK has no upstream artwork
+        run: |
+          contents=$(unzip -l build/LaunchVPN-android-universal.apk)
+          grep -q 'flutter_assets/assets/dat/' <<< "$contents"
+          ! grep -E 'flutter_assets/assets/(logo\.png|icon/|app_icon/|macos_icon/)' <<< "$contents"
+
       # Kotlin unit tests do not run Dart, so skip compiling it.
       - name: Test Android native code
         working-directory: launchvpn-client/android
@@ -238,3 +245,15 @@ jobs:
 
       - name: Build without signing
         run: flutter build ios --release --no-codesign --build-number "$BUILD_NUMBER"
+
+      # An upstream merge can bring its artwork back into the build.
+      - name: Check the app has no upstream artwork
+        run: |
+          app=build/ios/iphoneos/Runner.app
+          assets=$app/Frameworks/App.framework/flutter_assets/assets
+          test -d "$assets/dat"
+          for path in logo.png icon app_icon macos_icon; do
+            test ! -e "$assets/$path"
+          done
+          info=$(plutil -p "$app/Info.plist")
+          ! grep CFBundleAlternateIcons <<< "$info"

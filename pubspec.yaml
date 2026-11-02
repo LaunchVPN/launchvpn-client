@@ -126,13 +126,19 @@ flutter:
   uses-material-design: true
   generate: true
 
+  # Upstream's artwork stays for its desktop code and merges, but no phone
+  # build carries it.
   assets:
-    - assets/
+    - path: assets/
+      platforms: [linux, macos, windows]
     - assets/dat/
     - assets/geodata/regions.json
-    - assets/icon/
-    - assets/app_icon/
-    - assets/macos_icon/
+    - path: assets/icon/
+      platforms: [linux, macos, windows]
+    - path: assets/app_icon/
+      platforms: [linux, macos, windows]
+    - path: assets/macos_icon/
+      platforms: [linux, macos, windows]
     - assets/fonts/OFL-Manrope.txt
     - assets/fonts/OFL-Unbounded.txt
 
