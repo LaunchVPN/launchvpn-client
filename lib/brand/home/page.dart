@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
@@ -26,6 +27,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  /// Home without its free space, which the mockup splits evenly above and
+  /// below the toggle and its text.
+  static const _contentHeight = 382.0;
+
+  /// The same plus a four-line announcement and the least space above the cards.
+  static const _contentWithAnnouncementHeight = 528.0;
+  static const _minToggleGap = 24.0;
+
   late final HomeController _controller = widget.controller ?? HomeController();
 
   @override
@@ -59,77 +68,87 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  /// Depends only on the height, so a status or an announcement never moves the
+  /// toggle. It centers as in the mockup, higher only where an announcement
+  /// would not fit otherwise.
+  double _toggleGap(double height) => max(
+    _minToggleGap,
+    min((height - _contentHeight) / 2, height - _contentWithAnnouncementHeight),
+  );
+
   @override
   Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
     value: BrandTheme.statusBar,
     child: Scaffold(
       body: SafeArea(
         bottom: false,
-        child: BlocBuilder<HomeController, HomeState>(
-          bloc: _controller,
-          builder: (context, state) => CustomScrollView(
-            slivers: [
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    BrandSpacing.page,
-                    8,
-                    BrandSpacing.page,
-                    20,
-                  ),
-                  child: Column(
-                    children: [
-                      _Header(daysLeft: state.daysLeft(DateTime.now())),
-                      Expanded(
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 24),
-                            child: _Hero(state: state, onToggle: _toggle),
-                          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) =>
+              BlocBuilder<HomeController, HomeState>(
+                bloc: _controller,
+                builder: (context, state) => CustomScrollView(
+                  slivers: [
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          BrandSpacing.page,
+                          8,
+                          BrandSpacing.page,
+                          20,
+                        ),
+                        child: Column(
+                          children: [
+                            _Header(daysLeft: state.daysLeft(DateTime.now())),
+                            SizedBox(height: _toggleGap(constraints.maxHeight)),
+                            _Hero(state: state, onToggle: _toggle),
+                            const SizedBox(height: 24),
+                            const Spacer(),
+                            if (state.location case final location?)
+                              LocationCard(
+                                key: const ValueKey('home-location'),
+                                location: location,
+                                // "No answer" would contradict a tunnel that works.
+                                delay:
+                                    PingDelayConstants.isSuccessful(
+                                      location.delay,
+                                    )
+                                    ? locationDelayLabel(
+                                        AppLocalizations.of(context)!,
+                                        location,
+                                      )
+                                    : null,
+                                onTap: _openLocations,
+                                trailing: const Icon(
+                                  LucideIcons.chevronRight,
+                                  size: 20,
+                                  color: BrandColors.muted,
+                                ),
+                              ),
+                            if (state.subscription != null) ...[
+                              const SizedBox(height: 20),
+                              _PresetSwitch(
+                                selected: state.preset,
+                                onSelect: state.canChangeConnection
+                                    ? (preset) =>
+                                          _controller.selectPreset(preset, _run)
+                                    : null,
+                              ),
+                            ],
+                            if (state.announcement case final text?) ...[
+                              const SizedBox(height: 20),
+                              _AnnouncementBanner(
+                                text: text,
+                                onClose: _controller.dismissAnnouncement,
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                      if (state.location case final location?)
-                        LocationCard(
-                          key: const ValueKey('home-location'),
-                          location: location,
-                          // "No answer" would contradict a tunnel that works.
-                          delay: PingDelayConstants.isSuccessful(location.delay)
-                              ? locationDelayLabel(
-                                  AppLocalizations.of(context)!,
-                                  location,
-                                )
-                              : null,
-                          onTap: _openLocations,
-                          trailing: const Icon(
-                            LucideIcons.chevronRight,
-                            size: 20,
-                            color: BrandColors.muted,
-                          ),
-                        ),
-                      if (state.subscription != null) ...[
-                        const SizedBox(height: 20),
-                        _PresetSwitch(
-                          selected: state.preset,
-                          onSelect: state.canChangeConnection
-                              ? (preset) =>
-                                    _controller.selectPreset(preset, _run)
-                              : null,
-                        ),
-                      ],
-                      if (state.announcement case final text?) ...[
-                        const SizedBox(height: 20),
-                        _AnnouncementBanner(
-                          text: text,
-                          onClose: _controller.dismissAnnouncement,
-                        ),
-                      ],
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
         ),
       ),
     ),
@@ -142,29 +161,35 @@ class _Header extends StatelessWidget {
   final int? daysLeft;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      // A logo keeps its size when the system font grows.
-      const LaunchMark.logo(color: BrandColors.accent),
-      const SizedBox(width: 8),
-      const Text(
-        Brand.wordmark,
-        style: BrandText.wordmark,
-        textScaler: TextScaler.noScaling,
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: daysLeft == null ? null : _DaysPill(days: daysLeft!),
+  Widget build(BuildContext context) => ConstrainedBox(
+    // The pill's arrival must not move the toggle below.
+    constraints: const BoxConstraints(minHeight: _DaysPill.minHeight),
+    child: Row(
+      children: [
+        // A logo keeps its size when the system font grows.
+        const LaunchMark.logo(color: BrandColors.accent),
+        const SizedBox(width: 8),
+        const Text(
+          Brand.wordmark,
+          style: BrandText.wordmark,
+          textScaler: TextScaler.noScaling,
         ),
-      ),
-    ],
+        const SizedBox(width: 12),
+        Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: daysLeft == null ? null : _DaysPill(days: daysLeft!),
+          ),
+        ),
+      ],
+    ),
   );
 }
 
 class _DaysPill extends StatelessWidget {
   const _DaysPill({required this.days});
+
+  static const minHeight = 34.0;
 
   final int days;
 
@@ -172,7 +197,7 @@ class _DaysPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Container(
-      constraints: const BoxConstraints(minHeight: 34),
+      constraints: const BoxConstraints(minHeight: minHeight),
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
       decoration: BoxDecoration(
         color: BrandColors.surface,

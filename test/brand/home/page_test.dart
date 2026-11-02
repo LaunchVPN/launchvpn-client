@@ -170,6 +170,15 @@ void main() {
   ConnectToggleState toggleState(WidgetTester tester) =>
       tester.widget<ConnectToggle>(find.byType(ConnectToggle)).state;
 
+  double toggleTop(WidgetTester tester) =>
+      tester.getTopLeft(find.byType(ConnectToggle)).dy;
+
+  void useScreen(WidgetTester tester, double height) {
+    tester.view.physicalSize = Size(390, height);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+  }
+
   setUp(() {
     status = VpnStatus.disconnected;
     runtime = null;
@@ -314,12 +323,6 @@ void main() {
       await tester.pump();
     }
 
-    void usePhoneScreen(WidgetTester tester) {
-      tester.view.physicalSize = const Size(1170, 2532);
-      tester.view.devicePixelRatio = 3;
-      addTearDown(tester.view.reset);
-    }
-
     Future<void> close(WidgetTester tester) async {
       await tester.tap(find.byTooltip('Закрыть объявление'));
       await tester.runAsync(() => pumpEventQueue(times: 20));
@@ -340,10 +343,25 @@ void main() {
       );
     });
 
+    testWidgets('showing and closing it leaves the toggle in place', (
+      tester,
+    ) async {
+      useScreen(tester, 844);
+      await pumpHome(tester);
+      await addSubscription(tester);
+      final top = toggleTop(tester);
+
+      await setAnnounce(tester, notice);
+      expect(toggleTop(tester), top);
+
+      await close(tester);
+      expect(toggleTop(tester), top);
+    });
+
     testWidgets('stays closed while the panel has no other text', (
       tester,
     ) async {
-      usePhoneScreen(tester);
+      useScreen(tester, 844);
       await pumpHome(tester);
       await addSubscription(tester);
       await setAnnounce(tester, notice);
@@ -357,7 +375,7 @@ void main() {
     });
 
     testWidgets('a new text shows it again', (tester) async {
-      usePhoneScreen(tester);
+      useScreen(tester, 844);
       await pumpHome(tester);
       await addSubscription(tester);
       await setAnnounce(tester, notice);
@@ -371,7 +389,7 @@ void main() {
     testWidgets('a long text fits with the largest system font', (
       tester,
     ) async {
-      usePhoneScreen(tester);
+      useScreen(tester, 844);
       await pumpHome(tester, scale: _largeScale);
       await addSubscription(tester);
       await setAnnounce(tester, List.filled(12, notice).join(' '));
@@ -385,6 +403,64 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byKey(const ValueKey('home-announcement')), findsNothing);
     });
+  });
+
+  group('toggle position', () {
+    testWidgets('matches the mockup before anything has loaded', (
+      tester,
+    ) async {
+      useScreen(tester, 706);
+      await pumpHome(tester);
+
+      expect(toggleTop(tester), 204);
+    });
+
+    testWidgets('a short screen lifts it to leave room for an announcement', (
+      tester,
+    ) async {
+      useScreen(tester, 600);
+      await pumpHome(tester);
+
+      expect(toggleTop(tester), 114);
+    });
+  });
+
+  testWidgets('the toggle and the title stay put when the status changes', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+    await addSubscription(tester);
+    final top = toggleTop(tester);
+    final titleTop = tester.getTopLeft(find.text('Не подключено')).dy;
+
+    for (final (view, title) in [
+      (const ConnectionView(phase: ConnectionPhase.preparing), 'Подключение…'),
+      (const ConnectionView(phase: ConnectionPhase.connecting), 'Подключение…'),
+      (const ConnectionView(phase: ConnectionPhase.connected), 'Подключено'),
+      (
+        const ConnectionView(phase: ConnectionPhase.disconnecting),
+        'Отключение…',
+      ),
+      (
+        const ConnectionView(
+          phase: ConnectionPhase.failed,
+          issue: 'startFailed',
+        ),
+        'Не подключено',
+      ),
+      (
+        const ConnectionView(
+          phase: ConnectionPhase.failed,
+          issue: 'stopFailed',
+        ),
+        'VPN может быть включён',
+      ),
+    ]) {
+      coordinator.state.value = view;
+      await tester.pump();
+      expect(toggleTop(tester), top, reason: title);
+      expect(tester.getTopLeft(find.text(title)).dy, titleTop, reason: title);
+    }
   });
 
   testWidgets('without a subscription it says where to get one', (
