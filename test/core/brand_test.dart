@@ -162,12 +162,12 @@ void main() {
 
     test('the launch screen has the background of the app', () {
       final match = RegExp(
-        r'<color key="backgroundColor" red="([\d.]+)" green="([\d.]+)" blue="([\d.]+)"',
+        r'<color key="backgroundColor" red="([\d.]+)" green="([\d.]+)" blue="([\d.]+)" alpha="([\d.]+)"',
       ).firstMatch(_read('ios/Runner/Base.lproj/LaunchScreen.storyboard'))!;
 
       expect(
         Color.from(
-          alpha: 1,
+          alpha: double.parse(match[4]!),
           red: double.parse(match[1]!),
           green: double.parse(match[2]!),
           blue: double.parse(match[3]!),
