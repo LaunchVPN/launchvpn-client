@@ -158,38 +158,41 @@ class _HomePageState extends State<HomePage> {
 class _Header extends StatelessWidget {
   const _Header({required this.daysLeft});
 
+  static const _placeholderDays = 30;
+
   final int? daysLeft;
 
   @override
-  Widget build(BuildContext context) => ConstrainedBox(
-    // The pill's arrival must not move the toggle below.
-    constraints: const BoxConstraints(minHeight: _DaysPill.minHeight),
-    child: Row(
-      children: [
-        // A logo keeps its size when the system font grows.
-        const LaunchMark.logo(color: BrandColors.accent),
-        const SizedBox(width: 8),
-        const Text(
-          Brand.wordmark,
-          style: BrandText.wordmark,
-          textScaler: TextScaler.noScaling,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: daysLeft == null ? null : _DaysPill(days: daysLeft!),
+  Widget build(BuildContext context) => Row(
+    children: [
+      // A logo keeps its size when the system font grows.
+      const LaunchMark.logo(color: BrandColors.accent),
+      const SizedBox(width: 8),
+      const Text(
+        Brand.wordmark,
+        style: BrandText.wordmark,
+        textScaler: TextScaler.noScaling,
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Align(
+          alignment: AlignmentDirectional.centerEnd,
+          // Holds the pill's place, so its arrival does not move the toggle.
+          child: Visibility(
+            visible: daysLeft != null,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: _DaysPill(days: daysLeft ?? _placeholderDays),
           ),
         ),
-      ],
-    ),
+      ),
+    ],
   );
 }
 
 class _DaysPill extends StatelessWidget {
   const _DaysPill({required this.days});
-
-  static const minHeight = 34.0;
 
   final int days;
 
@@ -197,7 +200,7 @@ class _DaysPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Container(
-      constraints: const BoxConstraints(minHeight: minHeight),
+      constraints: const BoxConstraints(minHeight: 34),
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
       decoration: BoxDecoration(
         color: BrandColors.surface,

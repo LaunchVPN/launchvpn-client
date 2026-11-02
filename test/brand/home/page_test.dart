@@ -415,6 +415,23 @@ void main() {
       expect(toggleTop(tester), 204);
     });
 
+    testWidgets('the days pill does not move it with a large font', (
+      tester,
+    ) async {
+      useScreen(tester, 844);
+      await pumpHome(tester, scale: _largeScale);
+      final top = toggleTop(tester);
+
+      final expire = DateTime.now().add(const Duration(days: 46));
+      await addSubscription(
+        tester,
+        expire: expire.millisecondsSinceEpoch ~/ 1000,
+      );
+
+      expect(find.byIcon(LucideIcons.calendar).hitTestable(), findsOneWidget);
+      expect(toggleTop(tester), top);
+    });
+
     testWidgets('a short screen lifts it to leave room for an announcement', (
       tester,
     ) async {
@@ -500,7 +517,7 @@ void main() {
     await pumpHome(tester);
     await addSubscription(tester, expire: 0);
 
-    expect(find.byIcon(LucideIcons.calendar), findsNothing);
+    expect(find.byIcon(LucideIcons.calendar).hitTestable(), findsNothing);
   });
 
   testWidgets('a tap moves the knob to the middle and says connecting', (
