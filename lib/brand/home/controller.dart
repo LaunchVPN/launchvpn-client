@@ -28,6 +28,24 @@ enum HomeStatus {
 
 enum HomeRequest { connect, disconnect, reconnect, saveChoice }
 
+/// Why the last attempt failed, as the error screen tells it.
+enum HomeFailure {
+  /// The servers did not answer the check before connecting.
+  serverSilent,
+
+  /// The selection has no servers to connect to.
+  noServers,
+  other;
+
+  static HomeFailure of(String? issue) => switch (issue) {
+    'insufficientHealthyServers' || 'probeFailed' => serverSilent,
+    'selectionUnavailable' ||
+    'insufficientCandidates' ||
+    'finalExitUnavailable' => noServers,
+    _ => other,
+  };
+}
+
 /// Runs a connection command and reports its failure to the user.
 typedef ConnectionActionRunner = Future<void> Function(
   Future<void> Function() action,
@@ -65,24 +83,39 @@ class HomeState {
   /// it. The same phase after off is a start from outside the app.
   final bool restoring;
 
-  HomeStatus get status {
-    if (request == HomeRequest.disconnect) return HomeStatus.disconnecting;
-    if (request == HomeRequest.connect) return HomeStatus.connecting;
-    if (request == HomeRequest.reconnect) return HomeStatus.reconnecting;
-    return switch (view.phase) {
-      ConnectionPhase.connected => HomeStatus.connected,
-      ConnectionPhase.disconnecting => HomeStatus.disconnecting,
-      ConnectionPhase.preparing => HomeStatus.connecting,
-      ConnectionPhase.connecting =>
-        restoring ? HomeStatus.reconnecting : HomeStatus.connecting,
-      ConnectionPhase.disconnected || ConnectionPhase.failed =>
-        view.canDisconnect
-            ? HomeStatus.uncertain
-            : _attemptFailed
-            ? HomeStatus.failed
-            : HomeStatus.off,
-    };
-  }
+  HomeStatus get status => switch (request) {
+    HomeRequest.disconnect => HomeStatus.disconnecting,
+    HomeRequest.connect => HomeStatus.connecting,
+    HomeRequest.reconnect => HomeStatus.reconnecting,
+    HomeRequest.saveChoice || null => _reported,
+  };
+
+  /// What the coordinator reports, whatever command is waiting to start.
+  HomeStatus get _reported => switch (view.phase) {
+    ConnectionPhase.connected => HomeStatus.connected,
+    ConnectionPhase.disconnecting => HomeStatus.disconnecting,
+    ConnectionPhase.preparing => HomeStatus.connecting,
+    ConnectionPhase.connecting =>
+      restoring ? HomeStatus.reconnecting : HomeStatus.connecting,
+    ConnectionPhase.disconnected || ConnectionPhase.failed =>
+      view.canDisconnect
+          ? HomeStatus.uncertain
+          : _attemptFailed
+          ? HomeStatus.failed
+          : HomeStatus.off,
+  };
+
+  /// Set while Home shows the error screen instead of the toggle.
+  HomeFailure? get failure =>
+      status == HomeStatus.failed ? HomeFailure.of(view.issue) : null;
+
+  /// Whether the error screen shows [error] once its command ends, so a toast
+  /// would only repeat it.
+  bool explains(Object error) =>
+      _reported == HomeStatus.failed && identical(view.error, error);
+
+  /// Where the panel sends people for help, if it named a place.
+  String? get supportUrl => subscription?.supportUrl;
 
   /// Without a subscription there was nothing to connect to, which is what the
   /// screen says instead.
@@ -275,20 +308,27 @@ class HomeController extends PageCubit<HomeState> {
     await _showStoredChoices();
   }
 
-  /// Saves the location, with the same immediate reconnect as a preset.
+  /// Saves the location, with the same immediate reconnect as a preset. After
+  /// a failed attempt it also connects, the same location included, since the
+  /// person came to fix the connection.
   Future<void> selectLocation(
     Location location,
-    ConnectionActionRunner run,
-  ) async {
-    if (!state.canChangeConnection ||
-        location.id == state.selectedLocation?.id) {
-      return;
+    ConnectionActionRunner run, {
+    required VpnPermissionExplanation explain,
+  }) async {
+    final retry = state.status == HomeStatus.failed;
+    if (state.canChangeConnection &&
+        location.id != state.selectedLocation?.id) {
+      final request = _choiceRequest;
+      final selection = ServerSelection.server(location.id);
+      emit(state.copyWith(selection: selection));
+      await _perform(request, run, () => coordinator.applySelection(selection));
+      await _showStoredChoices();
     }
-    final request = _choiceRequest;
-    final selection = ServerSelection.server(location.id);
-    emit(state.copyWith(selection: selection));
-    await _perform(request, run, () => coordinator.applySelection(selection));
-    await _showStoredChoices();
+    // A choice that was not saved would retry the location that just failed.
+    if (retry && state.selectedLocation?.id == location.id) {
+      await toggle(run, explain: explain);
+    }
   }
 
   HomeRequest get _choiceRequest => state.status == HomeStatus.connected

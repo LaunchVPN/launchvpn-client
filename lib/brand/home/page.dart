@@ -10,13 +10,16 @@ import 'package:onexray/brand/home/toggle.dart';
 import 'package:onexray/brand/locations/page.dart';
 import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/permission/vpn_permission_page.dart';
+import 'package:onexray/brand/state_hero.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/db/database/constants.dart';
+import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/locations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.controller});
@@ -45,11 +48,28 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _run(Future<void> Function() action) async {
-    await runConnectionAction(context, _controller.coordinator, action);
+    await runConnectionAction(context, _controller.coordinator, () async {
+      try {
+        await action();
+      } catch (error) {
+        // The error screen tells the cause; a toast would say it twice.
+        if (!_controller.state.explains(error)) rethrow;
+      }
+    });
   }
 
-  Future<void> _toggle() =>
-      _controller.toggle(_run, explain: () => VpnPermissionPage.show(context));
+  Future<void> _openSupport(String url) async {
+    if (!await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    )) {
+      ygLogger('open support link failed');
+    }
+  }
+
+  Future<void> _toggle() => _controller.toggle(_run, explain: _explain);
+
+  Future<bool> _explain() => VpnPermissionPage.show(context);
 
   // Above the tab bar, as the mockup has it.
   Future<void> _openLocations() async {
@@ -60,7 +80,7 @@ class _HomePageState extends State<HomePage> {
           ),
         );
     if (chosen != null && mounted) {
-      await _controller.selectLocation(chosen, _run);
+      await _controller.selectLocation(chosen, _run, explain: _explain);
     }
   }
 
@@ -96,48 +116,10 @@ class _HomePageState extends State<HomePage> {
                         child: Column(
                           children: [
                             _Header(daysLeft: state.daysLeft(DateTime.now())),
-                            SizedBox(height: _toggleGap(constraints.maxHeight)),
-                            _Hero(state: state, onToggle: _toggle),
-                            const SizedBox(height: 24),
-                            const Spacer(),
-                            if (state.location case final location?)
-                              LocationCard(
-                                key: const ValueKey('home-location'),
-                                location: location,
-                                // "No answer" would contradict a tunnel that works.
-                                delay:
-                                    PingDelayConstants.isSuccessful(
-                                      location.delay,
-                                    )
-                                    ? locationDelayLabel(
-                                        AppLocalizations.of(context)!,
-                                        location,
-                                      )
-                                    : null,
-                                onTap: _openLocations,
-                                trailing: const Icon(
-                                  LucideIcons.chevronRight,
-                                  size: 20,
-                                  color: BrandColors.muted,
-                                ),
-                              ),
-                            if (state.subscription != null) ...[
-                              const SizedBox(height: 20),
-                              _PresetSwitch(
-                                selected: state.preset,
-                                onSelect: state.canChangeConnection
-                                    ? (preset) =>
-                                          _controller.selectPreset(preset, _run)
-                                    : null,
-                              ),
-                            ],
-                            if (state.announcement case final text?) ...[
-                              const SizedBox(height: 20),
-                              _AnnouncementBanner(
-                                text: text,
-                                onClose: _controller.dismissAnnouncement,
-                              ),
-                            ],
+                            if (state.failure case final failure?)
+                              ..._failureContent(state, failure)
+                            else
+                              ..._connectionContent(state, constraints),
                           ],
                         ),
                       ),
@@ -149,6 +131,59 @@ class _HomePageState extends State<HomePage> {
       ),
     ),
   );
+
+  /// The mockup's error state: the cause and the ways out, in place of the
+  /// toggle and the cards.
+  List<Widget> _failureContent(HomeState state, HomeFailure failure) => [
+    Expanded(child: Center(child: _FailureHero(failure))),
+    const SizedBox(height: 12),
+    _FailureActions(
+      onRetry: _toggle,
+      onChangeLocation: _openLocations,
+      onContactSupport: switch (state.supportUrl) {
+        final url? => () => _openSupport(url),
+        null => null,
+      },
+    ),
+  ];
+
+  List<Widget> _connectionContent(
+    HomeState state,
+    BoxConstraints constraints,
+  ) => [
+    SizedBox(height: _toggleGap(constraints.maxHeight)),
+    _Hero(state: state, onToggle: _toggle),
+    const SizedBox(height: 24),
+    const Spacer(),
+    if (state.location case final location?)
+      LocationCard(
+        key: const ValueKey('home-location'),
+        location: location,
+        // "No answer" would contradict a tunnel that works.
+        delay: PingDelayConstants.isSuccessful(location.delay)
+            ? locationDelayLabel(AppLocalizations.of(context)!, location)
+            : null,
+        onTap: _openLocations,
+        trailing: const Icon(
+          LucideIcons.chevronRight,
+          size: 20,
+          color: BrandColors.muted,
+        ),
+      ),
+    if (state.subscription != null) ...[
+      const SizedBox(height: 20),
+      _PresetSwitch(
+        selected: state.preset,
+        onSelect: state.canChangeConnection
+            ? (preset) => _controller.selectPreset(preset, _run)
+            : null,
+      ),
+    ],
+    if (state.announcement case final text?) ...[
+      const SizedBox(height: 20),
+      _AnnouncementBanner(text: text, onClose: _controller.dismissAnnouncement),
+    ],
+  ];
 }
 
 class _Header extends StatelessWidget {
@@ -274,16 +309,89 @@ class _Hint extends StatelessWidget {
       style: BrandText.hint.copyWith(color: color),
     );
     return switch (state.status) {
-      HomeStatus.off => text(
+      // A failed attempt shows the error screen instead.
+      HomeStatus.off || HomeStatus.failed => text(
         state.subscription == null ? l.homeNoSubscription : l.homeHintOff,
       ),
-      HomeStatus.failed => text(l.homeConnectFailed, color: BrandColors.danger),
       HomeStatus.connecting => text(l.homeHintConnecting),
       HomeStatus.reconnecting => text(l.homeHintReconnecting),
       HomeStatus.connected => _ConnectedHint(since: state.connectedSince),
       HomeStatus.disconnecting => const SizedBox.shrink(),
       HomeStatus.uncertain => text(l.homeHintUncertain),
     };
+  }
+}
+
+class _FailureHero extends StatelessWidget {
+  const _FailureHero(this.failure);
+
+  final HomeFailure failure;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final (icon, title, body) = switch (failure) {
+      HomeFailure.serverSilent => (
+        LucideIcons.wifiOff,
+        l.homeFailureServerTitle,
+        l.homeFailureServerBody,
+      ),
+      HomeFailure.noServers => (
+        LucideIcons.serverOff,
+        l.homeFailureNoServersTitle,
+        l.homeFailureNoServersBody,
+      ),
+      HomeFailure.other => (
+        LucideIcons.circleAlert,
+        l.homeFailureOtherTitle,
+        l.homeFailureOtherBody,
+      ),
+    };
+    return StateHero.danger(icon: icon, title: title, body: body);
+  }
+}
+
+class _FailureActions extends StatelessWidget {
+  const _FailureActions({
+    required this.onRetry,
+    required this.onChangeLocation,
+    required this.onContactSupport,
+  });
+
+  final VoidCallback onRetry;
+  final VoidCallback onChangeLocation;
+
+  /// Null when the panel sent no support link.
+  final VoidCallback? onContactSupport;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 12,
+      children: [
+        FilledButton.icon(
+          style: BrandTheme.primaryButton,
+          onPressed: onRetry,
+          icon: const Icon(LucideIcons.refreshCw),
+          label: Text(l.buttonRetry),
+        ),
+        FilledButton.icon(
+          style: BrandTheme.secondaryButton,
+          onPressed: onChangeLocation,
+          icon: const Icon(LucideIcons.globe),
+          label: Text(l.homeChangeLocation),
+        ),
+        if (onContactSupport case final open?)
+          TextButton.icon(
+            style: BrandTheme.linkButton,
+            onPressed: open,
+            icon: const Icon(LucideIcons.messageCircle),
+            label: Text(l.homeContactSupport),
+          ),
+      ],
+    );
   }
 }
 
