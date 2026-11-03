@@ -16,6 +16,7 @@ import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/servers/subscription/model.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 
 ConnectionRuntime _runtime([ConnectionConfiguration? configuration]) =>
@@ -52,6 +53,7 @@ void main() {
   late List<List<int>> sweeps;
   late List<bool Function()?> sweepCancels;
   late Future<void> Function() sweep;
+  late Future<SubscriptionRefreshResult> Function(SubscriptionData) refresh;
   var status = VpnStatus.disconnected;
   var stopCalls = 0;
 
@@ -70,6 +72,9 @@ void main() {
     sweeps = [];
     sweepCancels = [];
     sweep = () async {};
+    refresh = (_) async => const SubscriptionRefreshResult(
+      status: SubscriptionUpdateResult.success,
+    );
     stopCalls = 0;
     runtime = _runtime();
     statusEvents = StreamController<VpnStatus>.broadcast(sync: true);
@@ -103,6 +108,7 @@ void main() {
         sweepCancels.add(isCancelled);
         return sweep();
       },
+      refreshSubscription: (row) => refresh(row),
     );
     addTearDown(controller.close);
     await controller.initialize();
@@ -428,6 +434,128 @@ void main() {
       );
 
       expect(controller.state.daysLeft(DateTime.utc(2026, 2)), 0);
+    });
+  });
+
+  group('expiry', () {
+    int epoch(DateTime time) => time.millisecondsSinceEpoch ~/ 1000;
+    final past = epoch(DateTime.now().subtract(const Duration(days: 1)));
+    final future = epoch(DateTime.now().add(const Duration(days: 30)));
+
+    Future<void> setExpiry(int expire) async {
+      final row = (await db.subscriptionDao.allRows).single;
+      await db.subscriptionDao.updateRow(
+        row.copyWith(expireTimestamp: Value(expire)),
+      );
+      await settle();
+    }
+
+    /// Ends the connection a renewal starts, so no start is left waiting.
+    Future<void> finishConnecting() async {
+      status = VpnStatus.connected;
+      start.complete(HostConnection(VpnStatus.connected, runtime: runtime));
+      await settle();
+    }
+
+    test('a past expiry ends the subscription, none never does', () async {
+      await addSubscription(expire: 0);
+      expect(controller.state.expired, isFalse);
+
+      await setExpiry(past);
+
+      expect(controller.state.expired, isTrue);
+    });
+
+    test('turns off a tunnel that is running when the time runs out', () async {
+      await addSubscription(expire: future);
+      await connectFully();
+      stop.complete(const HostConnection(VpnStatus.disconnected));
+
+      await setExpiry(past);
+
+      expect(stopCalls, 1);
+      expect(controller.state.status, HomeStatus.off);
+    });
+
+    test('turns off a tunnel started from outside after expiry', () async {
+      await addSubscription(expire: past);
+      stop.complete(const HostConnection(VpnStatus.disconnected));
+
+      status = VpnStatus.connected;
+      await coordinator.refresh();
+      await settle();
+
+      expect(stopCalls, 1);
+    });
+
+    test('connects once the subscription is renewed', () async {
+      await addSubscription(expire: past);
+
+      await setExpiry(future);
+
+      expect(controller.state.expired, isFalse);
+      expect(controller.state.status, HomeStatus.connecting);
+      await finishConnecting();
+      expect(controller.state.status, HomeStatus.connected);
+    });
+
+    test('a refresh of an active subscription does not connect', () async {
+      await addSubscription(expire: future);
+
+      await setExpiry(future + 60);
+
+      expect(controller.state.status, HomeStatus.off);
+    });
+
+    test('refreshStatus loads the subscription and reports it', () async {
+      await addSubscription(expire: past);
+      var refreshing = false;
+      refresh = (_) async {
+        refreshing = controller.state.refreshing;
+        return const SubscriptionRefreshResult(
+          status: SubscriptionUpdateResult.success,
+          count: 1,
+        );
+      };
+
+      final result = await controller.refreshStatus();
+
+      expect(refreshing, isTrue);
+      expect(controller.state.refreshing, isFalse);
+      expect(result!.success, isTrue);
+      expect(controller.state.expired, isTrue);
+    });
+
+    test('refreshStatus that finds a renewal connects at once', () async {
+      await addSubscription(expire: past);
+      refresh = (row) async {
+        await db.subscriptionDao.updateRow(
+          row.copyWith(expireTimestamp: Value(future)),
+        );
+        return const SubscriptionRefreshResult(
+          status: SubscriptionUpdateResult.success,
+          count: 1,
+        );
+      };
+
+      await controller.refreshStatus();
+
+      expect(controller.state.expired, isFalse);
+      expect(controller.state.status, HomeStatus.connecting);
+      await finishConnecting();
+    });
+
+    test('a failed refreshStatus keeps the subscription expired', () async {
+      await addSubscription(expire: past);
+      refresh = (_) async => const SubscriptionRefreshResult(
+        status: SubscriptionUpdateResult.downloadFailed,
+      );
+
+      final result = await controller.refreshStatus();
+
+      expect(result!.success, isFalse);
+      expect(controller.state.expired, isTrue);
+      expect(controller.state.status, HomeStatus.off);
     });
   });
 

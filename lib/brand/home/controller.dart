@@ -11,6 +11,7 @@ import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/catalog.dart';
 import 'package:onexray/service/servers/locations.dart';
+import 'package:onexray/service/servers/subscription/model.dart';
 import 'package:onexray/service/servers/subscription/service.dart';
 import 'package:onexray/service/servers/subscription/user_info.dart';
 import 'package:onexray/service/shared/ping/service.dart';
@@ -63,6 +64,10 @@ typedef LocationPing = Future<void> Function(
 
 typedef AnnouncementDismissal = Future<void> Function(int subId, String text);
 
+typedef SubscriptionRefresh = Future<SubscriptionRefreshResult> Function(
+  SubscriptionData row,
+);
+
 class HomeState {
   HomeState({
     this.view = const ConnectionView(),
@@ -71,6 +76,8 @@ class HomeState {
     this.restoring = false,
     this.preset,
     this.selection,
+    this.expired = false,
+    this.refreshing = false,
   }) : catalog = catalog ?? ServerCatalog();
 
   final ConnectionView view;
@@ -87,6 +94,13 @@ class HomeState {
   /// The session fell from connected to connecting, so the system is restoring
   /// it. The same phase after off is a start from outside the app.
   final bool restoring;
+
+  /// The subscription's expiry has passed. Home shows «Подписка закончилась»
+  /// instead of the toggle, and no tunnel stays up.
+  final bool expired;
+
+  /// «Обновить статус» is loading the subscription.
+  final bool refreshing;
 
   HomeStatus get status => switch (request) {
     HomeRequest.disconnect => HomeStatus.disconnecting,
@@ -217,6 +231,8 @@ class HomeState {
     bool? restoring,
     TrafficMode? preset,
     ServerSelection? selection,
+    bool? expired,
+    bool? refreshing,
   }) => HomeState(
     view: view ?? this.view,
     catalog: catalog ?? this.catalog,
@@ -224,6 +240,8 @@ class HomeState {
     restoring: restoring ?? this.restoring,
     preset: preset ?? this.preset,
     selection: selection ?? this.selection,
+    expired: expired ?? this.expired,
+    refreshing: refreshing ?? this.refreshing,
   );
 
   HomeState _withRequest(HomeRequest? request) => HomeState(
@@ -233,6 +251,8 @@ class HomeState {
     restoring: restoring,
     preset: preset,
     selection: selection,
+    expired: expired,
+    refreshing: refreshing,
   );
 }
 
@@ -242,11 +262,15 @@ class HomeController extends PageCubit<HomeState> {
     ConnectionCoordinator? coordinator,
     LocationPing? pingLocations,
     AnnouncementDismissal? dismissAnnounce,
+    SubscriptionRefresh? refreshSubscription,
   }) : _db = database ?? AppDatabase(),
        coordinator = coordinator ?? ConnectionCoordinator.instance,
        _pingLocations = pingLocations ?? PingService().pingLocations,
        _dismissAnnounce =
            dismissAnnounce ?? SubscriptionService().dismissAnnounce,
+       _refreshSubscription =
+           refreshSubscription ??
+           SubscriptionService().refreshSubscriptionResult,
        super(HomeState()) {
     this.coordinator.state.addListener(_connectionChanged);
     _connectionChanged();
@@ -257,9 +281,15 @@ class HomeController extends PageCubit<HomeState> {
   late final _permissions = ConnectionPermissions(coordinator);
   final LocationPing _pingLocations;
   final AnnouncementDismissal _dismissAnnounce;
+  final SubscriptionRefresh _refreshSubscription;
   StreamSubscription<ServerCatalog>? _catalog;
   StreamSubscription<void>? _settings;
+  Timer? _expiry;
   bool _measuring = false;
+
+  /// An expiry this close gets a timer. A later one is checked again when the
+  /// interval update refreshes the subscription.
+  static const _expiryWatch = Duration(days: 1);
 
   void _connectionChanged() {
     final view = coordinator.state.value;
@@ -274,11 +304,15 @@ class HomeController extends PageCubit<HomeState> {
             view.runtime != null,
       ),
     );
+    _stopIfExpired();
   }
 
   Future<void> initialize() async {
     _catalog ??= ServerCatalog.watch(_db).listen(
-      (catalog) => emit(state.copyWith(catalog: catalog)),
+      (catalog) {
+        emit(state.copyWith(catalog: catalog));
+        _checkExpiry(catalog.sources.lastOrNull);
+      },
       onError: (Object error) =>
           ygLogger('read home catalog failed (${error.runtimeType})'),
     );
@@ -362,6 +396,84 @@ class HomeController extends PageCubit<HomeState> {
     }
   }
 
+  /// Follows [row]'s expiry. An expiry turns the tunnel off; a renewal after
+  /// it connects, as «Подписка закончилась» promises.
+  void _checkExpiry(SubscriptionData? row) {
+    _expiry?.cancel();
+    final now = DateTime.now();
+    final info = row == null
+        ? null
+        : SubscriptionUserInfo.fromSubscription(row);
+    final expired = info?.isExpired(now) ?? false;
+    if (info?.expiresAt case final expiresAt? when !expired) {
+      final left = expiresAt.difference(now);
+      if (left <= _expiryWatch) {
+        _expiry = Timer(left, () => _checkExpiry(state.subscription));
+      }
+    }
+    if (expired == state.expired) return;
+    emit(state.copyWith(expired: expired));
+    if (expired) {
+      _stopIfExpired();
+    } else {
+      unawaited(_connectAfterRenewal());
+    }
+  }
+
+  /// Without VPN consent only a tap may bring up the prompt, so the toggle
+  /// waits for one.
+  Future<void> _connectAfterRenewal() async {
+    if (state.status != HomeStatus.off && state.status != HomeStatus.failed) {
+      return;
+    }
+    if (coordinator.state.value.issue == 'permissionRequired') return;
+    await _perform(HomeRequest.connect, _logFailure, coordinator.connect);
+  }
+
+  /// The panel no longer serves an expired subscription, so a tunnel through
+  /// it would only keep the phone offline.
+  void _stopIfExpired() {
+    if (!state.expired) return;
+    switch (state.status) {
+      case HomeStatus.off || HomeStatus.failed || HomeStatus.disconnecting:
+        break;
+      case HomeStatus.connecting when state.request == HomeRequest.connect:
+        coordinator.cancel();
+      default:
+        unawaited(
+          _perform(HomeRequest.disconnect, _logFailure, coordinator.disconnect),
+        );
+    }
+  }
+
+  /// Runs a command nobody tapped, so no toast reports its failure.
+  static Future<void> _logFailure(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (error) {
+      ygLogger('automatic connection command failed (${error.runtimeType})');
+    }
+  }
+
+  /// «Обновить статус»: loads the subscription the way the interval update
+  /// does. A failed load keeps the stored data. A renewal connects at once.
+  /// Null when there is nothing to load or a load is already running.
+  Future<SubscriptionRefreshResult?> refreshStatus() async {
+    final row = state.subscription;
+    if (row == null || state.refreshing) return null;
+    emit(state.copyWith(refreshing: true));
+    try {
+      final result = await _refreshSubscription(row);
+      // The catalog may not have seen the new row yet.
+      if (result.success) {
+        _checkExpiry(await _db.subscriptionDao.searchRow(row.id));
+      }
+      return result;
+    } finally {
+      emit(state.copyWith(refreshing: false));
+    }
+  }
+
   /// Measures the listed locations unless the tunnel is up. The results reach
   /// the screen through the catalog as each batch is saved.
   Future<void> measureLocations() async {
@@ -421,6 +533,7 @@ class HomeController extends PageCubit<HomeState> {
   @override
   Future<void> disposePageResources() async {
     coordinator.state.removeListener(_connectionChanged);
+    _expiry?.cancel();
     await _catalog?.cancel();
     await _settings?.cancel();
   }

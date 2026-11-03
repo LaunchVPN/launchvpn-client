@@ -18,9 +18,12 @@ import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/distribution.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
+import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
+import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/locations.dart';
+import 'package:onexray/service/servers/subscription/failure.dart';
 import 'package:onexray/service/settings/app_update/service.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/event_bus/state.dart';
@@ -35,7 +38,8 @@ class HomePage extends StatefulWidget {
 
   final HomeController controller;
 
-  /// Only an APK build offers a newer release, since a store updates the rest.
+  /// Only an APK build offers a newer release and renewal on the site: a store
+  /// updates the rest and takes no payment outside its own.
   final AppDistribution distribution;
 
   @override
@@ -89,6 +93,21 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _toggle() => _controller.toggle(_run, explain: _explain);
+
+  /// A renewal needs no message: the screen gives way to the toggle.
+  Future<void> _refreshStatus() async {
+    final l = AppLocalizations.of(context)!;
+    final result = await _controller.refreshStatus();
+    if (result == null || !mounted) return;
+    if (!result.success) {
+      ContextAlert.showToast(
+        context,
+        subscriptionFailureMessage(l, result.status, error: result.error),
+      );
+    } else if (_controller.state.expired) {
+      ContextAlert.showToast(context, l.homeExpiredNotRenewed);
+    }
+  }
 
   Future<bool> _explain() => VpnPermissionPage.show(context);
 
@@ -150,7 +169,10 @@ class _HomePageState extends State<HomePage> {
                               child: Column(
                                 children: [
                                   _Header(
-                                    daysLeft: state.daysLeft(DateTime.now()),
+                                    // The screen's title says it instead.
+                                    daysLeft: state.expired
+                                        ? null
+                                        : state.daysLeft(DateTime.now()),
                                   ),
                                   if (update != null) ...[
                                     const SizedBox(height: 20),
@@ -162,7 +184,9 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                     ),
                                   ],
-                                  if (state.failure case final failure?)
+                                  if (state.expired)
+                                    ..._expiredContent(state)
+                                  else if (state.failure case final failure?)
                                     ..._failureContent(state, failure)
                                   else
                                     ..._connectionContent(
@@ -185,20 +209,50 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
-  /// The mockup's error state: the cause and the ways out, in place of the
-  /// toggle and the cards.
-  List<Widget> _failureContent(HomeState state, HomeFailure failure) => [
-    Expanded(child: Center(child: _FailureHero(failure))),
+  /// The mockups' state screens: a centered explanation and the ways out, in
+  /// place of the toggle and the cards.
+  List<Widget> _stateContent(Widget hero, Widget actions) => [
+    Expanded(child: Center(child: hero)),
     const SizedBox(height: 12),
-    _FailureActions(
-      onRetry: _toggle,
-      onChangeLocation: _openLocations,
-      onContactSupport: switch (state.subscription?.supportUrl) {
+    actions,
+  ];
+
+  /// Null when the panel sent no support link.
+  VoidCallback? _contactSupport(HomeState state) =>
+      switch (state.subscription?.supportUrl) {
         final url? => () => _openLink(Uri.parse(url), 'support'),
         null => null,
-      },
-    ),
-  ];
+      };
+
+  List<Widget> _failureContent(HomeState state, HomeFailure failure) =>
+      _stateContent(
+        _FailureHero(failure),
+        _FailureActions(
+          onRetry: _toggle,
+          onChangeLocation: _openLocations,
+          onContactSupport: _contactSupport(state),
+        ),
+      );
+
+  List<Widget> _expiredContent(HomeState state) {
+    final l = AppLocalizations.of(context)!;
+    final renews = widget.distribution == AppDistribution.apk;
+    return _stateContent(
+      StateHero.warning(
+        icon: LucideIcons.calendar,
+        title: l.homeExpiredTitle,
+        body: renews ? l.homeExpiredBodyRenew : l.homeExpiredBody,
+      ),
+      _ExpiredActions(
+        onRenew: renews
+            ? () => _openLink(Uri.parse(Brand.renewalUrl), 'renewal')
+            : null,
+        onRefresh: state.refreshing ? null : _refreshStatus,
+        refreshing: state.refreshing,
+        onContactSupport: _contactSupport(state),
+      ),
+    );
+  }
 
   List<Widget> _connectionContent(HomeState state, double toggleGap) => [
     SizedBox(height: toggleGap),
@@ -433,16 +487,79 @@ class _FailureActions extends StatelessWidget {
           icon: const Icon(LucideIcons.globe),
           label: Text(l.homeChangeLocation),
         ),
-        if (onContactSupport case final open?)
-          TextButton.icon(
-            style: BrandTheme.linkButton,
-            onPressed: open,
-            icon: const Icon(LucideIcons.messageCircle),
-            label: Text(l.homeContactSupport),
-          ),
+        if (onContactSupport case final open?) _SupportLink(onPressed: open),
       ],
     );
   }
+}
+
+class _ExpiredActions extends StatelessWidget {
+  const _ExpiredActions({
+    required this.onRenew,
+    required this.onRefresh,
+    required this.refreshing,
+    required this.onContactSupport,
+  });
+
+  /// Null in a store build, which offers no payment.
+  final VoidCallback? onRenew;
+
+  /// Null while the subscription loads.
+  final VoidCallback? onRefresh;
+  final bool refreshing;
+
+  /// Null when the panel sent no support link.
+  final VoidCallback? onContactSupport;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final refreshIcon = refreshing
+        ? const ButtonProgressIndicator(size: 20)
+        : const Icon(LucideIcons.refreshCw);
+    final refreshLabel = Text(l.homeExpiredRefresh);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 12,
+      children: [
+        if (onRenew case final renew?) ...[
+          FilledButton.icon(
+            style: BrandTheme.primaryButton,
+            onPressed: renew,
+            icon: const Icon(LucideIcons.externalLink),
+            label: Text(l.homeExpiredRenew),
+          ),
+          TextButton.icon(
+            style: BrandTheme.quietButton,
+            onPressed: onRefresh,
+            icon: refreshIcon,
+            label: refreshLabel,
+          ),
+        ] else
+          FilledButton.icon(
+            style: BrandTheme.primaryButton,
+            onPressed: onRefresh,
+            icon: refreshIcon,
+            label: refreshLabel,
+          ),
+        if (onContactSupport case final open?) _SupportLink(onPressed: open),
+      ],
+    );
+  }
+}
+
+class _SupportLink extends StatelessWidget {
+  const _SupportLink({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => TextButton.icon(
+    style: BrandTheme.linkButton,
+    onPressed: onPressed,
+    icon: const Icon(LucideIcons.messageCircle),
+    label: Text(AppLocalizations.of(context)!.homeContactSupport),
+  );
 }
 
 /// Counts from the session's own start, so reopening the app keeps the time.
