@@ -125,6 +125,14 @@ class PreferencesKey {
     await _prefs.setBool(_connectOnAppLaunch, value);
   }
 
+  static const _renewalReminders = "${_namespace}renewalReminders";
+
+  Future<bool> readRenewalReminders() async =>
+      await _prefs.getBool(_renewalReminders) ?? true;
+
+  Future<void> saveRenewalReminders(bool value) =>
+      _prefs.setBool(_renewalReminders, value);
+
   static const _autoUpdate = "${_namespace}autoUpdate";
 
   Future<Map<String, dynamic>?> readAutoUpdate() async {
@@ -218,6 +226,7 @@ class PreferencesKey {
       _prefs.remove('app2.xraySettingId'),
       _prefs.remove(_desktopStartHidden),
       _prefs.remove(_connectOnAppLaunch),
+      _prefs.remove(_renewalReminders),
     ]);
   }
 }
