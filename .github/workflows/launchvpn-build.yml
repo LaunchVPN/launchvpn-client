@@ -270,6 +270,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # A tag moved during the build would get an APK of another commit.
+          target=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_REF_NAME" --jq .sha)
+          if [ "$target" != "$GITHUB_SHA" ]; then
+            echo "::error::$GITHUB_REF_NAME moved to $target during the build. Push the tag again."
+            exit 1
+          fi
           gh release create "$GITHUB_REF_NAME" LaunchVPN-android-universal.apk \
             --repo "$GITHUB_REPOSITORY" \
             --draft --verify-tag --generate-notes \
