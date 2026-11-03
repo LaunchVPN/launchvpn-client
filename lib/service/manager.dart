@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:onexray/core/distribution.dart';
 import 'package:onexray/core/network/client.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/launch/app_startup.dart';
@@ -100,11 +101,12 @@ abstract final class ServiceManager {
     unawaited(_checkUpdate());
   }
 
+  /// A store build leaves updates to the store. An APK checks at every launch,
+  /// so Home offers a newer release whenever it opens.
   static Future<void> _checkUpdate() async {
+    if (AppDistribution.current != AppDistribution.apk) return;
     try {
       final service = AppUpdateService();
-      if (!await service.shouldRunAutomaticCheck()) return;
-      await service.recordAutomaticCheck();
       final result = await service.checkForUpdate();
       if (result.status == AppUpdateCheckStatus.upToDate) {
         AppEventBus.instance.updateAppUpdateInfo(null);
