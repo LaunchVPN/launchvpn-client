@@ -224,8 +224,7 @@ void main() {
         ConnectionResolutionFailure.probeFailed: HomeFailure.other,
         ConnectionResolutionFailure.finalExitUnavailable: HomeFailure.other,
         ConnectionResolutionFailure.selectionUnavailable: HomeFailure.noServers,
-        ConnectionResolutionFailure.insufficientCandidates:
-            HomeFailure.noServers,
+        ConnectionResolutionFailure.insufficientCandidates: HomeFailure.other,
         ConnectionResolutionFailure.invalidSettings: HomeFailure.other,
       };
       for (final MapEntry(key: reason, value: failure) in expected.entries) {

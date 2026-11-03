@@ -43,7 +43,6 @@ enum HomeFailure {
   static final _causes = {
     ConnectionResolutionFailure.insufficientHealthyServers.name: serverSilent,
     ConnectionResolutionFailure.selectionUnavailable.name: noServers,
-    ConnectionResolutionFailure.insufficientCandidates.name: noServers,
   };
 
   static HomeFailure of(String? issue) => _causes[issue] ?? other;
