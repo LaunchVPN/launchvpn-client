@@ -983,9 +983,24 @@ void main() {
 
       await tapRefresh(tester);
 
-      expect(find.byType(ShadToast), findsOneWidget);
+      expect(find.text('Не удалось загрузить подписку'), findsOneWidget);
       expect(find.text('Подписка пока не продлена'), findsNothing);
       expect(find.text('Подписка закончилась'), findsOneWidget);
+    });
+
+    testWidgets('a load another change superseded reports nothing', (
+      tester,
+    ) async {
+      await pumpHome(tester, distribution: AppDistribution.store);
+      await addSubscription(tester, expire: past);
+      refresh = (_) async => const SubscriptionRefreshResult(
+        status: SubscriptionUpdateResult.writeFailed,
+        superseded: true,
+      );
+
+      await tapRefresh(tester);
+
+      expect(find.byType(ShadToast), findsNothing);
     });
 
     testWidgets('a small screen with the largest font scrolls to support', (

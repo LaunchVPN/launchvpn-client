@@ -103,11 +103,12 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _toggle() => _controller.toggle(_run, explain: _explain);
 
-  /// A renewal needs no message: the screen gives way to the toggle.
+  /// A renewal needs no message: the screen gives way to the toggle. Neither
+  /// does a load that another change, such as a new link, superseded.
   Future<void> _refreshStatus() async {
     final l = AppLocalizations.of(context)!;
     final result = await _controller.refreshStatus();
-    if (result == null || !mounted) return;
+    if (result == null || result.superseded || !mounted) return;
     if (!result.success) {
       ContextAlert.showToast(
         context,
