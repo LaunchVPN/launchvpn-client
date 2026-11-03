@@ -82,14 +82,15 @@ latest stable 7.x release; its silent installation uses a short PowerShell step.
 ## LaunchVPN CI
 
 [LaunchVPN Build](../.github/workflows/launchvpn-build.yml) runs on pull requests,
-on pushes to `main` and on manual dispatch. The upstream workflows stay disabled.
-`main` requires its `validate`, `android` and `ios` jobs.
+on pushes to `main`, on release tags and on manual dispatch. The upstream workflows
+stay disabled. `main` requires its `validate`, `android` and `ios` jobs.
 
 | Job | Result |
 | --- | --- |
 | `validate` | The checks of the upstream Validate workflow. |
 | `android` | `LaunchVPN-android-universal.apk` on the run page, and the Kotlin tests. It is an [APK build](../docs/app.md#launchvpn-entry-point), which offers newer GitHub releases. |
-| `ios` | An unsigned build that proves the app and extensions compile. It produces no IPA and no TestFlight upload. |
+| `ios` | An unsigned build that proves the app and extensions compile. It produces no IPA and no TestFlight upload. Release tags skip it. |
+| `release` | Release tags only: a draft GitHub release with the APK and the pull requests merged since the latest release. |
 
 [build_core.py](build_core.py) runs only the native core and Geodata step, because
 `main.py` also deploys to the stores. CI passes the run number as the build number
@@ -101,7 +102,8 @@ Unlike the rule above, this workflow pins third-party actions to commits, becaus
 
 APKs from other branches use the debug key of the runner, which differs in every run:
 uninstall the previous build before installing one. Runs on `main` use the signing
-key when the `ANDROID_KEY*` secrets from the workflow header are set. Create the key
+key when the `ANDROID_KEY*` secrets from the workflow header are set; a release tag
+fails without them. Create the key
 once and keep a copy outside GitHub, since losing it means existing installs can no
 longer be updated:
 
@@ -113,6 +115,35 @@ base64 -w0 upload.jks | gh secret set ANDROID_KEYSTORE_BASE64 --repo "$REPO"
 gh secret set ANDROID_KEYSTORE_PASSWORD --repo "$REPO"
 gh secret set ANDROID_KEY_PASSWORD --repo "$REPO"
 gh secret set ANDROID_KEY_ALIAS --repo "$REPO" --body launchvpn
+```
+
+### Release the APK
+
+APK builds offer the latest published GitHub release when its tag is a newer
+version than their own. A release is cut by a tag; `pubspec.yaml` keeps its
+version.
+
+1. Tag a commit from `main` with the next version and push the tag:
+
+   ```shell
+   git fetch origin main
+   git tag v26.11.2 origin/main
+   git push origin v26.11.2
+   ```
+
+2. The workflow checks that the tag looks like `vMAJOR.MINOR.PATCH` and that
+   `main` contains its commit, then builds the APK with the tag's version and
+   the run number as the build number. A wrong tag stops the run with an error.
+3. The `release` job drafts a release named after the tag, with
+   `LaunchVPN-android-universal.apk` and the list of merged pull requests.
+   Installed apps do not see drafts.
+4. Write the notes in Russian on the release page and publish it as the latest
+   release. APK builds of older versions then show the update card.
+
+To drop a release, delete the draft and the tag:
+
+```shell
+gh release delete v26.11.2 --repo LaunchVPN/launchvpn-client --cleanup-tag --yes
 ```
 
 ## Build

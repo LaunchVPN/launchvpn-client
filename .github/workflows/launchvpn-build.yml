@@ -1,8 +1,11 @@
 #
 # Checks and builds LaunchVPN for Android and iOS. The upstream workflows stay
-# disabled, and main requires the three jobs below by name.
+# disabled, and main requires the validate, android and ios jobs by name.
+# A release tag (v26.11.2) on a commit from main builds the APK with the tag's
+# version and drafts a GitHub release with it.
 #
-# Optional repository secrets, used only on main:
+# Repository secrets, used on main and release tags. Main signs with a debug
+# key without them; a release tag fails.
 #   ANDROID_KEYSTORE_BASE64    base64 of the signing keystore (.jks)
 #   ANDROID_KEYSTORE_PASSWORD  store password
 #   ANDROID_KEY_PASSWORD       key password
@@ -14,6 +17,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - v*
   pull_request:
   workflow_dispatch:
 
@@ -107,6 +112,27 @@ jobs:
       run:
         working-directory: launchvpn-client
     steps:
+      # The App compares its version with the latest release tag, so the tag
+      # must parse as a version. Only commits from main are released.
+      - name: Check the release tag
+        if: github.ref_type == 'tag'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          semver='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          if [[ ! "$GITHUB_REF_NAME" =~ $semver ]]; then
+            echo "::error::Release tags look like v26.11.2, got $GITHUB_REF_NAME"
+            exit 1
+          fi
+          # identical or behind: main contains the tagged commit.
+          status=$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$GITHUB_SHA" --jq .status)
+          if [[ "$status" != identical && "$status" != behind ]]; then
+            echo "::error::$GITHUB_REF_NAME is not on main. Tag a commit from main."
+            exit 1
+          fi
+          echo "BUILD_NAME=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v7
         with:
           path: launchvpn-client
@@ -155,7 +181,7 @@ jobs:
       # Without this key Gradle signs with the debug key of the runner, which
       # differs in every run, so such an APK cannot update a previous install.
       - name: Restore the signing key
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref_type == 'tag'
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -163,6 +189,10 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           if [ -z "$KEYSTORE_B64" ]; then
+            if [ "$GITHUB_REF_TYPE" = tag ]; then
+              echo "::error::ANDROID_KEYSTORE_BASE64 is not set, a release needs the signing key"
+              exit 1
+            fi
             echo "::warning::ANDROID_KEYSTORE_BASE64 is not set, signing with a debug key"
             exit 0
           fi
@@ -178,6 +208,7 @@ jobs:
       # A pull request builds only arm64 to save time. Main builds both, and
       # its APK is the one that also runs on x64 emulators. The define makes
       # the App offer newer GitHub releases, which a store build leaves out.
+      # A release tag sets the version; other builds keep pubspec.yaml's.
       - name: Build the APK
         env:
           TARGET_PLATFORMS: ${{ github.event_name == 'pull_request' && 'android-arm64' || 'android-arm64,android-x64' }}
@@ -185,6 +216,7 @@ jobs:
           flutter build apk --release \
             --target-platform "$TARGET_PLATFORMS" \
             --dart-define=LAUNCHVPN_DISTRIBUTION=apk \
+            ${BUILD_NAME:+--build-name "$BUILD_NAME"} \
             --build-number "$BUILD_NUMBER"
           mv build/app/outputs/flutter-apk/app-release.apk \
             build/LaunchVPN-android-universal.apk
@@ -217,9 +249,34 @@ jobs:
           archive: false
           if-no-files-found: error
 
+  # The App does not see a draft. Publishing it makes the release the latest.
+  release:
+    if: github.ref_type == 'tag'
+    needs: [validate, android]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: LaunchVPN-android-universal.apk
+
+      # The notes list the pull requests merged since the latest release.
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" LaunchVPN-android-universal.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft --verify-tag --generate-notes \
+            --title "LaunchVPN ${GITHUB_REF_NAME#v}"
+
   # Proves the iOS app and its extensions compile. Signing and TestFlight need
-  # the Apple Developer account.
+  # the Apple Developer account. A release tag skips it: its commit on main
+  # has passed it already.
   ios:
+    if: github.ref_type != 'tag'
     runs-on: xcode-27 # macOS 27 ARM64 (public preview)
     timeout-minutes: 60
     defaults:
