@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:onexray/brand/state_hero.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 
@@ -37,7 +38,15 @@ class VpnPermissionPage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      Expanded(child: Center(child: _Hero(l))),
+                      Expanded(
+                        child: Center(
+                          child: StateHero.accent(
+                            icon: LucideIcons.shieldCheck,
+                            title: l.vpnPermissionTitle,
+                            body: l.vpnPermissionBody,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       _Points([l.vpnPermissionNoLogs, l.vpnPermissionOneTap]),
                       const SizedBox(height: 32),
@@ -62,49 +71,6 @@ class VpnPermissionPage extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Hero extends StatelessWidget {
-  const _Hero(this.l);
-
-  final AppLocalizations l;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: 88,
-        height: 88,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: BrandColors.accentBadge,
-          border: Border.all(color: BrandColors.accentBadgeLine),
-        ),
-        child: const Icon(
-          LucideIcons.shieldCheck,
-          size: 36,
-          color: BrandColors.accent,
-        ),
-      ),
-      const SizedBox(height: 16),
-      Text(
-        l.vpnPermissionTitle,
-        style: BrandText.screenTitle,
-        textAlign: TextAlign.center,
-      ),
-      const SizedBox(height: 16),
-      ConstrainedBox(
-        // The mockup breaks the text into three short lines.
-        constraints: const BoxConstraints(maxWidth: 300),
-        child: Text(
-          l.vpnPermissionBody,
-          style: BrandText.hint,
-          textAlign: TextAlign.center,
-        ),
-      ),
-    ],
-  );
 }
 
 class _Points extends StatelessWidget {

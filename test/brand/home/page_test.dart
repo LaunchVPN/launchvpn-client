@@ -21,12 +21,17 @@ import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/settings/language/locale.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+// ignore: depend_on_referenced_packages
+import 'package:url_launcher_platform_interface/link.dart';
+// ignore: depend_on_referenced_packages
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 const _largeScale = 3.0;
 
@@ -57,6 +62,8 @@ void main() {
   late Completer<HostConnection> start;
   var status = VpnStatus.disconnected;
   ConnectionRuntime? runtime;
+  late Future<void> Function() prepareFailure;
+  var prepares = 0;
   var sweeps = 0;
 
   Future<void> pumpHome(WidgetTester tester, {double scale = 1}) async {
@@ -76,13 +83,24 @@ void main() {
         readRuntime: () async => runtime,
         inspect: (current, {observedStatus}) async =>
             HostConnection(observedStatus ?? status, runtime: current),
-        prepare: (_, _) async => _runtime(DateTime(2026)),
+        prepare: (_, _) async {
+          prepares++;
+          await prepareFailure();
+          return _runtime(DateTime(2026));
+        },
         start: (_) => start.future,
         stop: () async => const HostConnection(VpnStatus.disconnected),
       );
       await coordinator.initialize(registerReferences: false);
     });
     addTearDown(coordinator.dispose);
+    // Ends a start left waiting before the coordinator closes, so the command
+    // finishes instead of failing against a disposed state.
+    addTearDown(() async {
+      if (start.isCompleted) return;
+      start.complete(const HostConnection(VpnStatus.disconnected));
+      await tester.runAsync(() => pumpEventQueue(times: 50));
+    });
     controller = HomeController(
       database: db,
       coordinator: coordinator,
@@ -111,7 +129,11 @@ void main() {
     await tester.pump();
   }
 
-  Future<void> addSubscription(WidgetTester tester, {int? expire}) async {
+  Future<void> addSubscription(
+    WidgetTester tester, {
+    int? expire,
+    String? supportUrl,
+  }) async {
     await tester.runAsync(() async {
       await db.subscriptionDao.insertRow(
         SubscriptionCompanion.insert(
@@ -120,6 +142,7 @@ void main() {
           timestamp: DateTime(2026),
           mode: Value(SubscriptionMode.providerManaged.name),
           expireTimestamp: Value(expire),
+          supportUrl: Value(supportUrl),
           userInfoUpdatedAt: Value(DateTime(2026)),
         ),
       );
@@ -182,6 +205,8 @@ void main() {
   setUp(() {
     status = VpnStatus.disconnected;
     runtime = null;
+    prepareFailure = () async {};
+    prepares = 0;
     sweeps = 0;
   });
 
@@ -461,13 +486,6 @@ void main() {
       (
         const ConnectionView(
           phase: ConnectionPhase.failed,
-          issue: 'startFailed',
-        ),
-        'Не подключено',
-      ),
-      (
-        const ConnectionView(
-          phase: ConnectionPhase.failed,
           issue: 'stopFailed',
         ),
         'VPN может быть включён',
@@ -575,24 +593,164 @@ void main() {
     expect(toggleState(tester), ConnectToggleState.transitioning);
   });
 
-  testWidgets('a failed attempt says so and keeps the knob off', (
-    tester,
-  ) async {
-    await pumpHome(tester);
-    await addSubscription(tester);
+  group('error screen', () {
+    const support = 'https://example.com/support';
 
-    coordinator.state.value = const ConnectionView(
-      phase: ConnectionPhase.failed,
-      issue: 'startFailed',
-    );
-    await tester.pump();
+    Future<void> fail(WidgetTester tester, String issue) async {
+      coordinator.state.value = ConnectionView(
+        phase: ConnectionPhase.failed,
+        issue: issue,
+      );
+      await tester.pump();
+    }
 
-    expect(find.text('Не подключено'), findsOneWidget);
-    expect(
-      find.text('Не удалось подключиться. Нажмите, чтобы попробовать ещё раз'),
-      findsOneWidget,
-    );
-    expect(toggleState(tester), ConnectToggleState.off);
+    /// Lets the connection queue run, which needs real time between frames,
+    /// until [done]. Not pumpAndSettle: the connected timer ticks every second.
+    Future<void> settle(WidgetTester tester, bool Function() done) async {
+      for (var round = 0; round < 100 && !done(); round++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump();
+      }
+      await tester.runAsync(() => pumpEventQueue(times: 50));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(done(), isTrue);
+    }
+
+    testWidgets('replaces the toggle and the cards and names the cause', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+      await addGroup(tester, '🇩🇪 Германия');
+
+      await fail(tester, 'insufficientHealthyServers');
+
+      expect(find.text('Сервер не отвечает'), findsOneWidget);
+      expect(
+        find.text(
+          'Попробуйте другую локацию или «Обход глушилок» — '
+          'он работает на мобильном интернете.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Повторить'), findsOneWidget);
+      expect(find.text('Сменить локацию'), findsOneWidget);
+      expect(find.byType(ConnectToggle), findsNothing);
+      expect(find.byKey(const ValueKey('home-location')), findsNothing);
+      expect(find.text('Умный'), findsNothing);
+    });
+
+    testWidgets('each cause has its own title', (tester) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+
+      await fail(tester, 'selectionUnavailable');
+      expect(find.text('Нет доступных серверов'), findsOneWidget);
+
+      await fail(tester, 'startFailed');
+      expect(find.text('Не удалось подключиться'), findsOneWidget);
+    });
+
+    // One flow: each attempt runs through the shared Geodata queue, which
+    // would stay tied to this test's fake zone for any later test. Every
+    // attempt fails, so its command ends here; a successful connection is
+    // covered in the controller tests.
+    testWidgets('each way out of a failure tries again, without a toast', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+      await addGroup(tester, '🇪🇺 AUTO | Самые быстрые', delay: 860);
+      await addGroup(tester, '🇩🇪 Германия', delay: 516);
+      prepareFailure = () async => throw const ConnectionResolutionException(
+        ConnectionResolutionFailure.insufficientHealthyServers,
+      );
+      Future<void> attempt(int count) => settle(
+        tester,
+        () =>
+            prepares == count &&
+            controller.state.request == null &&
+            controller.state.failure != null,
+      );
+
+      await tester.tap(find.byType(ConnectToggle));
+      await attempt(1);
+      expect(find.text('Сервер не отвечает'), findsOneWidget);
+      expect(find.byType(ShadToast), findsNothing);
+
+      await tester.tap(find.text('Повторить'));
+      await tester.pump();
+      expect(toggleState(tester), ConnectToggleState.transitioning);
+      await attempt(2);
+      expect(find.text('Сервер не отвечает'), findsOneWidget);
+
+      await tester.tap(find.text('Сменить локацию'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LocationsPage), findsOneWidget);
+      await tester.tap(find.text('Германия'));
+      await tester.pumpAndSettle();
+      await attempt(3);
+      expect(find.byType(LocationsPage), findsNothing);
+      final stored = await tester.runAsync(() => coordinator.configuration);
+      final germany = controller.state.locations.named('Германия')!;
+      expect(stored!.connection.selection.id, germany.id);
+      expect(find.byType(ShadToast), findsNothing);
+    });
+
+    testWidgets('success takes the screen away', (tester) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+      await fail(tester, 'startFailed');
+
+      coordinator.state.value = const ConnectionView(
+        phase: ConnectionPhase.connected,
+      );
+      await tester.pump();
+
+      expect(find.text('Не удалось подключиться'), findsNothing);
+      expect(toggleState(tester), ConnectToggleState.on);
+    });
+
+    testWidgets('«Написать в поддержку» opens the panel link', (tester) async {
+      final launcher = _Launcher();
+      final previous = UrlLauncherPlatform.instance;
+      UrlLauncherPlatform.instance = launcher;
+      addTearDown(() => UrlLauncherPlatform.instance = previous);
+      await pumpHome(tester);
+      await addSubscription(tester, supportUrl: support);
+      await fail(tester, 'startFailed');
+
+      await tester.tap(find.text('Написать в поддержку'));
+      await tester.pump();
+
+      expect(launcher.opened, [support]);
+    });
+
+    testWidgets('has no support button without a panel link', (tester) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+
+      await fail(tester, 'startFailed');
+
+      expect(find.text('Написать в поддержку'), findsNothing);
+    });
+
+    testWidgets('a small screen with the largest font scrolls to support', (
+      tester,
+    ) async {
+      useScreen(tester, 568);
+      await pumpHome(tester, scale: _largeScale);
+      await addSubscription(tester, supportUrl: support);
+
+      await fail(tester, 'insufficientHealthyServers');
+
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('Написать в поддержку'));
+      await tester.pumpAndSettle();
+      expect(find.text('Написать в поддержку').hitTestable(), findsOneWidget);
+    });
   });
 
   testWidgets(
@@ -712,4 +870,18 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Всё через VPN'), findsOneWidget);
   });
+}
+
+/// Records the links the screen opens instead of leaving the test.
+final class _Launcher extends UrlLauncherPlatform {
+  final opened = <String>[];
+
+  @override
+  LinkDelegate? get linkDelegate => null;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    opened.add(url);
+    return true;
+  }
 }

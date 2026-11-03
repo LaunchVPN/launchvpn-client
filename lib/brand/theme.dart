@@ -21,6 +21,8 @@ abstract final class BrandColors {
   static const accentBadgeLine = Color(0x669C5EEF);
   static const accentInk = Color(0xFFFFFFFF);
   static const danger = Color(0xFFF14D4C);
+  static const dangerBadge = Color(0x24F14D4C);
+  static const dangerBadgeLine = Color(0x66F14D4C);
   static const warning = Color(0xFFF5AE39);
   static const success = Color(0xFF4BCB71);
 }
@@ -248,16 +250,27 @@ abstract final class BrandTheme {
     );
   }
 
-  /// The mockup's full-width buttons: the main action and the quiet one below.
+  /// The mockup's full-width buttons: the main action, a second one on a raised
+  /// surface, the quiet one below and a muted link.
   static final primaryButton = FilledButton.styleFrom(
     backgroundColor: BrandColors.accent,
     foregroundColor: BrandColors.accentInk,
   ).merge(_wideButton);
+  static final secondaryButton = FilledButton.styleFrom(
+    backgroundColor: BrandColors.surfaceRaised,
+    foregroundColor: BrandColors.ink,
+    side: const BorderSide(color: BrandColors.line),
+  ).merge(_wideButton);
   static final quietButton = TextButton.styleFrom(
     foregroundColor: BrandColors.ink,
   ).merge(_wideButton);
+  static final linkButton = TextButton.styleFrom(
+    foregroundColor: BrandColors.muted,
+    minimumSize: const Size.fromHeight(44),
+  ).merge(_wideButton);
   static final _wideButton = ButtonStyle(
     minimumSize: const WidgetStatePropertyAll(Size.fromHeight(52)),
+    iconSize: const WidgetStatePropertyAll(20),
     textStyle: const WidgetStatePropertyAll(BrandText.cardTitle),
     shape: const WidgetStatePropertyAll(
       RoundedRectangleBorder(

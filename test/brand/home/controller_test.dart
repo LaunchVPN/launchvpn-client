@@ -12,6 +12,7 @@ import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
@@ -215,6 +216,81 @@ void main() {
       expect(controller.state.status, HomeStatus.failed);
     });
 
+    test('names why the attempt failed', () async {
+      await addSubscription();
+      final expected = {
+        ConnectionResolutionFailure.insufficientHealthyServers:
+            HomeFailure.serverSilent,
+        ConnectionResolutionFailure.probeFailed: HomeFailure.other,
+        ConnectionResolutionFailure.finalExitUnavailable: HomeFailure.other,
+        ConnectionResolutionFailure.selectionUnavailable: HomeFailure.noServers,
+        ConnectionResolutionFailure.insufficientCandidates: HomeFailure.other,
+        ConnectionResolutionFailure.invalidSettings: HomeFailure.other,
+      };
+      for (final MapEntry(key: reason, value: failure) in expected.entries) {
+        prepareFailure = () async =>
+            throw ConnectionResolutionException(reason);
+
+        await controller.toggle(run, explain: _explainNever);
+        await settle();
+
+        expect(controller.state.failure, failure, reason: reason.name);
+      }
+    });
+
+    test('the error screen explains its own error, not an older one', () async {
+      await addSubscription();
+      prepareFailure = () async => throw const ConnectionResolutionException(
+        ConnectionResolutionFailure.insufficientHealthyServers,
+      );
+
+      await controller.toggle(run, explain: _explainNever);
+      await settle();
+
+      expect(controller.state.explains(failures.single), isTrue);
+      expect(controller.state.explains(StateError('other')), isFalse);
+    });
+
+    test('a generic failure keeps the toast that names its cause', () async {
+      await addSubscription();
+      prepareFailure = () async => throw const ConnectionHostException('x');
+
+      await controller.toggle(run, explain: _explainNever);
+      await settle();
+
+      expect(controller.state.failure, HomeFailure.other);
+      expect(controller.state.explains(failures.single), isFalse);
+    });
+
+    test('a refused VPN permission is not a failure', () async {
+      await addSubscription();
+
+      coordinator.state.value = ConnectionView(
+        phase: ConnectionPhase.failed,
+        issue: 'permissionRequired',
+        permission: PlatformPermissionResult(
+          kind: PlatformPermissionKind.androidVpn,
+          state: PlatformPermissionState.denied,
+        ),
+      );
+
+      expect(controller.state.failure, isNull);
+      expect(controller.state.status, HomeStatus.off);
+    });
+
+    test('a cancelled attempt is not a failure', () async {
+      await addSubscription();
+      final connecting = controller.toggle(run, explain: _explainNever);
+      await settle();
+      stop.complete(const HostConnection(VpnStatus.disconnected));
+      await controller.toggle(run, explain: _explainNever);
+      await connecting;
+      await settle();
+
+      expect(controller.state.failure, isNull);
+      expect(controller.state.explains(failures.single), isFalse);
+    });
+
     test('does nothing without a subscription', () async {
       await controller.toggle(run, explain: _explainNever);
       await settle();
@@ -403,6 +479,7 @@ void main() {
         await controller.selectLocation(
           controller.state.locations.withId(germany)!,
           run,
+          explain: _explainNever,
         );
 
         expect(controller.state.location?.name, 'Германия');
@@ -417,6 +494,7 @@ void main() {
       await controller.selectLocation(
         controller.state.locations.withId(germany)!,
         run,
+        explain: _explainNever,
       );
 
       final reopened = HomeController(database: db, coordinator: coordinator);
@@ -434,6 +512,7 @@ void main() {
       final selecting = controller.selectLocation(
         controller.state.locations.withId(germany)!,
         run,
+        explain: _explainNever,
       );
       await settle();
       expect(controller.state.status, HomeStatus.reconnecting);
@@ -461,6 +540,7 @@ void main() {
       await controller.selectLocation(
         controller.state.locations.withId(germany)!,
         run,
+        explain: _explainNever,
       );
       await settle();
 
@@ -468,12 +548,95 @@ void main() {
       expect((await stored()).id, germany);
     });
 
+    test('after a failed attempt, the choice connects through it', () async {
+      prepareFailure = () async => throw StateError('no route');
+      await controller.toggle(run, explain: _explainNever);
+      await settle();
+      expect(controller.state.status, HomeStatus.failed);
+      prepareFailure = () async {};
+
+      final selecting = controller.selectLocation(
+        controller.state.locations.withId(germany)!,
+        run,
+        explain: _explainNever,
+      );
+      await settle();
+      expect(controller.state.status, HomeStatus.connecting);
+
+      status = VpnStatus.connected;
+      start.complete(HostConnection(VpnStatus.connected, runtime: runtime));
+      await selecting;
+      await settle();
+
+      expect(controller.state.status, HomeStatus.connected);
+      expect(controller.state.failure, isNull);
+      expect((await stored()).id, germany);
+    });
+
+    test('after a failed attempt, the same location connects again', () async {
+      prepareFailure = () async => throw StateError('no route');
+      await controller.toggle(run, explain: _explainNever);
+      await settle();
+      prepareFailure = () async {};
+
+      final selecting = controller.selectLocation(
+        controller.state.locations.withId(fastest)!,
+        run,
+        explain: _explainNever,
+      );
+      await settle();
+      expect(controller.state.status, HomeStatus.connecting);
+
+      status = VpnStatus.connected;
+      start.complete(HostConnection(VpnStatus.connected, runtime: runtime));
+      await selecting;
+      await settle();
+
+      expect(controller.state.status, HomeStatus.connected);
+    });
+
+    test(
+      'after a failure, the shown location replaces a missing one',
+      () async {
+        await db.connectionConfigDao.commit(
+          configurationJson: ConnectionConfiguration(
+            connection: ConnectionSettings(
+              selection: const ServerSelection.server(99999),
+            ),
+          ).encode(),
+        );
+        await settle();
+        expect(controller.state.location?.id, fastest);
+        prepareFailure = () async => throw const ConnectionResolutionException(
+          ConnectionResolutionFailure.selectionUnavailable,
+        );
+        await controller.toggle(run, explain: _explainNever);
+        await settle();
+        expect(controller.state.status, HomeStatus.failed);
+        prepareFailure = () async {};
+
+        final selecting = controller.selectLocation(
+          controller.state.locations.withId(fastest)!,
+          run,
+          explain: _explainNever,
+        );
+        await settle();
+        expect((await stored()).id, fastest);
+        expect(controller.state.status, HomeStatus.connecting);
+
+        status = VpnStatus.connected;
+        start.complete(HostConnection(VpnStatus.connected, runtime: runtime));
+        await selecting;
+      },
+    );
+
     test('cannot change while a connection is in progress', () async {
       await connectFully(
         whileConnecting: () async {
           await controller.selectLocation(
             controller.state.locations.withId(germany)!,
             run,
+            explain: _explainNever,
           );
           expect((await stored()).kind, SelectionKind.automatic);
         },
