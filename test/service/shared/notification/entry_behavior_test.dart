@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/tools/platform.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
@@ -16,6 +17,7 @@ import 'package:onexray/service/settings/language/service.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/menu/tray/entry.dart';
 import 'package:onexray/service/shared/menu/tray/service.dart';
+import 'package:onexray/service/shared/notification/scheduled.dart';
 import 'package:onexray/service/shared/notification/service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
@@ -44,10 +46,45 @@ void main() {
       await NotificationService().asyncInit();
       expect(calls, ['initialize']);
 
-      await NotificationService().requestPermission();
-      expect(calls, ['initialize', 'requestNotificationsPermission']);
+      await SystemNotifications().request();
+      expect(calls, [
+        'initialize',
+        'requestNotificationsPermission',
+        'areNotificationsEnabled',
+      ]);
     },
   );
+
+  test('Android reminders have a channel apart from the VPN status', () async {
+    final calls = <MethodCall>[];
+    final previousTarget = debugDefaultTargetPlatformOverride;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    AndroidFlutterLocalNotificationsPlugin.registerWith();
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      calls.add(call);
+      return null;
+    });
+    addTearDown(() {
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+      debugDefaultTargetPlatformOverride = previousTarget;
+    });
+
+    await SystemNotifications().schedule(
+      ScheduledNotification(
+        id: 1,
+        at: DateTime.now().add(const Duration(days: 1)),
+        title: 'Подписка закончится завтра',
+        body: 'Продлите её, чтобы VPN не отключился.',
+      ),
+    );
+
+    final call = calls.singleWhere((call) => call.method == 'zonedSchedule');
+    final android = (call.arguments as Map)['platformSpecifics'] as Map;
+    expect(android['channelId'], isNot(Brand.androidId));
+    expect(android['channelName'], 'Напоминания');
+  });
 
   group('public notification entry behavior', () {
     final calls = <MethodCall>[];

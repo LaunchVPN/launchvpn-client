@@ -10,9 +10,9 @@ upstream pages kept for merging. They are not reachable in this build.
 - The app opens directly on Home. Upstream's privacy and first-run flags are not read, so there
   is no Setup, and launch shows no system prompts. `ConnectionPermissions` asks on the first
   connection from Home or the Android Tile: the VPN consent first, then, once it is granted,
-  notifications on Android 13 and later. A refused VPN consent is asked again on the next
-  connection; notifications are asked only alongside it. Without notifications the VPN still runs,
-  only its status line is hidden.
+  notifications on Android 13 and later and on iOS. A refused VPN consent is asked again on the
+  next connection; notifications are asked only alongside it or by Renewal reminders. Without
+  notifications the VPN still runs; only the Android status line and the reminders are missing.
 - Before the first system VPN prompt the Allow VPN screen explains it, over the tabs. Continue
   goes on to the system prompts and the connection; Not now or Back leaves the connection off
   without an error, and the screen comes back next time. After one Continue the screen is not
@@ -75,15 +75,25 @@ upstream pages kept for merging. They are not reachable in this build.
   name. A tap stores the group as a fixed selection and returns Home; a running tunnel reconnects at
   once, as with a preset. Until the user chooses, the selection stays automatic, which is the first
   group.
-- Settings has two rows so far. Mode opens a screen above the tabs with the same presets as Home,
-  through the same `HomeController`, so both tabs show one value and a choice while connected
-  reconnects and reads as a reconnect on Home. A tap returns to Settings. Connect at launch is off
-  by default and applies from the next launch. The attempt does not hold the loading screen: Home
-  opens at once and shows it, and a tap there stops it. Background updates start after the attempt
-  ends, so their first check normally goes through the tunnel. A tunnel that comes up later triggers
-  another check. Without a subscription Home asks for one
-  rather than reporting a failed attempt. Without VPN consent the launch makes no attempt, since
-  only a tap may bring up the prompt.
+- Settings has Connection and App sections so far. Mode opens a screen above the tabs with the same
+  presets as Home, through the same `HomeController`, so both tabs show one value and a choice while
+  connected reconnects and reads as a reconnect on Home. A tap returns to Settings. Connect at
+  launch is off by default and applies from the next launch. The attempt does not hold the loading
+  screen: Home opens at once and shows it, and a tap there stops it. Background updates start after
+  the attempt ends, so their first check normally goes through the tunnel. A tunnel that comes up
+  later triggers another check. Without a subscription Home asks for one rather than reporting a
+  failed attempt. Without VPN consent the launch makes no attempt, since only a tap may bring up the
+  prompt.
+- Renewal reminders, under App, are on by default. `RenewalReminders` sets two local
+  notifications at noon local time, three days and one day before the expiry date from the
+  subscription headers, and leaves out one whose time has passed. They carry no payment link. The
+  reminders follow the stored subscription, so every load that changes the expiry moves them and a
+  subscription without expiry has none. They are also set again when the App starts or returns,
+  and Android sets them again after a reboot. Android shows them in a Reminders channel apart from
+  the VPN status and delivers them inexactly, without the exact alarm permission. The switch shows on only while the setting is on and the system allows
+  notifications. Turning it on asks the system; once the system no longer asks, the App's page in
+  the system settings opens, and the switch turns on when the person returns with notifications
+  allowed. Turning it off removes pending reminders.
 - `BrandShell` owns service startup and retry, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published, but when the Android Tile or
   Widget lacks a permission or a saved configuration, it opens the App with the `startVpn` quick

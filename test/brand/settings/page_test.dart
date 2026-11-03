@@ -10,6 +10,8 @@ import 'package:onexray/brand/app.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/router.dart';
 import 'package:onexray/brand/settings/controller.dart';
+import 'package:onexray/brand/settings/page.dart';
+import 'package:onexray/brand/settings/row.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
@@ -20,6 +22,7 @@ import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/launch/app_startup.dart';
+import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
 import 'package:onexray/service/shared/share/service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,6 +30,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 // ignore: depend_on_referenced_packages
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+
+import '../../support/fake_notifications.dart';
 
 final class _Store extends InMemorySharedPreferencesAsync {
   _Store() : super.empty();
@@ -63,6 +68,8 @@ void main() {
   late AppDatabase db;
   late ConnectionCoordinator coordinator;
   late HomeController controller;
+  late FakeNotifications notifications;
+  late RenewalReminders reminders;
   late Completer<HostConnection> start;
   var status = VpnStatus.disconnected;
   ConnectionRuntime? runtime;
@@ -96,6 +103,7 @@ void main() {
     });
     final GoRouter router = createBrandRouter(
       controller: controller,
+      settings: BrandSettingsPage(controller: controller, reminders: reminders),
       shareService: share,
       initializeServices: (_) => share.init(),
       openLink: (_, _) async {},
@@ -108,6 +116,8 @@ void main() {
   Future<void> pumpApp(WidgetTester tester) async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
+    notifications = FakeNotifications();
+    reminders = RenewalReminders(database: db, notifications: notifications);
     final statusEvents = StreamController<VpnStatus>.broadcast(sync: true);
     addTearDown(statusEvents.close);
     await tester.runAsync(() async {
@@ -166,13 +176,15 @@ void main() {
     expect(find.text('Умный'), findsNothing);
   });
 
+  Tristate isToggled(WidgetTester tester, String title) => tester
+      .getSemantics(find.bySemanticsLabel(RegExp('^$title')))
+      .flagsCollection
+      .isToggled;
+
   group('connect at launch', () {
     const title = 'Подключать при запуске';
 
-    Tristate toggled(WidgetTester tester) => tester
-        .getSemantics(find.bySemanticsLabel(title))
-        .flagsCollection
-        .isToggled;
+    Tristate toggled(WidgetTester tester) => isToggled(tester, title);
 
     testWidgets('is off until the user turns it on', (tester) async {
       await pumpApp(tester);
@@ -191,7 +203,12 @@ void main() {
       await settle(tester);
       expect(toggled(tester), Tristate.isTrue);
 
-      await tester.tap(find.byType(ShadSwitch));
+      await tester.tap(
+        find.descendant(
+          of: find.widgetWithText(SettingsSwitchRow, title),
+          matching: find.byType(ShadSwitch),
+        ),
+      );
       await settle(tester);
       expect(toggled(tester), Tristate.isFalse);
     });
@@ -210,7 +227,9 @@ void main() {
     });
 
     test('a second tap during a save is ignored', () async {
-      final settings = SettingsController();
+      final settings = SettingsController(
+        reminders: RenewalReminders(notifications: FakeNotifications()),
+      );
       addTearDown(settings.close);
       await settings.initialize();
 
@@ -232,6 +251,61 @@ void main() {
       await pumpRouter(tester);
       await openTab(tester, 1);
 
+      expect(toggled(tester), Tristate.isTrue);
+    });
+  });
+
+  group('renewal reminders', () {
+    const title = 'Напоминать о продлении';
+
+    Tristate toggled(WidgetTester tester) => isToggled(tester, title);
+
+    testWidgets('are on by default, under App', (tester) async {
+      await pumpApp(tester);
+      await openTab(tester, 1);
+
+      expect(find.text('ПРИЛОЖЕНИЕ'), findsOneWidget);
+      expect(find.text('За 3 дня и за 1 день'), findsOneWidget);
+      expect(toggled(tester), Tristate.isTrue);
+    });
+
+    testWidgets('a tap turns them off and on, and it is saved', (tester) async {
+      await pumpApp(tester);
+      await openTab(tester, 1);
+
+      await tester.tap(find.text(title));
+      await settle(tester);
+      expect(toggled(tester), Tristate.isFalse);
+      expect(await tester.runAsync(() => reminders.active), isFalse);
+
+      await tester.tap(find.text(title));
+      await settle(tester);
+      expect(toggled(tester), Tristate.isTrue);
+      expect(await tester.runAsync(() => reminders.active), isTrue);
+    });
+
+    testWidgets('without notifications the switch is off until the person '
+        'allows them in the system settings', (tester) async {
+      await pumpApp(tester);
+      notifications.allowed = false;
+      await openTab(tester, 1);
+      expect(toggled(tester), Tristate.isFalse);
+
+      notifications.prompt = Completer();
+      await tester.tap(find.text(title));
+      await settle(tester);
+      // Off while the system prompt is open, since nothing is allowed yet.
+      expect(toggled(tester), Tristate.isFalse);
+
+      notifications.prompt!.complete();
+      await settle(tester);
+      expect(notifications.settingsOpened, 1);
+      expect(toggled(tester), Tristate.isFalse);
+
+      notifications.allowed = true;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
       expect(toggled(tester), Tristate.isTrue);
     });
   });

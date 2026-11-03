@@ -26,8 +26,7 @@ class BrandApp extends StatelessWidget {
       title: Brand.name,
       theme: BrandTheme.material(),
       routerConfig: routerConfig ?? _router,
-      // The interface is Russian until the language setting arrives.
-      locale: const Locale('ru'),
+      locale: const Locale(Brand.languageCode),
       localizationsDelegates: AppLocalePolicy.localizationsDelegates,
       supportedLocales: AppLocalePolicy.normalizeSupportedLocales(
         AppLocalizations.supportedLocales,

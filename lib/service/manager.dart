@@ -5,6 +5,7 @@ import 'package:onexray/core/distribution.dart';
 import 'package:onexray/core/network/client.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/launch/app_startup.dart';
+import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
 import 'package:onexray/service/settings/app_update/service.dart';
 import 'package:onexray/service/advanced/xray/data_update/scheduler.dart';
 import 'package:onexray/service/connect/coordinator.dart';
@@ -77,6 +78,7 @@ abstract final class ServiceManager {
       "NotificationService",
       () => NotificationService().asyncInit(),
     );
+    await _runInit('RenewalReminders', RenewalReminders.instance.start);
     await _runInit("TrayService", () => TrayService().init());
     await _runInit("WindowService", () => WindowService().asyncInit());
     await _runInit("ShareService", () => ShareService().init());
@@ -131,6 +133,7 @@ abstract final class ServiceManager {
   static void serviceDispose() {
     unawaited(LocalApiService.instance.stop());
     PingService().stopAutomatic();
+    unawaited(RenewalReminders.instance.dispose());
     _initFuture = null;
     _initialized = false;
     TrayService().dispose();

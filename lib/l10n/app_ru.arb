@@ -1021,5 +1021,12 @@
   "vpnPermissionBody": "Система попросит разрешение на VPN. Без него приложение не сможет защищать ваш трафик.",
   "vpnPermissionNoLogs": "Без логов посещённых сайтов",
   "vpnPermissionOneTap": "Отключается одной кнопкой",
-  "vpnPermissionNotNow": "Не сейчас"
+  "vpnPermissionNotNow": "Не сейчас",
+  "settingsApp": "Приложение",
+  "settingsRenewalReminders": "Напоминать о продлении",
+  "settingsRenewalRemindersHint": "За 3 дня и за 1 день",
+  "renewalReminderThreeDays": "Подписка закончится через 3 дня",
+  "renewalReminderTomorrow": "Подписка закончится завтра",
+  "renewalReminderBody": "Продлите её, чтобы VPN не отключился.",
+  "notificationChannelReminders": "Напоминания"
 }

@@ -12,30 +12,44 @@ import 'package:onexray/brand/theme.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
 import 'package:onexray/service/connect/settings.dart';
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadSwitch;
+import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
 
 /// The Settings tab. Its other rows arrive with their features.
 class BrandSettingsPage extends StatefulWidget {
-  const BrandSettingsPage({super.key, required this.controller});
+  const BrandSettingsPage({
+    super.key,
+    required this.controller,
+    this.reminders,
+  });
 
   final HomeController controller;
+
+  /// The App's own when null.
+  final RenewalReminders? reminders;
 
   @override
   State<BrandSettingsPage> createState() => _BrandSettingsPageState();
 }
 
 class _BrandSettingsPageState extends State<BrandSettingsPage> {
-  final _settings = SettingsController();
+  late final _settings = SettingsController(reminders: widget.reminders);
+
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
     unawaited(widget.controller.initialize());
     unawaited(_settings.initialize());
+    // Notifications may have been allowed in the system settings meanwhile.
+    _lifecycle = AppLifecycleListener(
+      onResume: () => unawaited(_settings.readRenewalReminders()),
+    );
   }
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     unawaited(_settings.close());
     super.dispose();
   }
@@ -74,13 +88,7 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
             children: [
               Text(l.prototypeSettings, style: BrandText.screenTitle),
               const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 4, 8),
-                child: Text(
-                  l.settingsConnection.toUpperCase(),
-                  style: BrandText.sectionLabel,
-                ),
-              ),
+              _SectionLabel(l.settingsConnection),
               SettingsCard(
                 children: [
                   BlocBuilder<HomeController, HomeState>(
@@ -111,26 +119,31 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
                   ),
                   BlocBuilder<SettingsController, SettingsState>(
                     bloc: _settings,
-                    builder: (context, state) {
-                      final enabled = state.connectOnLaunch;
-                      return SettingsRow(
-                        icon: LucideIcons.zap,
-                        title: l.settingsConnectOnLaunch,
-                        toggled: enabled ?? false,
-                        onTap: enabled == null
-                            ? null
-                            : () => _settings.setConnectOnLaunch(!enabled),
-                        // The whole row is the control.
-                        trailing: IgnorePointer(
-                          child: ShadSwitch(
-                            value: enabled ?? false,
-                            width: 51,
-                            height: 31,
-                            margin: 2,
-                          ),
-                        ),
-                      );
-                    },
+                    buildWhen: (a, b) => a.connectOnLaunch != b.connectOnLaunch,
+                    builder: (context, state) => SettingsSwitchRow(
+                      icon: LucideIcons.zap,
+                      title: l.settingsConnectOnLaunch,
+                      value: state.connectOnLaunch,
+                      onChanged: _settings.setConnectOnLaunch,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _SectionLabel(l.settingsApp),
+              SettingsCard(
+                children: [
+                  BlocBuilder<SettingsController, SettingsState>(
+                    bloc: _settings,
+                    buildWhen: (a, b) =>
+                        a.renewalReminders != b.renewalReminders,
+                    builder: (context, state) => SettingsSwitchRow(
+                      icon: LucideIcons.bell,
+                      title: l.settingsRenewalReminders,
+                      subtitle: l.settingsRenewalRemindersHint,
+                      value: state.renewalReminders,
+                      onChanged: _settings.setRenewalReminders,
+                    ),
                   ),
                 ],
               ),
@@ -140,6 +153,18 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
       ),
     );
   }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 4, 8),
+    child: Text(text.toUpperCase(), style: BrandText.sectionLabel),
+  );
 }
 
 /// Null for a preset this screen does not offer, or before it is read.

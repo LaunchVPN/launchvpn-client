@@ -3,7 +3,7 @@ import 'package:onexray/core/pigeon/host_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/connect/coordinator.dart';
-import 'package:onexray/service/shared/notification/service.dart';
+import 'package:onexray/service/shared/notification/scheduled.dart';
 
 /// Shows the App's own explanation before the system VPN prompt and answers
 /// whether the person chose to go on.
@@ -19,7 +19,7 @@ final class ConnectionPermissions {
     Future<void> Function()? requestNotifications,
   }) : _requestVpn = requestVpn ?? AppHostApi().requestPlatformPermission,
        _requestNotifications =
-           requestNotifications ?? NotificationService().requestPermission;
+           requestNotifications ?? SystemNotifications().request;
 
   final ConnectionCoordinator _coordinator;
   final Future<PlatformPermissionResult> Function() _requestVpn;
@@ -64,7 +64,8 @@ final class ConnectionPermissions {
     try {
       await _requestNotifications();
     } catch (error, stackTrace) {
-      // The VPN runs without notifications; only its status line is hidden.
+      // The VPN runs without notifications; only its Android status line and
+      // the renewal reminders are missing.
       ygLogger('request notifications failed: $error\n$stackTrace');
     }
   }
