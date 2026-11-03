@@ -11,8 +11,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/page.dart';
 import 'package:onexray/brand/home/toggle.dart';
+import 'package:onexray/brand/home/update_banner.dart';
 import 'package:onexray/brand/locations/page.dart';
 import 'package:onexray/brand/theme.dart';
+import 'package:onexray/core/distribution.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
@@ -25,8 +27,10 @@ import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/settings/app_update/service.dart';
 import 'package:onexray/service/settings/language/locale.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 // ignore: depend_on_referenced_packages
 import 'package:url_launcher_platform_interface/link.dart';
@@ -55,6 +59,7 @@ ConnectionRuntime _runtime(DateTime startedAt) => ConnectionRuntime.create(
 );
 
 void main() {
+  late AppEventBus bus;
   late AppDatabase db;
   late ConnectionCoordinator coordinator;
   late HomeController controller;
@@ -66,8 +71,12 @@ void main() {
   var prepares = 0;
   var sweeps = 0;
 
-  Future<void> pumpHome(WidgetTester tester, {double scale = 1}) async {
-    final bus = AppEventBus();
+  Future<void> pumpHome(
+    WidgetTester tester, {
+    double scale = 1,
+    AppDistribution distribution = AppDistribution.current,
+  }) async {
+    bus = AppEventBus();
     addTearDown(bus.close);
     db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
@@ -122,7 +131,10 @@ void main() {
             child: ShadToaster(child: child!),
           ),
         ),
-        home: HomePage(controller: controller),
+        home: BlocProvider.value(
+          value: bus,
+          child: HomePage(controller: controller, distribution: distribution),
+        ),
       ),
     );
     await tester.runAsync(() => pumpEventQueue(times: 20));
@@ -464,6 +476,76 @@ void main() {
       await pumpHome(tester);
 
       expect(toggleTop(tester), 114);
+    });
+  });
+
+  group('update banner', () {
+    const release =
+        'https://github.com/LaunchVPN/launchvpn-client/releases/v26.11.2';
+
+    Future<void> announceUpdate(WidgetTester tester) async {
+      bus.updateAppUpdateInfo(
+        AppUpdateInfo(
+          currentVersion: '26.11.0',
+          latestVersion: '26.11.2',
+          releaseNotes: '',
+          releaseUri: Uri.parse(release),
+          updateUri: Uri.parse(release),
+          destination: AppUpdateDestination.githubRelease,
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets(
+      'an APK build offers the newer release, and a tap opens its page',
+      (tester) async {
+        final launcher = _Launcher();
+        final previous = UrlLauncherPlatform.instance;
+        UrlLauncherPlatform.instance = launcher;
+        addTearDown(() => UrlLauncherPlatform.instance = previous);
+        await pumpHome(tester, distribution: AppDistribution.apk);
+
+        await announceUpdate(tester);
+        expect(find.text('Доступна версия 26.11.2'), findsOneWidget);
+        expect(find.text('Текущая версия: 26.11.0'), findsOneWidget);
+
+        await tester.tap(find.text('Доступна версия 26.11.2'));
+        await tester.pump();
+        expect(launcher.opened, [release]);
+      },
+    );
+
+    testWidgets('a store build leaves updates to the store', (tester) async {
+      await pumpHome(tester, distribution: AppDistribution.store);
+
+      await announceUpdate(tester);
+
+      expect(find.textContaining('Доступна версия'), findsNothing);
+    });
+
+    testWidgets('the toggle centers below it as in the mockup', (tester) async {
+      useScreen(tester, 706);
+      await pumpHome(tester, distribution: AppDistribution.apk);
+
+      await announceUpdate(tester);
+
+      final banner = tester.getBottomLeft(find.byType(UpdateBanner)).dy;
+      expect(toggleTop(tester) - banner, 64);
+    });
+
+    testWidgets('fits with the largest system font', (tester) async {
+      useScreen(tester, 844);
+      await pumpHome(
+        tester,
+        scale: _largeScale,
+        distribution: AppDistribution.apk,
+      );
+
+      await announceUpdate(tester);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Текущая версия: 26.11.0'), findsOneWidget);
     });
   });
 

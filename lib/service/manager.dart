@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:onexray/core/distribution.dart';
 import 'package:onexray/core/network/client.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/launch/app_startup.dart';
@@ -100,18 +101,16 @@ abstract final class ServiceManager {
     unawaited(_checkUpdate());
   }
 
+  /// A store build leaves updates to the store. An APK checks at every launch,
+  /// so a newer release stays offered until it is installed: the App has no
+  /// way to skip a version.
   static Future<void> _checkUpdate() async {
+    if (AppDistribution.current != AppDistribution.apk) return;
     try {
-      final service = AppUpdateService();
-      if (!await service.shouldRunAutomaticCheck()) return;
-      await service.recordAutomaticCheck();
-      final result = await service.checkForUpdate();
-      if (result.status == AppUpdateCheckStatus.upToDate) {
-        AppEventBus.instance.updateAppUpdateInfo(null);
-      } else if (result.updateInfo case final update?) {
-        AppEventBus.instance.updateAppUpdateInfo(
-          await service.shouldShowAutomaticReminder(update) ? update : null,
-        );
+      final result = await AppUpdateService().checkForUpdate();
+      // A failed check keeps whatever the previous one found.
+      if (result.status != AppUpdateCheckStatus.failed) {
+        AppEventBus.instance.updateAppUpdateInfo(result.updateInfo);
       }
     } catch (_) {
       /* Update checks never block connection readiness. */

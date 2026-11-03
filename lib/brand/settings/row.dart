@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:onexray/brand/icon_tile.dart';
 import 'package:onexray/brand/theme.dart';
 
 /// A card of rows split by lines, as the settings mockups draw them.
@@ -72,15 +73,10 @@ class SettingsRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: BrandColors.surfaceRaised,
-                    borderRadius: BorderRadius.circular(BrandRadii.segment),
-                  ),
-                  child: Icon(icon, size: 18, color: BrandColors.ink),
+                IconTile(
+                  icon: icon,
+                  color: BrandColors.ink,
+                  fill: BrandColors.surfaceRaised,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

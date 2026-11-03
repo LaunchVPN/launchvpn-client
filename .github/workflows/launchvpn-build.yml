@@ -176,13 +176,15 @@ jobs:
           EOF
 
       # A pull request builds only arm64 to save time. Main builds both, and
-      # its APK is the one that also runs on x64 emulators.
+      # its APK is the one that also runs on x64 emulators. The define makes
+      # the App offer newer GitHub releases, which a store build leaves out.
       - name: Build the APK
         env:
           TARGET_PLATFORMS: ${{ github.event_name == 'pull_request' && 'android-arm64' || 'android-arm64,android-x64' }}
         run: |
           flutter build apk --release \
             --target-platform "$TARGET_PLATFORMS" \
+            --dart-define=LAUNCHVPN_DISTRIBUTION=apk \
             --build-number "$BUILD_NUMBER"
           mv build/app/outputs/flutter-apk/app-release.apk \
             build/LaunchVPN-android-universal.apk
