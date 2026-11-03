@@ -291,7 +291,13 @@ void main() {
       await openTab(tester, 1);
       expect(toggled(tester), Tristate.isFalse);
 
+      notifications.prompt = Completer();
       await tester.tap(find.text(title));
+      await settle(tester);
+      // Off while the system prompt is open, since nothing is allowed yet.
+      expect(toggled(tester), Tristate.isFalse);
+
+      notifications.prompt!.complete();
       await settle(tester);
       expect(notifications.settingsOpened, 1);
       expect(toggled(tester), Tristate.isFalse);

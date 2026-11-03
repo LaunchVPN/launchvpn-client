@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:onexray/service/shared/notification/scheduled.dart';
 
 /// The phone's notifications: what is pending and what the person allows.
@@ -8,12 +10,16 @@ final class FakeNotifications implements ScheduledNotifications {
   int requests = 0;
   int settingsOpened = 0;
 
+  /// While set, the system prompt stays open until it completes.
+  Completer<void>? prompt;
+
   @override
   Future<bool> permitted() async => allowed;
 
   @override
   Future<bool> request() async {
     requests++;
+    await prompt?.future;
     if (grantOnRequest) allowed = true;
     return allowed;
   }

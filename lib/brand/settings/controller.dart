@@ -70,12 +70,12 @@ class SettingsController extends PageCubit<SettingsState> {
     }
   }
 
-  /// Turning reminders on may end in the system settings; the switch then
-  /// stays off until notifications are allowed there.
+  /// Turning reminders on may end in the system settings, so the switch turns
+  /// on only once they work; turning them off shows at once.
   Future<void> setRenewalReminders(bool value) async {
     if (_savingReminders) return;
     _savingReminders = true;
-    emit(state.copyWith(renewalReminders: value));
+    if (!value) emit(state.copyWith(renewalReminders: false));
     try {
       if (value) {
         await _reminders.enable();
