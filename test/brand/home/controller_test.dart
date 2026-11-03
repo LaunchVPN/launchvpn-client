@@ -477,6 +477,18 @@ void main() {
       expect(controller.state.status, HomeStatus.off);
     });
 
+    test('a failed automatic disconnect keeps the toggle to retry', () async {
+      await addSubscription(expire: future);
+      await connectFully();
+
+      await setExpiry(past);
+      stop.completeError(StateError('no answer'));
+      await settle();
+
+      expect(controller.state.status, HomeStatus.uncertain);
+      expect(controller.state.showsExpired, isFalse);
+    });
+
     test('turns off a tunnel started from outside after expiry', () async {
       await addSubscription(expire: past);
       stop.complete(const HostConnection(VpnStatus.disconnected));

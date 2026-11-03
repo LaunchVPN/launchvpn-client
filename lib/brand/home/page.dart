@@ -179,7 +179,7 @@ class _HomePageState extends State<HomePage> {
                                 children: [
                                   _Header(
                                     // The screen's title says it instead.
-                                    daysLeft: state.expired
+                                    daysLeft: state.showsExpired
                                         ? null
                                         : state.daysLeft(DateTime.now()),
                                   ),
@@ -193,7 +193,7 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                     ),
                                   ],
-                                  if (state.expired)
+                                  if (state.showsExpired)
                                     ..._expiredContent(state)
                                   else if (state.failure case final failure?)
                                     ..._failureContent(state, failure)

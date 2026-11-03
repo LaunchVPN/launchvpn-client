@@ -102,6 +102,13 @@ class HomeState {
   /// «Обновить статус» is loading the subscription.
   final bool refreshing;
 
+  /// The screen waits for the tunnel to go off. Until then the toggle shows
+  /// the disconnect, or a failed one to retry.
+  bool get showsExpired => expired && _tunnelOff;
+
+  bool get _tunnelOff =>
+      status == HomeStatus.off || status == HomeStatus.failed;
+
   HomeStatus get status => switch (request) {
     HomeRequest.disconnect => HomeStatus.disconnecting,
     HomeRequest.connect => HomeStatus.connecting,
@@ -287,8 +294,9 @@ class HomeController extends PageCubit<HomeState> {
   Timer? _expiry;
   bool _measuring = false;
 
-  /// An expiry this close gets a timer. A later one is checked again when the
-  /// interval update refreshes the subscription.
+  /// An expiry this close gets a timer, and so does a running tunnel, which
+  /// checks again at least this often. Otherwise a later expiry is checked
+  /// when the subscription refreshes or the App returns.
   static const _expiryWatch = Duration(days: 1);
 
   void _connectionChanged() {
@@ -304,6 +312,8 @@ class HomeController extends PageCubit<HomeState> {
             view.runtime != null,
       ),
     );
+    // A tunnel that came up needs its expiry watched.
+    _checkExpiry(state.subscription);
     _stopIfExpired();
   }
 
@@ -408,8 +418,11 @@ class HomeController extends PageCubit<HomeState> {
     final expired = info?.isExpired(now) ?? false;
     if (info?.expiresAt case final expiresAt? when !expired) {
       final left = expiresAt.difference(now);
-      if (left <= _expiryWatch) {
-        _expiry = Timer(left, recheckExpiry);
+      if (left <= _expiryWatch || !state._tunnelOff) {
+        _expiry = Timer(
+          left < _expiryWatch ? left : _expiryWatch,
+          recheckExpiry,
+        );
       }
     }
     if (expired == state.expired) return;
@@ -428,10 +441,7 @@ class HomeController extends PageCubit<HomeState> {
   /// Without VPN consent only a tap may bring up the prompt, so the toggle
   /// waits for one. A removed subscription is no renewal.
   Future<void> _connectAfterRenewal() async {
-    if (state.subscription == null ||
-        (state.status != HomeStatus.off && state.status != HomeStatus.failed)) {
-      return;
-    }
+    if (state.subscription == null || !state._tunnelOff) return;
     if (coordinator.state.value.issue == 'permissionRequired') return;
     await _perform(HomeRequest.connect, _logFailure, coordinator.connect);
   }
