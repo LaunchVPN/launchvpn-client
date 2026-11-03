@@ -268,18 +268,6 @@ abstract final class BrandTheme {
     foregroundColor: BrandColors.muted,
     minimumSize: const Size.fromHeight(44),
   ).merge(_wideButton);
-
-  /// The mockup's small button inside a card. Its touch area stays 48 tall.
-  static final smallButton = FilledButton.styleFrom(
-    backgroundColor: BrandColors.accent,
-    foregroundColor: BrandColors.accentInk,
-    minimumSize: const Size(0, 34),
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-    textStyle: BrandText.selectedPreset,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(BrandRadii.segment)),
-    ),
-  );
   static final _wideButton = ButtonStyle(
     minimumSize: const WidgetStatePropertyAll(Size.fromHeight(52)),
     iconSize: const WidgetStatePropertyAll(20),
