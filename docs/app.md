@@ -13,6 +13,10 @@ upstream pages kept for merging. They are not reachable in this build.
   notifications on Android 13 and later. A refused VPN consent is asked again on the next
   connection; notifications are asked only alongside it. Without notifications the VPN still runs,
   only its status line is hidden.
+- Before the first system VPN prompt the «Разрешите VPN» screen explains it, over the tabs.
+  «Продолжить» goes on to the system prompts and the connection; «Не сейчас» or Back leaves the
+  connection off without an error, and the screen comes back next time. After one «Продолжить»
+  the screen is not shown again, even if the system prompt was refused.
 - The launch screens on both platforms use the background of the theme.
 - Phone builds carry none of upstream's artwork: `pubspec.yaml` limits its logo and icons to
   desktop, and iOS builds only the primary icon. The desktop folders, `msix_config`, that artwork

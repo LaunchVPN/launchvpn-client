@@ -133,7 +133,7 @@ void main() {
   /// Ends every connection it starts: a start left waiting would hold the shared
   /// Geodata queue from the next test.
   Future<void> connectFully({Future<void> Function()? whileConnecting}) async {
-    final toggled = controller.toggle(run);
+    final toggled = controller.toggle(run, explain: _explainNever);
     await settle();
     await whileConnecting?.call();
     status = VpnStatus.connected;
@@ -146,7 +146,7 @@ void main() {
     test('connects and reaches connected', () async {
       await addSubscription();
 
-      final toggled = controller.toggle(run);
+      final toggled = controller.toggle(run, explain: _explainNever);
       await settle();
       expect(controller.state.status, HomeStatus.connecting);
 
@@ -164,7 +164,7 @@ void main() {
       () async {
         await addSubscription();
 
-        unawaited(controller.toggle(run));
+        unawaited(controller.toggle(run, explain: _explainNever));
 
         expect(controller.state.status, HomeStatus.connecting);
       },
@@ -172,12 +172,12 @@ void main() {
 
     test('a tap while connecting cancels and returns to off', () async {
       await addSubscription();
-      final connecting = controller.toggle(run);
+      final connecting = controller.toggle(run, explain: _explainNever);
       await settle();
       expect(coordinator.state.value.phase, ConnectionPhase.connecting);
 
       stop.complete(const HostConnection(VpnStatus.disconnected));
-      await controller.toggle(run);
+      await controller.toggle(run, explain: _explainNever);
       await connecting;
       expect(failures, hasLength(1));
       expect(failures.single, isA<ConnectionHostException>());
@@ -193,7 +193,7 @@ void main() {
       await settle();
       expect(controller.state.status, HomeStatus.connected);
 
-      final disconnecting = controller.toggle(run);
+      final disconnecting = controller.toggle(run, explain: _explainNever);
       expect(controller.state.status, HomeStatus.disconnecting);
 
       status = VpnStatus.disconnected;
@@ -208,7 +208,7 @@ void main() {
       await addSubscription();
       prepareFailure = () async => throw const ConnectionHostException('x');
 
-      await controller.toggle(run);
+      await controller.toggle(run, explain: _explainNever);
       await settle();
 
       expect(failures, hasLength(1));
@@ -216,7 +216,7 @@ void main() {
     });
 
     test('does nothing without a subscription', () async {
-      await controller.toggle(run);
+      await controller.toggle(run, explain: _explainNever);
       await settle();
 
       expect(coordinator.state.value.phase, ConnectionPhase.disconnected);
@@ -260,7 +260,7 @@ void main() {
 
       status = VpnStatus.disconnected;
       stop.complete(const HostConnection(VpnStatus.disconnected));
-      await controller.toggle(run);
+      await controller.toggle(run, explain: _explainNever);
       await settle();
 
       expect(controller.state.status, HomeStatus.off);
@@ -283,7 +283,7 @@ void main() {
 
       status = VpnStatus.disconnected;
       stop.complete(const HostConnection(VpnStatus.disconnected));
-      await controller.toggle(run);
+      await controller.toggle(run, explain: _explainNever);
       await settle();
 
       expect(controller.state.status, HomeStatus.off);
@@ -297,7 +297,7 @@ void main() {
       expect(controller.state.status, HomeStatus.connecting);
 
       stop.complete(const HostConnection(VpnStatus.disconnected));
-      await controller.toggle(run);
+      await controller.toggle(run, explain: _explainNever);
       await settle();
 
       expect(stopCalls, 1);
@@ -310,7 +310,7 @@ void main() {
       await coordinator.refresh();
       await settle();
 
-      final stopping = controller.toggle(run);
+      final stopping = controller.toggle(run, explain: _explainNever);
       await settle();
       stop.completeError(StateError('no answer'));
       await stopping;
@@ -672,7 +672,7 @@ void main() {
 
     test('cannot change while a connection is in progress', () async {
       await addSubscription();
-      unawaited(controller.toggle(run));
+      unawaited(controller.toggle(run, explain: _explainNever));
       await settle();
 
       await controller.selectPreset(TrafficMode.allVpn, run);
@@ -682,3 +682,6 @@ void main() {
     });
   });
 }
+
+/// These connections already have VPN permission, so nothing is explained.
+Future<bool> _explainNever() => fail('VPN permission is not asked here');

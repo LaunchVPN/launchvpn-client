@@ -74,6 +74,7 @@ abstract final class BrandText {
   static final timer = hint.copyWith(
     fontFeatures: const [FontFeature.tabularFigures()],
   );
+  static final body = hint.copyWith(color: BrandColors.ink);
   static const cardTitle = TextStyle(
     fontFamily: _body,
     fontWeight: FontWeight.w600,
@@ -242,6 +243,25 @@ abstract final class BrandTheme {
       textTheme: base.textTheme.copyWith(family: BrandText._body),
     );
   }
+
+  /// The mockup's full-width buttons: the main action and the quiet one below.
+  static final primaryButton = FilledButton.styleFrom(
+    minimumSize: const Size.fromHeight(52),
+    backgroundColor: BrandColors.accent,
+    foregroundColor: BrandColors.accentInk,
+    textStyle: BrandText.cardTitle,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(BrandRadii.md)),
+    ),
+  );
+  static final quietButton = TextButton.styleFrom(
+    minimumSize: const Size.fromHeight(52),
+    foregroundColor: BrandColors.ink,
+    textStyle: BrandText.cardTitle,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(BrandRadii.md)),
+    ),
+  );
 
   static const statusBar = SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,

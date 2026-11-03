@@ -3186,5 +3186,10 @@
   "settingsConnectOnLaunch": "Connect at launch",
   "settingsPresetSmartHint": "Sites that don't need a VPN open directly",
   "settingsPresetAllVpnHint": "All traffic goes through the server",
-  "settingsPresetFootnote": "You can also change the mode on the home screen."
+  "settingsPresetFootnote": "You can also change the mode on the home screen.",
+  "vpnPermissionTitle": "Allow VPN",
+  "vpnPermissionBody": "The system will ask for VPN permission. Without it, the app can't protect your traffic.",
+  "vpnPermissionNoLogs": "No logs of the sites you visit",
+  "vpnPermissionOneTap": "Turns off with one tap",
+  "vpnPermissionNotNow": "Not now"
 }

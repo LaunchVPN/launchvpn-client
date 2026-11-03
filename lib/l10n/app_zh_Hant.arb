@@ -1000,5 +1000,10 @@
   "settingsConnectOnLaunch": "啟動時連線",
   "settingsPresetSmartHint": "不需要 VPN 的網站直接開啟",
   "settingsPresetAllVpnHint": "所有流量都透過伺服器",
-  "settingsPresetFootnote": "也可以在主畫面上變更模式。"
+  "settingsPresetFootnote": "也可以在主畫面上變更模式。",
+  "vpnPermissionTitle": "允許 VPN",
+  "vpnPermissionBody": "系統會請求 VPN 權限。沒有它，App 無法保護你的流量。",
+  "vpnPermissionNoLogs": "不記錄你造訪的網站",
+  "vpnPermissionOneTap": "一鍵即可關閉",
+  "vpnPermissionNotNow": "以後再說"
 }
