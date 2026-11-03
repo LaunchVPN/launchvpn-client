@@ -64,10 +64,19 @@ class _HomePageState extends State<HomePage> {
 
   HomeController get _controller => widget.controller;
 
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
     unawaited(_controller.initialize());
+    _lifecycle = AppLifecycleListener(onResume: _controller.recheckExpiry);
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
   }
 
   Future<void> _run(Future<void> Function() action) async {
@@ -248,7 +257,6 @@ class _HomePageState extends State<HomePage> {
             ? () => _openLink(Uri.parse(Brand.renewalUrl), 'renewal')
             : null,
         onRefresh: state.refreshing ? null : _refreshStatus,
-        refreshing: state.refreshing,
         onContactSupport: _contactSupport(state),
       ),
     );
@@ -497,16 +505,14 @@ class _ExpiredActions extends StatelessWidget {
   const _ExpiredActions({
     required this.onRenew,
     required this.onRefresh,
-    required this.refreshing,
     required this.onContactSupport,
   });
 
   /// Null in a store build, which offers no payment.
   final VoidCallback? onRenew;
 
-  /// Null while the subscription loads.
+  /// Null while the subscription loads, which the button shows with a spinner.
   final VoidCallback? onRefresh;
-  final bool refreshing;
 
   /// Null when the panel sent no support link.
   final VoidCallback? onContactSupport;
@@ -514,7 +520,7 @@ class _ExpiredActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final refreshIcon = refreshing
+    final refreshIcon = onRefresh == null
         ? const ButtonProgressIndicator(size: 20)
         : const Icon(LucideIcons.refreshCw);
     final refreshLabel = Text(l.homeExpiredRefresh);

@@ -62,4 +62,4 @@ _Avoid_: intent, universal link
 
 **Flavor**:
 Either the store build (App Store, Google Play) or the APK from GitHub Releases. They
-differ only in that the APK checks for updates itself.
+differ only in that the APK checks for updates itself and offers renewal on the site.

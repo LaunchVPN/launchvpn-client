@@ -499,6 +499,18 @@ void main() {
       expect(controller.state.status, HomeStatus.connected);
     });
 
+    test('removing an expired subscription does not connect', () async {
+      await addSubscription(expire: past);
+
+      await db.subscriptionDao.deleteRow(
+        (await db.subscriptionDao.allRows).single.id,
+      );
+      await settle();
+
+      expect(controller.state.expired, isFalse);
+      expect(controller.state.status, HomeStatus.off);
+    });
+
     test('a refresh of an active subscription does not connect', () async {
       await addSubscription(expire: future);
 

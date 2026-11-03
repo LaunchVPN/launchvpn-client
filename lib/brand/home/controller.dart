@@ -400,6 +400,7 @@ class HomeController extends PageCubit<HomeState> {
   /// it connects, as «Подписка закончилась» promises.
   void _checkExpiry(SubscriptionData? row) {
     _expiry?.cancel();
+    if (isClosed) return;
     final now = DateTime.now();
     final info = row == null
         ? null
@@ -408,7 +409,7 @@ class HomeController extends PageCubit<HomeState> {
     if (info?.expiresAt case final expiresAt? when !expired) {
       final left = expiresAt.difference(now);
       if (left <= _expiryWatch) {
-        _expiry = Timer(left, () => _checkExpiry(state.subscription));
+        _expiry = Timer(left, recheckExpiry);
       }
     }
     if (expired == state.expired) return;
@@ -420,10 +421,15 @@ class HomeController extends PageCubit<HomeState> {
     }
   }
 
+  /// A timer pauses while the device sleeps, so the screen checks again when
+  /// the App returns.
+  void recheckExpiry() => _checkExpiry(state.subscription);
+
   /// Without VPN consent only a tap may bring up the prompt, so the toggle
-  /// waits for one.
+  /// waits for one. A removed subscription is no renewal.
   Future<void> _connectAfterRenewal() async {
-    if (state.status != HomeStatus.off && state.status != HomeStatus.failed) {
+    if (state.subscription == null ||
+        (state.status != HomeStatus.off && state.status != HomeStatus.failed)) {
       return;
     }
     if (coordinator.state.value.issue == 'permissionRequired') return;
@@ -464,8 +470,9 @@ class HomeController extends PageCubit<HomeState> {
     emit(state.copyWith(refreshing: true));
     try {
       final result = await _refreshSubscription(row);
-      // The catalog may not have seen the new row yet.
-      if (result.success) {
+      // The catalog may not have seen the new row yet. A link may have
+      // replaced the subscription meanwhile, and its row decides instead.
+      if (result.success && row.id == state.subscription?.id) {
         _checkExpiry(await _db.subscriptionDao.searchRow(row.id));
       }
       return result;
