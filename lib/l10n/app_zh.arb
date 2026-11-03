@@ -1021,5 +1021,12 @@
   "vpnPermissionBody": "系统会请求 VPN 权限。没有它，应用无法保护你的流量。",
   "vpnPermissionNoLogs": "不记录你访问的网站",
   "vpnPermissionOneTap": "一键即可关闭",
-  "vpnPermissionNotNow": "以后再说"
+  "vpnPermissionNotNow": "以后再说",
+  "settingsApp": "应用",
+  "settingsRenewalReminders": "续订提醒",
+  "settingsRenewalRemindersHint": "提前 3 天和 1 天",
+  "renewalReminderThreeDays": "你的订阅将在 3 天后到期",
+  "renewalReminderTomorrow": "你的订阅将在明天到期",
+  "renewalReminderBody": "请续订，以免 VPN 断开。",
+  "notificationChannelReminders": "提醒"
 }

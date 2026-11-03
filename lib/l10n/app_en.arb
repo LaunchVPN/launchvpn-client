@@ -3213,5 +3213,12 @@
   "vpnPermissionBody": "The system will ask for VPN permission. Without it, the app can't protect your traffic.",
   "vpnPermissionNoLogs": "No logs of the sites you visit",
   "vpnPermissionOneTap": "Turns off with one tap",
-  "vpnPermissionNotNow": "Not now"
+  "vpnPermissionNotNow": "Not now",
+  "settingsApp": "App",
+  "settingsRenewalReminders": "Renewal reminders",
+  "settingsRenewalRemindersHint": "3 days and 1 day before",
+  "renewalReminderThreeDays": "Your subscription ends in 3 days",
+  "renewalReminderTomorrow": "Your subscription ends tomorrow",
+  "renewalReminderBody": "Renew it to keep the VPN on.",
+  "notificationChannelReminders": "Reminders"
 }
