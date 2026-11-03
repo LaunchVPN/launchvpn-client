@@ -89,7 +89,7 @@ stay disabled. `main` requires its `validate`, `android` and `ios` jobs.
 | --- | --- |
 | `validate` | The checks of the upstream Validate workflow. |
 | `android` | `LaunchVPN-android-universal.apk` on the run page, and the Kotlin tests. It is an [APK build](../docs/app.md#launchvpn-entry-point), which offers newer GitHub releases. |
-| `ios` | An unsigned build that proves the app and extensions compile. It produces no IPA and no TestFlight upload. Release tags skip it. |
+| `ios` | An unsigned build that proves the app and extensions compile. It produces no IPA and no TestFlight upload. |
 | `release` | Release tags only: a draft GitHub release with the APK and the pull requests merged since the latest release. |
 
 [build_core.py](build_core.py) runs only the native core and Geodata step, because
@@ -99,13 +99,14 @@ without the configured base: nothing with this package ID has shipped yet.
 Unlike the rule above, this workflow pins third-party actions to commits, because the
 `android` job holds the signing key. The shared
 [Flutter Action](../.github/actions/setup-flutter/action.yml) keeps upstream's tag.
+The `release` job calls the `gh` CLI on the runner instead of a release Action, so
+the job that can write to the repository runs no third-party code.
 
 APKs from other branches use the debug key of the runner, which differs in every run:
 uninstall the previous build before installing one. Runs on `main` use the signing
 key when the `ANDROID_KEY*` secrets from the workflow header are set; a release tag
-fails without them. Create the key
-once and keep a copy outside GitHub, since losing it means existing installs can no
-longer be updated:
+fails without them. Create the key once and keep a copy outside GitHub, since losing
+it means existing installs can no longer be updated:
 
 ```shell
 keytool -genkeypair -v -keystore upload.jks -alias launchvpn \
@@ -140,11 +141,18 @@ version.
 4. Write the notes in Russian on the release page and publish it as the latest
    release. APK builds of older versions then show the update card.
 
+Builds from `main` keep the version in `pubspec.yaml`, so after a release they
+offer it as an update. Their build number is higher than the release's, so Android
+refuses to install it over them; uninstall such a build first.
+
 To drop a release, delete the draft and the tag:
 
 ```shell
 gh release delete v26.11.2 --repo LaunchVPN/launchvpn-client --cleanup-tag --yes
 ```
+
+A rerun of the `release` job fails while its draft exists; delete the draft alone,
+without `--cleanup-tag`, before rerunning it.
 
 ## Build
 

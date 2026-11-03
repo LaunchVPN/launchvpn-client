@@ -273,10 +273,8 @@ jobs:
             --title "LaunchVPN ${GITHUB_REF_NAME#v}"
 
   # Proves the iOS app and its extensions compile. Signing and TestFlight need
-  # the Apple Developer account. A release tag skips it: its commit on main
-  # has passed it already.
+  # the Apple Developer account.
   ios:
-    if: github.ref_type != 'tag'
     runs-on: xcode-27 # macOS 27 ARM64 (public preview)
     timeout-minutes: 60
     defaults:
