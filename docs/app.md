@@ -40,6 +40,16 @@ upstream pages kept for merging. They are not reachable in this build.
   choice connects at once, even when it is the same location. Contact support opens the panel's
   `support-url` and is absent without one. A cancelled attempt or a missing VPN consent shows no
   error screen, and the next connection takes it away.
+- Once the expiry from the subscription headers has passed, Home shows Subscription ended in
+  place of the toggle and the cards, without the days pill. A running tunnel goes off, since the
+  panel no longer serves the user; a subscription without expiry never ends. An APK build offers
+  Renew, which opens `Brand.renewalUrl`; a store build offers no payment. Refresh status loads the
+  subscription the way the interval update does, with a spinner in the button. A failed load keeps
+  the stored data and names the cause in a toast; a subscription still expired says it is not
+  renewed yet. A renewal, found by the button or the interval update, returns Home and connects,
+  unless the VPN consent is missing, which only a tap may ask for. Contact support works as on the
+  error screen. An expiry within a day has a timer; a later one is checked when the subscription
+  refreshes.
 - If a command failed and the tunnel may still be up, the screen says so and a tap disconnects.
   Without a subscription the toggle is disabled.
 - No status or announcement moves the toggle. It sits as centered in the mockup, and higher only on

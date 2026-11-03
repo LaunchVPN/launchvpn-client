@@ -3174,6 +3174,12 @@
     "placeholders": {"version": {"type": "String"}}
   },
   "homeUpdateAction": "Update",
+  "homeExpiredTitle": "Your subscription has ended",
+  "homeExpiredBodyRenew": "Renew your subscription to connect again. The status updates on its own, or tap the button below.",
+  "homeExpiredBody": "Once your subscription is active again, the app will connect on its own.",
+  "homeExpiredRenew": "Renew",
+  "homeExpiredRefresh": "Refresh status",
+  "homeExpiredNotRenewed": "Your subscription has not been renewed yet",
   "homeNoSubscription": "Open your subscription link from the bot or the website",
   "homeDaysLeft": "{days, plural, one {{days} day} other {{days} days}}",
   "@homeDaysLeft": {

@@ -24,6 +24,8 @@ abstract final class BrandColors {
   static const dangerBadge = Color(0x24F14D4C);
   static const dangerBadgeLine = Color(0x66F14D4C);
   static const warning = Color(0xFFF5AE39);
+  static const warningBadge = Color(0x24F5AE39);
+  static const warningBadgeLine = Color(0x66F5AE39);
   static const success = Color(0xFF4BCB71);
 }
 

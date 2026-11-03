@@ -14,6 +14,17 @@ class StateHero extends StatelessWidget {
        _fill = BrandColors.accentBadge,
        _line = BrandColors.accentBadgeLine;
 
+  /// For something that needs the person's attention, such as an ended
+  /// subscription.
+  const StateHero.warning({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.body,
+  }) : _color = BrandColors.warning,
+       _fill = BrandColors.warningBadge,
+       _line = BrandColors.warningBadgeLine;
+
   /// For something that went wrong.
   const StateHero.danger({
     super.key,

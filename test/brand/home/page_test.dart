@@ -21,12 +21,14 @@ import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
+import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/servers/subscription/model.dart';
 import 'package:onexray/service/settings/app_update/service.dart';
 import 'package:onexray/service/settings/language/locale.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
@@ -70,6 +72,7 @@ void main() {
   late Future<void> Function() prepareFailure;
   var prepares = 0;
   var sweeps = 0;
+  late Future<SubscriptionRefreshResult> Function(SubscriptionData) refresh;
 
   Future<void> pumpHome(
     WidgetTester tester, {
@@ -115,6 +118,7 @@ void main() {
       coordinator: coordinator,
       pingLocations: (_, {isCancelled}) async => sweeps++,
       dismissAnnounce: db.subscriptionDao.dismissAnnounce,
+      refreshSubscription: (row) => refresh(row),
     );
     addTearDown(controller.close);
     await tester.pumpWidget(
@@ -220,6 +224,9 @@ void main() {
     prepareFailure = () async {};
     prepares = 0;
     sweeps = 0;
+    refresh = (_) async => const SubscriptionRefreshResult(
+      status: SubscriptionUpdateResult.success,
+    );
   });
 
   group('locations', () {
@@ -827,6 +834,185 @@ void main() {
       await addSubscription(tester, supportUrl: support);
 
       await fail(tester, 'insufficientHealthyServers');
+
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('Написать в поддержку'));
+      await tester.pumpAndSettle();
+      expect(find.text('Написать в поддержку').hitTestable(), findsOneWidget);
+    });
+  });
+
+  group('expired subscription', () {
+    const support = 'https://t.me/launchvpn_support';
+    final past =
+        DateTime.now()
+            .subtract(const Duration(days: 1))
+            .millisecondsSinceEpoch ~/
+        1000;
+    final future =
+        DateTime.now().add(const Duration(days: 30)).millisecondsSinceEpoch ~/
+        1000;
+
+    _Launcher useLauncher() {
+      final launcher = _Launcher();
+      final previous = UrlLauncherPlatform.instance;
+      UrlLauncherPlatform.instance = launcher;
+      addTearDown(() => UrlLauncherPlatform.instance = previous);
+      return launcher;
+    }
+
+    Future<void> tapRefresh(WidgetTester tester) async {
+      await tester.tap(find.text('Обновить статус'));
+      await tester.runAsync(() => pumpEventQueue(times: 20));
+      await tester.pump();
+    }
+
+    testWidgets(
+      'an APK build offers renewal on the site instead of the toggle',
+      (tester) async {
+        final launcher = useLauncher();
+        await pumpHome(tester, distribution: AppDistribution.apk);
+        await addSubscription(tester, expire: past, supportUrl: support);
+
+        expect(find.text('Подписка закончилась'), findsOneWidget);
+        expect(find.byType(ConnectToggle), findsNothing);
+        expect(find.text('Срок истёк'), findsNothing);
+        expect(
+          find.widgetWithText(TextButton, 'Обновить статус'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Продлить'));
+        await tester.tap(find.text('Написать в поддержку'));
+        await tester.pump();
+        expect(launcher.opened, ['https://app.launch.tel', support]);
+      },
+    );
+
+    testWidgets('a store build offers no payment', (tester) async {
+      await pumpHome(tester, distribution: AppDistribution.store);
+      await addSubscription(tester, expire: past);
+
+      expect(find.text('Подписка закончилась'), findsOneWidget);
+      expect(
+        find.text(
+          'Когда подписка снова станет активной, приложение подключится само.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Продлить'), findsNothing);
+      expect(
+        find.widgetWithText(FilledButton, 'Обновить статус'),
+        findsOneWidget,
+      );
+      expect(find.text('Написать в поддержку'), findsNothing);
+    });
+
+    testWidgets('a subscription without expiry shows the toggle', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      await addSubscription(tester, expire: 0);
+
+      expect(find.text('Подписка закончилась'), findsNothing);
+      expect(find.byType(ConnectToggle), findsOneWidget);
+    });
+
+    testWidgets('«Обновить статус» spins, then says it is not renewed yet', (
+      tester,
+    ) async {
+      await pumpHome(tester, distribution: AppDistribution.store);
+      await addSubscription(tester, expire: past);
+      final loaded = Completer<SubscriptionRefreshResult>();
+      refresh = (_) => loaded.future;
+
+      await tester.tap(find.text('Обновить статус'));
+      await tester.pump();
+      expect(find.byType(ButtonProgressIndicator), findsOneWidget);
+
+      loaded.complete(
+        const SubscriptionRefreshResult(
+          status: SubscriptionUpdateResult.success,
+          count: 1,
+        ),
+      );
+      await tester.runAsync(() => pumpEventQueue(times: 20));
+      await tester.pump();
+
+      expect(find.byType(ButtonProgressIndicator), findsNothing);
+      expect(find.text('Подписка пока не продлена'), findsOneWidget);
+      expect(find.text('Подписка закончилась'), findsOneWidget);
+    });
+
+    testWidgets('a renewal without VPN consent returns to the toggle', (
+      tester,
+    ) async {
+      await pumpHome(tester, distribution: AppDistribution.apk);
+      await addSubscription(tester, expire: past);
+      // Only a tap may bring up the system prompt, so the renewal does not
+      // connect. The controller tests cover the connection itself.
+      coordinator.state.value = const ConnectionView(
+        phase: ConnectionPhase.disconnected,
+        issue: 'permissionRequired',
+      );
+      refresh = (row) async {
+        await db.subscriptionDao.updateRow(
+          row.copyWith(expireTimestamp: Value(future)),
+        );
+        return const SubscriptionRefreshResult(
+          status: SubscriptionUpdateResult.success,
+          count: 1,
+        );
+      };
+
+      await tapRefresh(tester);
+
+      expect(find.text('Подписка закончилась'), findsNothing);
+      expect(find.text('Подписка пока не продлена'), findsNothing);
+      expect(toggleState(tester), ConnectToggleState.off);
+    });
+
+    testWidgets('a failed load names the cause and keeps the screen', (
+      tester,
+    ) async {
+      await pumpHome(tester, distribution: AppDistribution.store);
+      await addSubscription(tester, expire: past);
+      refresh = (_) async => const SubscriptionRefreshResult(
+        status: SubscriptionUpdateResult.downloadFailed,
+      );
+
+      await tapRefresh(tester);
+
+      expect(find.text('Не удалось загрузить подписку'), findsOneWidget);
+      expect(find.text('Подписка пока не продлена'), findsNothing);
+      expect(find.text('Подписка закончилась'), findsOneWidget);
+    });
+
+    testWidgets('a load another change superseded reports nothing', (
+      tester,
+    ) async {
+      await pumpHome(tester, distribution: AppDistribution.store);
+      await addSubscription(tester, expire: past);
+      refresh = (_) async => const SubscriptionRefreshResult(
+        status: SubscriptionUpdateResult.writeFailed,
+        superseded: true,
+      );
+
+      await tapRefresh(tester);
+
+      expect(find.byType(ShadToast), findsNothing);
+    });
+
+    testWidgets('a small screen with the largest font scrolls to support', (
+      tester,
+    ) async {
+      useScreen(tester, 568);
+      await pumpHome(
+        tester,
+        scale: _largeScale,
+        distribution: AppDistribution.apk,
+      );
+      await addSubscription(tester, expire: past, supportUrl: support);
 
       expect(tester.takeException(), isNull);
       await tester.ensureVisible(find.text('Написать в поддержку'));

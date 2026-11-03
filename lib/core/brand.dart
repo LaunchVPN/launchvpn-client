@@ -26,6 +26,10 @@ abstract final class Brand {
   /// Deep links add subscriptions from this domain and its subdomains only.
   static const subscriptionDomain = 'launch.tel';
 
+  /// Where an APK build sends the person to renew. Store builds offer no
+  /// payment.
+  static const renewalUrl = 'https://app.$subscriptionDomain';
+
   /// Leading User-Agent product. Panels pick the Xray JSON template by it.
   static const subscriptionClient = 'v2rayN';
 
