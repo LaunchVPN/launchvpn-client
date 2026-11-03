@@ -497,23 +497,24 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('an APK build offers the newer release and opens its page', (
-      tester,
-    ) async {
-      final launcher = _Launcher();
-      final previous = UrlLauncherPlatform.instance;
-      UrlLauncherPlatform.instance = launcher;
-      addTearDown(() => UrlLauncherPlatform.instance = previous);
-      await pumpHome(tester, distribution: AppDistribution.apk);
+    testWidgets(
+      'an APK build offers the newer release, and a tap opens its page',
+      (tester) async {
+        final launcher = _Launcher();
+        final previous = UrlLauncherPlatform.instance;
+        UrlLauncherPlatform.instance = launcher;
+        addTearDown(() => UrlLauncherPlatform.instance = previous);
+        await pumpHome(tester, distribution: AppDistribution.apk);
 
-      await announceUpdate(tester);
-      expect(find.text('Доступна версия 26.11.2'), findsOneWidget);
-      expect(find.text('Текущая версия: 26.11.0'), findsOneWidget);
+        await announceUpdate(tester);
+        expect(find.text('Доступна версия 26.11.2'), findsOneWidget);
+        expect(find.text('Текущая версия: 26.11.0'), findsOneWidget);
 
-      await tester.tap(find.text('Обновить'));
-      await tester.pump();
-      expect(launcher.opened, [release]);
-    });
+        await tester.tap(find.text('Доступна версия 26.11.2'));
+        await tester.pump();
+        expect(launcher.opened, [release]);
+      },
+    );
 
     testWidgets('a store build leaves updates to the store', (tester) async {
       await pumpHome(tester, distribution: AppDistribution.store);
@@ -530,7 +531,7 @@ void main() {
       await announceUpdate(tester);
 
       final banner = tester.getBottomLeft(find.byType(UpdateBanner)).dy;
-      expect(toggleTop(tester) - banner, 58);
+      expect(toggleTop(tester) - banner, 64);
     });
 
     testWidgets('fits with the largest system font', (tester) async {
@@ -544,7 +545,7 @@ void main() {
       await announceUpdate(tester);
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Обновить'), findsOneWidget);
+      expect(find.text('Текущая версия: 26.11.0'), findsOneWidget);
     });
   });
 

@@ -102,7 +102,7 @@ abstract final class ServiceManager {
   }
 
   /// A store build leaves updates to the store. An APK checks at every launch,
-  /// so Home offers a newer release whenever it opens.
+  /// so a newer release stays offered until it is installed.
   static Future<void> _checkUpdate() async {
     if (AppDistribution.current != AppDistribution.apk) return;
     try {

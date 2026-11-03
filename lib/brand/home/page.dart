@@ -51,11 +51,11 @@ class _HomePageState extends State<HomePage> {
   static const _contentWithAnnouncementHeight = 528.0;
 
   /// The update banner and the space above it.
-  static const _bannerHeight = 92.0;
+  static const _bannerHeight = 80.0;
 
-  /// Home with the banner, which the mockup's APK frame centers the toggle
-  /// below, between the banner and the cards.
-  static const _contentWithBannerHeight = 590.0;
+  /// The header, the banner, the toggle with its text and the cards. As in the
+  /// mockup's APK frame, the rest splits evenly above and below the toggle.
+  static const _contentWithBannerHeight = 578.0;
   static const _minToggleGap = 24.0;
 
   HomeController get _controller => widget.controller;

@@ -88,7 +88,7 @@ on pushes to `main` and on manual dispatch. The upstream workflows stay disabled
 | Job | Result |
 | --- | --- |
 | `validate` | The checks of the upstream Validate workflow. |
-| `android` | `LaunchVPN-android-universal.apk` on the run page, and the Kotlin tests. The APK is built with `--dart-define=LAUNCHVPN_DISTRIBUTION=apk`, so it offers newer GitHub releases on Home. |
+| `android` | `LaunchVPN-android-universal.apk` on the run page, and the Kotlin tests. It is an [APK build](../docs/app.md#launchvpn-entry-point), which offers newer GitHub releases. |
 | `ios` | An unsigned build that proves the app and extensions compile. It produces no IPA and no TestFlight upload. |
 
 [build_core.py](build_core.py) runs only the native core and Geodata step, because
