@@ -15,13 +15,12 @@ void main() {
   late _RecordingCoordinator coordinator;
 
   // PreferencesKey keeps the first platform it sees, so tests share one store.
-  setUpAll(
-    () => SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.empty(),
-  );
+  final store = _Store();
+  setUpAll(() => SharedPreferencesAsyncPlatform.instance = store);
 
   setUp(() async {
     steps = [];
+    store.broken = false;
     await SharedPreferencesAsync().clear();
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
@@ -101,11 +100,42 @@ void main() {
     expect(steps, ['explain', 'vpn', 'connect']);
   });
 
+  test('broken storage still explains and connects', () async {
+    needVpnPermission();
+    store.broken = true;
+
+    await permissions().connect(explain: answer(true));
+
+    expect(steps, ['explain', 'vpn', 'notifications', 'connect']);
+  });
+
   test('with permission granted, a connection asks nothing', () async {
     await permissions().connect(explain: answer(true));
 
     expect(steps, ['connect']);
   });
+}
+
+final class _Store extends InMemorySharedPreferencesAsync {
+  _Store() : super.empty();
+
+  bool broken = false;
+
+  @override
+  Future<bool?> getBool(String key, SharedPreferencesOptions options) async {
+    if (broken) throw StateError('unreadable');
+    return super.getBool(key, options);
+  }
+
+  @override
+  Future<bool> setBool(
+    String key,
+    bool value,
+    SharedPreferencesOptions options,
+  ) async {
+    if (broken) throw StateError('unwritable');
+    return super.setBool(key, value, options);
+  }
 }
 
 final class _RecordingCoordinator extends ConnectionCoordinator {

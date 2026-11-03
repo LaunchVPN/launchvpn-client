@@ -42,12 +42,21 @@ final class ConnectionPermissions {
   }
 
   /// Shows [explain] until the person once chooses to go on, and answers
-  /// whether the system prompt may follow.
+  /// whether the system prompt may follow. The saved choice only spares the
+  /// screen, so a storage failure shows it again rather than block connecting.
   Future<bool> _explainOnce(VpnPermissionExplanation explain) async {
     final preferences = PreferencesKey();
-    if (await preferences.readVpnPermissionExplained()) return true;
+    try {
+      if (await preferences.readVpnPermissionExplained()) return true;
+    } catch (error, stackTrace) {
+      ygLogger('read VPN explanation failed: $error\n$stackTrace');
+    }
     if (!await explain()) return false;
-    await preferences.saveVpnPermissionExplained();
+    try {
+      await preferences.saveVpnPermissionExplained();
+    } catch (error, stackTrace) {
+      ygLogger('save VPN explanation failed: $error\n$stackTrace');
+    }
     return true;
   }
 
