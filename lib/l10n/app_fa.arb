@@ -985,7 +985,7 @@
   "homeFailureServerTitle": "سرور پاسخ نمی‌دهد",
   "homeFailureServerBody": "مکان دیگری را امتحان کنید یا «Обход глушилок» را که روی اینترنت همراه کار می‌کند.",
   "homeFailureNoServersTitle": "سروری در دسترس نیست",
-  "homeFailureNoServersBody": "این مکان دیگر سروری ندارد. مکان دیگری را انتخاب کنید.",
+  "homeFailureNoServersBody": "این مکان سروری برای اتصال ندارد. مکان دیگری را انتخاب کنید.",
   "homeFailureOtherTitle": "اتصال برقرار نشد",
   "homeFailureOtherBody": "دوباره تلاش کنید یا مکان دیگری را انتخاب کنید.",
   "homeChangeLocation": "تغییر مکان",

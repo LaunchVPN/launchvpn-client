@@ -985,7 +985,7 @@
   "homeFailureServerTitle": "Сервер не отвечает",
   "homeFailureServerBody": "Попробуйте другую локацию или «Обход глушилок» — он работает на мобильном интернете.",
   "homeFailureNoServersTitle": "Нет доступных серверов",
-  "homeFailureNoServersBody": "В этой локации не осталось серверов. Выберите другую.",
+  "homeFailureNoServersBody": "В этой локации нет подходящих серверов. Выберите другую.",
   "homeFailureOtherTitle": "Не удалось подключиться",
   "homeFailureOtherBody": "Попробуйте ещё раз или выберите другую локацию.",
   "homeChangeLocation": "Сменить локацию",

@@ -7,6 +7,7 @@ import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/connect/connection_permissions.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/catalog.dart';
 import 'package:onexray/service/servers/locations.dart';
@@ -35,15 +36,20 @@ enum HomeFailure {
 
   /// The selection has no servers to connect to.
   noServers,
+
+  /// Any other cause, which only the toast names.
   other;
 
-  static HomeFailure of(String? issue) => switch (issue) {
-    'insufficientHealthyServers' || 'probeFailed' => serverSilent,
-    'selectionUnavailable' ||
-    'insufficientCandidates' ||
-    'finalExitUnavailable' => noServers,
-    _ => other,
+  static final _causes = {
+    ConnectionResolutionFailure.insufficientHealthyServers.name: serverSilent,
+    ConnectionResolutionFailure.selectionUnavailable.name: noServers,
+    ConnectionResolutionFailure.insufficientCandidates.name: noServers,
   };
+
+  static HomeFailure of(String? issue) => _causes[issue] ?? other;
+
+  /// Whether the screen's own text names the cause.
+  bool get namesCause => this != other;
 }
 
 /// Runs a connection command and reports its failure to the user.
@@ -109,13 +115,13 @@ class HomeState {
   HomeFailure? get failure =>
       status == HomeStatus.failed ? HomeFailure.of(view.issue) : null;
 
-  /// Whether the error screen shows [error] once its command ends, so a toast
-  /// would only repeat it.
+  /// Whether the error screen names the cause of [error] once its command
+  /// ends, so a toast would only repeat it. A generic failure keeps the toast,
+  /// the only place its specific cause appears.
   bool explains(Object error) =>
-      _reported == HomeStatus.failed && identical(view.error, error);
-
-  /// Where the panel sends people for help, if it named a place.
-  String? get supportUrl => subscription?.supportUrl;
+      _reported == HomeStatus.failed &&
+      identical(view.error, error) &&
+      HomeFailure.of(view.issue).namesCause;
 
   /// Without a subscription there was nothing to connect to, which is what the
   /// screen says instead.

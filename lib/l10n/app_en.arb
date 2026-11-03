@@ -3160,7 +3160,7 @@
   "homeFailureServerTitle": "Server is not responding",
   "homeFailureServerBody": "Try another location or «Обход глушилок», which works on mobile internet.",
   "homeFailureNoServersTitle": "No servers available",
-  "homeFailureNoServersBody": "This location has no servers left. Choose another one.",
+  "homeFailureNoServersBody": "This location has no servers to connect to. Choose another one.",
   "homeFailureOtherTitle": "Couldn't connect",
   "homeFailureOtherBody": "Try again or choose another location.",
   "homeChangeLocation": "Change location",

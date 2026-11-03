@@ -985,7 +985,7 @@
   "homeFailureServerTitle": "伺服器沒有回應",
   "homeFailureServerBody": "請嘗試其他位置或「Обход глушилок」，它可在行動網路下使用。",
   "homeFailureNoServersTitle": "沒有可用的伺服器",
-  "homeFailureNoServersBody": "此位置已沒有伺服器，請選擇其他位置。",
+  "homeFailureNoServersBody": "此位置沒有可連線的伺服器，請選擇其他位置。",
   "homeFailureOtherTitle": "無法連線",
   "homeFailureOtherBody": "請重試或選擇其他位置。",
   "homeChangeLocation": "更換位置",

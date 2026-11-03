@@ -33,9 +33,10 @@ upstream pages kept for merging. They are not reachable in this build.
 - A session falling from connected to connecting reads as a reconnect. No platform emits that
   today on a network change: Android keeps its tunnel up and reports nothing, and the iOS tunnel
   never sets `reasserting`. So after a network change the screen stays connected.
-- A failed attempt replaces the toggle and the cards with an error screen, with no toast. Its text
-  follows the coordinator's issue: servers that did not answer the check, a selection with no
-  servers, or any other failure. Retry connects again. Change location opens Locations, and the
+- A failed attempt replaces the toggle and the cards with an error screen. Its text follows the
+  coordinator's issue: servers that did not answer the check, a selection with no servers, or any
+  other failure. Only the generic text keeps the toast, which names the specific cause. Retry
+  connects again. Change location opens Locations, and the
   choice connects at once, even when it is the same location. Contact support opens the panel's
   `support-url` and is absent without one. A cancelled attempt or a missing VPN consent shows no
   error screen, and the next connection takes it away.

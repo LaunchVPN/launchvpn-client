@@ -58,12 +58,19 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  /// The panel's link was checked to be https on import. A device with nothing
+  /// to open it leaves the screen as it is.
   Future<void> _openSupport(String url) async {
-    if (!await launchUrl(
-      Uri.parse(url),
-      mode: LaunchMode.externalApplication,
-    )) {
-      ygLogger('open support link failed');
+    try {
+      if (await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      )) {
+        return;
+      }
+      ygLogger('open support link failed: nothing handled it');
+    } catch (error) {
+      ygLogger('open support link failed (${error.runtimeType})');
     }
   }
 
@@ -140,7 +147,7 @@ class _HomePageState extends State<HomePage> {
     _FailureActions(
       onRetry: _toggle,
       onChangeLocation: _openLocations,
-      onContactSupport: switch (state.supportUrl) {
+      onContactSupport: switch (state.subscription?.supportUrl) {
         final url? => () => _openSupport(url),
         null => null,
       },

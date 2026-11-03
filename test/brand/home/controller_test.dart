@@ -221,7 +221,8 @@ void main() {
       final expected = {
         ConnectionResolutionFailure.insufficientHealthyServers:
             HomeFailure.serverSilent,
-        ConnectionResolutionFailure.probeFailed: HomeFailure.serverSilent,
+        ConnectionResolutionFailure.probeFailed: HomeFailure.other,
+        ConnectionResolutionFailure.finalExitUnavailable: HomeFailure.other,
         ConnectionResolutionFailure.selectionUnavailable: HomeFailure.noServers,
         ConnectionResolutionFailure.insufficientCandidates:
             HomeFailure.noServers,
@@ -240,13 +241,42 @@ void main() {
 
     test('the error screen explains its own error, not an older one', () async {
       await addSubscription();
-      prepareFailure = () async => throw const ConnectionHostException('x');
+      prepareFailure = () async => throw const ConnectionResolutionException(
+        ConnectionResolutionFailure.insufficientHealthyServers,
+      );
 
       await controller.toggle(run, explain: _explainNever);
       await settle();
 
       expect(controller.state.explains(failures.single), isTrue);
       expect(controller.state.explains(StateError('other')), isFalse);
+    });
+
+    test('a generic failure keeps the toast that names its cause', () async {
+      await addSubscription();
+      prepareFailure = () async => throw const ConnectionHostException('x');
+
+      await controller.toggle(run, explain: _explainNever);
+      await settle();
+
+      expect(controller.state.failure, HomeFailure.other);
+      expect(controller.state.explains(failures.single), isFalse);
+    });
+
+    test('a refused VPN permission is not a failure', () async {
+      await addSubscription();
+
+      coordinator.state.value = ConnectionView(
+        phase: ConnectionPhase.failed,
+        issue: 'permissionRequired',
+        permission: PlatformPermissionResult(
+          kind: PlatformPermissionKind.androidVpn,
+          state: PlatformPermissionState.denied,
+        ),
+      );
+
+      expect(controller.state.failure, isNull);
+      expect(controller.state.status, HomeStatus.off);
     });
 
     test('a cancelled attempt is not a failure', () async {
@@ -561,6 +591,9 @@ void main() {
       status = VpnStatus.connected;
       start.complete(HostConnection(VpnStatus.connected, runtime: runtime));
       await selecting;
+      await settle();
+
+      expect(controller.state.status, HomeStatus.connected);
     });
 
     test('cannot change while a connection is in progress', () async {
