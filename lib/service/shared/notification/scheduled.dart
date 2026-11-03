@@ -54,6 +54,7 @@ final class SystemNotifications implements ScheduledNotifications {
       >();
 
   // The plugin resolves only the running platform's side; others are null.
+  // Desktop builds, kept for upstream merges, are not offered reminders.
   @override
   Future<bool> permitted() async {
     if (_android case final android?) {
