@@ -164,6 +164,12 @@ class HomeState {
 
   late final LocationList locations = LocationList.from(catalog);
 
+  /// Whether the stored selection already names [location]. An automatic one
+  /// stands for the first location.
+  bool stores(Location location) => selection?.kind == SelectionKind.server
+      ? selection!.id == location.id
+      : location.id == locations.first?.id;
+
   /// The location the next connection uses. A connection that was starting
   /// during a refresh can leave the selection on a row the list has replaced.
   Location? get selectedLocation {
@@ -323,8 +329,12 @@ class HomeController extends PageCubit<HomeState> {
     required VpnPermissionExplanation explain,
   }) async {
     final retry = state.status == HomeStatus.failed;
-    if (state.canChangeConnection &&
-        location.id != state.selectedLocation?.id) {
+    // A retry compares with what is stored: a fixed choice whose row is gone
+    // shows the first location without storing it.
+    final unchanged = retry
+        ? state.stores(location)
+        : location.id == state.selectedLocation?.id;
+    if (state.canChangeConnection && !unchanged) {
       final request = _choiceRequest;
       final selection = ServerSelection.server(location.id);
       emit(state.copyWith(selection: selection));

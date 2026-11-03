@@ -596,6 +596,41 @@ void main() {
       expect(controller.state.status, HomeStatus.connected);
     });
 
+    test(
+      'after a failure, the shown location replaces a missing one',
+      () async {
+        await db.connectionConfigDao.commit(
+          configurationJson: ConnectionConfiguration(
+            connection: ConnectionSettings(
+              selection: const ServerSelection.server(99999),
+            ),
+          ).encode(),
+        );
+        await settle();
+        expect(controller.state.location?.id, fastest);
+        prepareFailure = () async => throw const ConnectionResolutionException(
+          ConnectionResolutionFailure.selectionUnavailable,
+        );
+        await controller.toggle(run, explain: _explainNever);
+        await settle();
+        expect(controller.state.status, HomeStatus.failed);
+        prepareFailure = () async {};
+
+        final selecting = controller.selectLocation(
+          controller.state.locations.withId(fastest)!,
+          run,
+          explain: _explainNever,
+        );
+        await settle();
+        expect((await stored()).id, fastest);
+        expect(controller.state.status, HomeStatus.connecting);
+
+        status = VpnStatus.connected;
+        start.complete(HostConnection(VpnStatus.connected, runtime: runtime));
+        await selecting;
+      },
+    );
+
     test('cannot change while a connection is in progress', () async {
       await connectFully(
         whileConnecting: () async {
