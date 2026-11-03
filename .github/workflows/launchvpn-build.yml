@@ -75,7 +75,9 @@ jobs:
         run: |
           flutter gen-l10n
           dart run build_runner build
-          dart run tool/ffigen.dart
+
+      - name: Generate FFI bindings
+        uses: ./.github/actions/generate-ffi
 
       - name: Verify generated sources
         run: git diff --exit-code
@@ -164,6 +166,7 @@ jobs:
         with:
           ref: ${{ env.LIBXRAY_REF }}
           system: android
+          toolchain: ndk-${{ steps.ndk.outputs.ndk-full-version }}
 
       - name: Setup Flutter
         uses: ./launchvpn-client/.github/actions/setup-flutter-cached

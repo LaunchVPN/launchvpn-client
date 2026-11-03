@@ -10,12 +10,15 @@ inputs:
   system:
     description: android or ios
     required: true
+  toolchain:
+    description: Version of the compiler toolchain the caller installed, such as the NDK
+    default: runner
 
 runs:
   using: composite
   steps:
-    # The workflow in the key covers the NDK version. The build also downloads
-    # Geodata and uses the runner's Xcode, so the week keeps both recent.
+    # The build also downloads Geodata and uses the runner's Xcode, so the week
+    # in the key keeps both recent.
     - name: Read the current week
       id: week
       shell: bash
@@ -28,7 +31,7 @@ runs:
           launchvpn-client/android/app/libs
           launchvpn-client/swift/all/LibXray.xcframework
           launchvpn-client/assets/dat
-        key: libxray-${{ inputs.system }}-${{ inputs.ref }}-${{ hashFiles('launchvpn-client/build_scripts/**/*.py', 'launchvpn-client/.github/workflows/launchvpn-build.yml', 'launchvpn-client/.github/actions/build-libxray/action.yml') }}-${{ steps.week.outputs.value }}
+        key: libxray-${{ inputs.system }}-${{ inputs.ref }}-${{ inputs.toolchain }}-${{ hashFiles('launchvpn-client/build_scripts/**/*.py', 'launchvpn-client/.github/actions/build-libxray/action.yml') }}-${{ steps.week.outputs.value }}
 
     - if: steps.cache.outputs.cache-hit != 'true'
       uses: actions/checkout@v7

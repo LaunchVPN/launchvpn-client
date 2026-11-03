@@ -1,10 +1,11 @@
 name: Generate FFI bindings
 description: Generate the ignored FFI bindings, or restore them when their inputs are unchanged
 
-# The validate job always generates them, so a bad cached file cannot hide there.
+# The key covers every input of the generator, so a cached file equals a fresh one.
 inputs:
   app-path:
     description: Directory of the Flutter App inside the workspace
+    default: .
 
 runs:
   using: composite
