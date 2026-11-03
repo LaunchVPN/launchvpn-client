@@ -32,7 +32,7 @@ final class ConnectionPermissions {
   Future<void> connect({required VpnPermissionExplanation explain}) async {
     final view = _coordinator.state.value;
     if (view.issue == 'permissionRequired' && view.permission != null) {
-      if (!await _explained(explain)) return;
+      if (!await _explainOnce(explain)) return;
       final vpn = await _requestVpn();
       if (vpn.state == PlatformPermissionState.granted) {
         await _askForNotifications();
@@ -41,7 +41,9 @@ final class ConnectionPermissions {
     await _coordinator.connect();
   }
 
-  Future<bool> _explained(VpnPermissionExplanation explain) async {
+  /// Shows [explain] until the person once chooses to go on, and answers
+  /// whether the system prompt may follow.
+  Future<bool> _explainOnce(VpnPermissionExplanation explain) async {
     final preferences = PreferencesKey();
     if (await preferences.readVpnPermissionExplained()) return true;
     if (!await explain()) return false;

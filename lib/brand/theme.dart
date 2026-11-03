@@ -15,6 +15,10 @@ abstract final class BrandColors {
   static const muted = Color(0xFFA09CA9);
   static const accent = Color(0xFF9C5EEF);
   static const accentSoft = Color(0xFF3B1B62);
+
+  /// The tinted circle behind an icon and its outline.
+  static const accentBadge = Color(0x249C5EEF);
+  static const accentBadgeLine = Color(0x669C5EEF);
   static const accentInk = Color(0xFFFFFFFF);
   static const danger = Color(0xFFF14D4C);
   static const warning = Color(0xFFF5AE39);
@@ -246,20 +250,19 @@ abstract final class BrandTheme {
 
   /// The mockup's full-width buttons: the main action and the quiet one below.
   static final primaryButton = FilledButton.styleFrom(
-    minimumSize: const Size.fromHeight(52),
     backgroundColor: BrandColors.accent,
     foregroundColor: BrandColors.accentInk,
-    textStyle: BrandText.cardTitle,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(BrandRadii.md)),
-    ),
-  );
+  ).merge(_wideButton);
   static final quietButton = TextButton.styleFrom(
-    minimumSize: const Size.fromHeight(52),
     foregroundColor: BrandColors.ink,
-    textStyle: BrandText.cardTitle,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(BrandRadii.md)),
+  ).merge(_wideButton);
+  static final _wideButton = ButtonStyle(
+    minimumSize: const WidgetStatePropertyAll(Size.fromHeight(52)),
+    textStyle: const WidgetStatePropertyAll(BrandText.cardTitle),
+    shape: const WidgetStatePropertyAll(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(BrandRadii.md)),
+      ),
     ),
   );
 

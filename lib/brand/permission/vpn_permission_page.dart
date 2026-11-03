@@ -4,7 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 
-/// Explains the system VPN prompt before it appears, as the «Вход» mockup has it.
+/// Explains the system VPN prompt before it appears, as the mockup's
+/// «Состояние — разрешение VPN» frame has it.
 class VpnPermissionPage extends StatelessWidget {
   const VpnPermissionPage({super.key});
 
@@ -77,8 +78,8 @@ class _Hero extends StatelessWidget {
         height: 88,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: BrandColors.accent.withValues(alpha: 0.14),
-          border: Border.all(color: BrandColors.accent.withValues(alpha: 0.4)),
+          color: BrandColors.accentBadge,
+          border: Border.all(color: BrandColors.accentBadgeLine),
         ),
         child: const Icon(
           LucideIcons.shieldCheck,
