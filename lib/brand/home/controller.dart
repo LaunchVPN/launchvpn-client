@@ -326,7 +326,11 @@ class HomeController extends PageCubit<HomeState> {
   }
 
   /// Connects from off, cancels a connection in progress, otherwise disconnects.
-  Future<void> toggle(ConnectionActionRunner run) async {
+  /// A connection without VPN permission may first [explain] the system prompt.
+  Future<void> toggle(
+    ConnectionActionRunner run, {
+    required VpnPermissionExplanation explain,
+  }) async {
     if (!state.canToggle) return;
     switch (state.status) {
       // Only this screen's own command is known to be cancellable. Whatever
@@ -334,7 +338,11 @@ class HomeController extends PageCubit<HomeState> {
       case HomeStatus.connecting when state.request == HomeRequest.connect:
         coordinator.cancel();
       case HomeStatus.off || HomeStatus.failed:
-        await _perform(HomeRequest.connect, run, _permissions.connect);
+        await _perform(
+          HomeRequest.connect,
+          run,
+          () => _permissions.connect(explain: explain),
+        );
       case HomeStatus.disconnecting:
         break;
       default:

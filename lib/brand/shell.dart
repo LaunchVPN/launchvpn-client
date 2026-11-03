@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:onexray/brand/permission/vpn_permission_page.dart';
 import 'package:onexray/brand/router.dart';
 import 'package:onexray/brand/subscription_link_flow.dart';
 import 'package:onexray/core/tools/logger.dart';
@@ -108,7 +109,9 @@ class _BrandShellState extends State<BrandShell> {
     widget.navigationShell.goBranch(BrandRoutes.homeBranch);
     final coordinator = ConnectionCoordinator.instance;
     final command = switch (action) {
-      ShortCutAction.startVpn => ConnectionPermissions(coordinator).connect,
+      ShortCutAction.startVpn => () => ConnectionPermissions(
+        coordinator,
+      ).connect(explain: () => VpnPermissionPage.show(context)),
       ShortCutAction.stopVpn => coordinator.disconnect,
       _ => null,
     };

@@ -15,6 +15,10 @@ abstract final class BrandColors {
   static const muted = Color(0xFFA09CA9);
   static const accent = Color(0xFF9C5EEF);
   static const accentSoft = Color(0xFF3B1B62);
+
+  /// The tinted circle behind an icon and its outline.
+  static const accentBadge = Color(0x249C5EEF);
+  static const accentBadgeLine = Color(0x669C5EEF);
   static const accentInk = Color(0xFFFFFFFF);
   static const danger = Color(0xFFF14D4C);
   static const warning = Color(0xFFF5AE39);
@@ -74,6 +78,7 @@ abstract final class BrandText {
   static final timer = hint.copyWith(
     fontFeatures: const [FontFeature.tabularFigures()],
   );
+  static final body = hint.copyWith(color: BrandColors.ink);
   static const cardTitle = TextStyle(
     fontFamily: _body,
     fontWeight: FontWeight.w600,
@@ -242,6 +247,24 @@ abstract final class BrandTheme {
       textTheme: base.textTheme.copyWith(family: BrandText._body),
     );
   }
+
+  /// The mockup's full-width buttons: the main action and the quiet one below.
+  static final primaryButton = FilledButton.styleFrom(
+    backgroundColor: BrandColors.accent,
+    foregroundColor: BrandColors.accentInk,
+  ).merge(_wideButton);
+  static final quietButton = TextButton.styleFrom(
+    foregroundColor: BrandColors.ink,
+  ).merge(_wideButton);
+  static final _wideButton = ButtonStyle(
+    minimumSize: const WidgetStatePropertyAll(Size.fromHeight(52)),
+    textStyle: const WidgetStatePropertyAll(BrandText.cardTitle),
+    shape: const WidgetStatePropertyAll(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(BrandRadii.md)),
+      ),
+    ),
+  );
 
   static const statusBar = SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,

@@ -1000,5 +1000,10 @@
   "settingsConnectOnLaunch": "Подключать при запуске",
   "settingsPresetSmartHint": "Сайты, которым VPN не нужен, открываются напрямую",
   "settingsPresetAllVpnHint": "Весь трафик идёт через сервер",
-  "settingsPresetFootnote": "Режим можно сменить и на главном экране."
+  "settingsPresetFootnote": "Режим можно сменить и на главном экране.",
+  "vpnPermissionTitle": "Разрешите VPN",
+  "vpnPermissionBody": "Система попросит разрешение на VPN. Без него приложение не сможет защищать ваш трафик.",
+  "vpnPermissionNoLogs": "Без логов посещённых сайтов",
+  "vpnPermissionOneTap": "Отключается одной кнопкой",
+  "vpnPermissionNotNow": "Не сейчас"
 }

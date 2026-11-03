@@ -41,6 +41,14 @@ class PreferencesKey {
     await _prefs.setBool(_firstRun, value);
   }
 
+  static const _vpnPermissionExplained = "${_namespace}vpnPermissionExplained";
+
+  Future<bool> readVpnPermissionExplained() async =>
+      await _prefs.getBool(_vpnPermissionExplained) ?? false;
+
+  Future<void> saveVpnPermissionExplained() =>
+      _prefs.setBool(_vpnPermissionExplained, true);
+
   static const _appUpdateLastCheckTimestamp =
       "${_namespace}appUpdateLastCheckTimestamp";
 

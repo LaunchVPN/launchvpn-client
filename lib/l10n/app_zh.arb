@@ -1000,5 +1000,10 @@
   "settingsConnectOnLaunch": "启动时连接",
   "settingsPresetSmartHint": "无需 VPN 的网站直接打开",
   "settingsPresetAllVpnHint": "所有流量都通过服务器",
-  "settingsPresetFootnote": "也可以在主屏幕上更改模式。"
+  "settingsPresetFootnote": "也可以在主屏幕上更改模式。",
+  "vpnPermissionTitle": "允许 VPN",
+  "vpnPermissionBody": "系统会请求 VPN 权限。没有它，应用无法保护你的流量。",
+  "vpnPermissionNoLogs": "不记录你访问的网站",
+  "vpnPermissionOneTap": "一键即可关闭",
+  "vpnPermissionNotNow": "以后再说"
 }

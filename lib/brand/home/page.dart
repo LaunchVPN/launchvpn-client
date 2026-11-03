@@ -9,6 +9,7 @@ import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/toggle.dart';
 import 'package:onexray/brand/locations/page.dart';
 import 'package:onexray/brand/mark.dart';
+import 'package:onexray/brand/permission/vpn_permission_page.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/db/database/constants.dart';
@@ -47,7 +48,8 @@ class _HomePageState extends State<HomePage> {
     await runConnectionAction(context, _controller.coordinator, action);
   }
 
-  Future<void> _toggle() => _controller.toggle(_run);
+  Future<void> _toggle() =>
+      _controller.toggle(_run, explain: () => VpnPermissionPage.show(context));
 
   // Above the tab bar, as the mockup has it.
   Future<void> _openLocations() async {
