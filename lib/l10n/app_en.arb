@@ -3165,6 +3165,15 @@
   "homeFailureOtherBody": "Try again or choose another location.",
   "homeChangeLocation": "Change location",
   "homeContactSupport": "Contact support",
+  "homeUpdateAvailable": "Version {version} is available",
+  "@homeUpdateAvailable": {
+    "placeholders": {"version": {"type": "String"}}
+  },
+  "homeUpdateCurrent": "Current version: {version}",
+  "@homeUpdateCurrent": {
+    "placeholders": {"version": {"type": "String"}}
+  },
+  "homeUpdateAction": "Update",
   "homeNoSubscription": "Open your subscription link from the bot or the website",
   "homeDaysLeft": "{days, plural, one {{days} day} other {{days} days}}",
   "@homeDaysLeft": {

@@ -52,6 +52,13 @@ upstream pages kept for merging. They are not reachable in this build.
   [provider presets](xray-configuration.md#provider-presets).
 - When the panel sends an announcement, Home shows it in a card below the presets until the user
   closes it. See [panel info](subscriptions-and-sharing.md#panel-info).
+- An APK build, made with `--dart-define=LAUNCHVPN_DISTRIBUTION=apk`, asks GitHub for the latest
+  release at every launch, once the launch connection attempt ends. A newer version shows a card
+  below the header with that version and the installed one, and Update opens the release page in
+  the browser. The toggle
+  then centers between the card and the location card, as the mockup's APK frame has it. Every
+  other build, iOS and local runs included, is a store build: it leaves updates to the store,
+  never asks GitHub and shows no card.
 - Home's location card opens Locations, above the tabs. `LocationList` reads the panel's groups in
   panel order: names starting with `AUTO |` go under Automatic and everything else, services
   included, under Countries and services. The flag emoji becomes an image and is removed from the

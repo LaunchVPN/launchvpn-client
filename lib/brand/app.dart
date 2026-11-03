@@ -18,7 +18,7 @@ class BrandApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => BlocProvider(
-    // Services read AppEventBus.instance, and no brand widget selects from it.
+    // Services read AppEventBus.instance. Home selects the newer release.
     lazy: false,
     create: (_) => AppEventBus(),
     child: MaterialApp.router(

@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/toggle.dart';
+import 'package:onexray/brand/home/update_banner.dart';
 import 'package:onexray/brand/locations/page.dart';
 import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/permission/vpn_permission_page.dart';
@@ -14,17 +15,28 @@ import 'package:onexray/brand/state_hero.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/db/database/constants.dart';
+import 'package:onexray/core/distribution.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/locations.dart';
+import 'package:onexray/service/settings/app_update/service.dart';
+import 'package:onexray/service/shared/event_bus/service.dart';
+import 'package:onexray/service/shared/event_bus/state.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.controller});
+  const HomePage({
+    super.key,
+    required this.controller,
+    this.distribution = AppDistribution.current,
+  });
 
   final HomeController controller;
+
+  /// Only an APK build offers a newer release, since a store updates the rest.
+  final AppDistribution distribution;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -37,6 +49,13 @@ class _HomePageState extends State<HomePage> {
 
   /// The same plus a four-line announcement and the least space above the cards.
   static const _contentWithAnnouncementHeight = 528.0;
+
+  /// The update banner and the space above it.
+  static const _bannerHeight = 92.0;
+
+  /// Home with the banner, which the mockup's APK frame centers the toggle
+  /// below, between the banner and the cards.
+  static const _contentWithBannerHeight = 590.0;
   static const _minToggleGap = 24.0;
 
   HomeController get _controller => widget.controller;
@@ -58,19 +77,14 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  /// The panel's link was checked to be https on import. A device with nothing
-  /// to open it leaves the screen as it is.
-  Future<void> _openSupport(String url) async {
+  /// Opens [uri] outside the App. A device with nothing to open it leaves the
+  /// screen as it is.
+  Future<void> _openLink(Uri uri, String name) async {
     try {
-      if (await launchUrl(
-        Uri.parse(url),
-        mode: LaunchMode.externalApplication,
-      )) {
-        return;
-      }
-      ygLogger('open support link failed: nothing handled it');
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+      ygLogger('open $name link failed: nothing handled it');
     } catch (error) {
-      ygLogger('open support link failed (${error.runtimeType})');
+      ygLogger('open $name link failed (${error.runtimeType})');
     }
   }
 
@@ -91,13 +105,21 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Depends only on the height, so a status or an announcement never moves the
-  /// toggle. It centers as in the mockup, higher only where an announcement
-  /// would not fit otherwise.
-  double _toggleGap(double height) => max(
-    _minToggleGap,
-    min((height - _contentHeight) / 2, height - _contentWithAnnouncementHeight),
-  );
+  /// Depends only on the height and the banner, so a status or an announcement
+  /// never moves the toggle. It centers as in the mockup, higher only where an
+  /// announcement would not fit otherwise.
+  double _toggleGap(double height, {required bool banner}) {
+    final (content, withAnnouncement) = banner
+        ? (
+            _contentWithBannerHeight,
+            _contentWithAnnouncementHeight + _bannerHeight,
+          )
+        : (_contentHeight, _contentWithAnnouncementHeight);
+    return max(
+      _minToggleGap,
+      min((height - content) / 2, height - withAnnouncement),
+    );
+  }
 
   @override
   Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
@@ -107,32 +129,56 @@ class _HomePageState extends State<HomePage> {
         bottom: false,
         child: LayoutBuilder(
           builder: (context, constraints) =>
-              BlocBuilder<HomeController, HomeState>(
-                bloc: _controller,
-                builder: (context, state) => CustomScrollView(
-                  slivers: [
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          BrandSpacing.page,
-                          8,
-                          BrandSpacing.page,
-                          20,
-                        ),
-                        child: Column(
-                          children: [
-                            _Header(daysLeft: state.daysLeft(DateTime.now())),
-                            if (state.failure case final failure?)
-                              ..._failureContent(state, failure)
-                            else
-                              ..._connectionContent(state, constraints),
-                          ],
-                        ),
+              BlocSelector<AppEventBus, AppEventBusState, AppUpdateInfo?>(
+                selector: (bus) => widget.distribution == AppDistribution.apk
+                    ? bus.appUpdateInfo
+                    : null,
+                builder: (context, update) =>
+                    BlocBuilder<HomeController, HomeState>(
+                      bloc: _controller,
+                      builder: (context, state) => CustomScrollView(
+                        slivers: [
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                BrandSpacing.page,
+                                8,
+                                BrandSpacing.page,
+                                20,
+                              ),
+                              child: Column(
+                                children: [
+                                  _Header(
+                                    daysLeft: state.daysLeft(DateTime.now()),
+                                  ),
+                                  if (update != null) ...[
+                                    const SizedBox(height: 20),
+                                    UpdateBanner(
+                                      update: update,
+                                      onUpdate: () => _openLink(
+                                        update.releaseUri,
+                                        'release',
+                                      ),
+                                    ),
+                                  ],
+                                  if (state.failure case final failure?)
+                                    ..._failureContent(state, failure)
+                                  else
+                                    ..._connectionContent(
+                                      state,
+                                      _toggleGap(
+                                        constraints.maxHeight,
+                                        banner: update != null,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
               ),
         ),
       ),
@@ -148,17 +194,14 @@ class _HomePageState extends State<HomePage> {
       onRetry: _toggle,
       onChangeLocation: _openLocations,
       onContactSupport: switch (state.subscription?.supportUrl) {
-        final url? => () => _openSupport(url),
+        final url? => () => _openLink(Uri.parse(url), 'support'),
         null => null,
       },
     ),
   ];
 
-  List<Widget> _connectionContent(
-    HomeState state,
-    BoxConstraints constraints,
-  ) => [
-    SizedBox(height: _toggleGap(constraints.maxHeight)),
+  List<Widget> _connectionContent(HomeState state, double toggleGap) => [
+    SizedBox(height: toggleGap),
     _Hero(state: state, onToggle: _toggle),
     const SizedBox(height: 24),
     const Spacer(),
