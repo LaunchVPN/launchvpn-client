@@ -483,7 +483,8 @@ class ConnectionCoordinator with WidgetsBindingObserver {
 
   /// Stores the change before a running session restarts with it, so a failed
   /// or cancelled reconnect does not take back the user's choice. A change
-  /// that does not reach the running session only stores.
+  /// that does not reach the running session only stores. A newer change
+  /// stored in between fails the restart rather than being overwritten.
   Future<void> applyChange(
     ConnectionConfiguration Function(ConnectionConfiguration current) change, {
     bool restart = true,
@@ -495,7 +496,7 @@ class ConnectionCoordinator with WidgetsBindingObserver {
       affectsRuntime: false,
       expectedConfiguration: current.encode(),
     );
-    if (restart) await apply(next);
+    if (restart) await apply(next, expectedConfiguration: next.encode());
   }
 
   /// UI has already confirmed a disruptive change before calling this method.
