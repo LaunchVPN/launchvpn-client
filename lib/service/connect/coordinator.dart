@@ -471,29 +471,31 @@ class ConnectionCoordinator with WidgetsBindingObserver {
     await apply(next, connect: true);
   }
 
-  Future<void> applyTrafficMode(TrafficMode mode) =>
-      _storeThenRestart({'trafficMode': mode.name});
-
-  Future<void> applySelection(ServerSelection selection) =>
-      _storeThenRestart({'selection': selection.toJson()});
-
-  /// Stores the change before a running session restarts with it, so a failed
-  /// or cancelled reconnect does not take back the user's choice.
-  Future<void> _storeThenRestart(Map<String, dynamic> change) async {
-    final current = await configuration;
-    final next = ConnectionConfiguration(
+  Future<void> applySelection(ServerSelection selection) => applyChange(
+    (current) => ConnectionConfiguration(
       connection: ConnectionSettings.fromJson({
         ...current.connection.toJson(),
-        ...change,
+        'selection': selection.toJson(),
       }),
       policy: current.policy,
-    );
+    ),
+  );
+
+  /// Stores the change before a running session restarts with it, so a failed
+  /// or cancelled reconnect does not take back the user's choice. A change
+  /// that does not reach the running session only stores.
+  Future<void> applyChange(
+    ConnectionConfiguration Function(ConnectionConfiguration current) change, {
+    bool restart = true,
+  }) async {
+    final current = await configuration;
+    final next = change(current);
     await apply(
       next,
       affectsRuntime: false,
       expectedConfiguration: current.encode(),
     );
-    await apply(next);
+    if (restart) await apply(next);
   }
 
   /// UI has already confirmed a disruptive change before calling this method.
