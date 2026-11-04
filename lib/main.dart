@@ -2,9 +2,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:onexray/core/pigeon/flutter_api.dart';
 import 'package:onexray/core/pigeon/host_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
+import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/core/tools/platform.dart';
 import 'package:onexray/brand/app.dart';
 import 'package:onexray/service/launch/app_startup.dart';
+import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/menu/short_cut/service.dart';
 import 'package:onexray/service/shared/menu/settings/service.dart';
 import 'package:onexray/service/shared/menu/window/service.dart';
@@ -32,7 +34,15 @@ Future<void> main(List<String> _) async {
   }
 
   MacOSSettingsMenuService().initialize();
-  runApp(const BrandApp());
+  // The saved language, read before the first frame so it shows from the start.
+  final eventBus = AppEventBus();
+  try {
+    await eventBus.asyncInitTheme();
+  } catch (error) {
+    // The App still opens, in the system's language.
+    ygLogger('read saved language failed (${error.runtimeType})');
+  }
+  runApp(BrandApp(eventBus: eventBus));
   // Hidden windows may not render frames. Keep visibility independent from
   // first-frame callbacks and preserve the existing hidden-start policy.
   await appStartup.onWindowReady();

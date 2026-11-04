@@ -25,7 +25,13 @@ upstream pages kept for merging. They are not reachable in this build.
 - Phone builds ask for neither the camera nor photos. Upstream's QR scanner and photo picker are
   gone. Its import page, kept for merging, reads QR codes from an image chosen in the system
   picker, and all platforms decode them in Dart.
-- The interface has one dark theme, `lib/brand/theme.dart`, and one language, Russian.
+- The interface has one dark theme, `lib/brand/theme.dart`, and two languages, Russian and
+  English. `BrandLanguage` maps upstream's saved `LanguageCode` to them: «Как в системе», the
+  default, gives Russian on a Russian system and English on any other, and upstream's other
+  languages, never offered, count as the system. `main` reads the saved choice before the first
+  frame. Text outside the screens, such as notifications and reminders, comes from
+  `appLocalizationsNoContext` in the same language, and the iOS Widget gets it too. Location names
+  come from the panel and are not translated.
   `BrandTheme.palette` also feeds upstream's Material and Shad themes, so shared dialogs and
   toasts match. Manrope and Unbounded are bundled with their licenses in `assets/fonts/`.
 - Home's toggle follows `ConnectionCoordinator`. A tap connects, cancels our own connection in
@@ -94,6 +100,9 @@ upstream pages kept for merging. They are not reachable in this build.
   notifications. Turning it on asks the system; once the system no longer asks, the App's page in
   the system settings opens, and the switch turns on when the person returns with notifications
   allowed. Turning it off removes pending reminders.
+- Language, under App, opens a screen above the tabs with «Как в системе», «Русский» and
+  «English». A tap applies at once on every screen, including the open one, and is saved. Pending
+  reminders are set again in the new language.
 - `BrandShell` owns service startup and retry, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published, but when the Android Tile or
   Widget lacks a permission or a saved configuration, it opens the App with the `startVpn` quick

@@ -1028,5 +1028,9 @@
   "renewalReminderThreeDays": "你的訂閱將在 3 天後到期",
   "renewalReminderTomorrow": "你的訂閱將在明天到期",
   "renewalReminderBody": "請續訂，以免 VPN 中斷。",
-  "notificationChannelReminders": "提醒"
+  "notificationChannelReminders": "提醒",
+  "settingsLanguage": "語言",
+  "settingsLanguageSystem": "跟隨系統",
+  "settingsLanguageNowRussian": "目前為俄語",
+  "settingsLanguageNowEnglish": "目前為英語"
 }

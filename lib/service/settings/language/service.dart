@@ -1,12 +1,10 @@
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/l10n/localizations/app_localizations_en.dart';
-import 'package:onexray/service/shared/event_bus/service.dart';
+import 'package:onexray/service/settings/language/brand_language.dart';
 
 AppLocalizations appLocalizationsNoContext() {
-  final eventBus = AppEventBus.instance;
-  final locale = eventBus.state.languageCode.locale;
   try {
-    return lookupAppLocalizations(locale);
+    return lookupAppLocalizations(BrandLanguage.current);
   } catch (_) {
     return AppLocalizationsEn();
   }

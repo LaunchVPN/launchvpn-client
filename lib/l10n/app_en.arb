@@ -3158,7 +3158,7 @@
   "homeStatusConnected": "Connected",
   "homeIpHidden": "IP hidden",
   "homeFailureServerTitle": "Server is not responding",
-  "homeFailureServerBody": "Try another location or «Обход глушилок», which works on mobile internet.",
+  "homeFailureServerBody": "Try another location or “Обход глушилок”, which works on mobile internet.",
   "homeFailureNoServersTitle": "No servers available",
   "homeFailureNoServersBody": "This location has no servers to connect to. Choose another one.",
   "homeFailureOtherTitle": "Couldn't connect",
@@ -3220,5 +3220,9 @@
   "renewalReminderThreeDays": "Your subscription ends in 3 days",
   "renewalReminderTomorrow": "Your subscription ends tomorrow",
   "renewalReminderBody": "Renew it to keep the VPN on.",
-  "notificationChannelReminders": "Reminders"
+  "notificationChannelReminders": "Reminders",
+  "settingsLanguage": "Language",
+  "settingsLanguageSystem": "Same as system",
+  "settingsLanguageNowRussian": "Currently Russian",
+  "settingsLanguageNowEnglish": "Currently English"
 }

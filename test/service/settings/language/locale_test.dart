@@ -184,15 +184,13 @@ void main() {
       await bus.asyncInitTheme();
       expect(bus.state.languageCode, LanguageCode.zh);
       expect(bus.state.themeCode.themeMode, ThemeMode.dark);
-      expect(
-        appLocalizationsNoContext().localeName,
-        isLinuxArm64 ? "en" : "zh",
-      );
+      // LaunchVPN offers no Chinese, so the choice counts as the system.
+      expect(appLocalizationsNoContext().localeName, "en");
 
       await bus.updateLanguageCode(LanguageCode.system);
       await bus.updateThemeCode(ThemeCode.system);
       binding.platformDispatcher.localeTestValue = const Locale("fa", "IR");
-      expect(appLocalizationsNoContext().localeName, "fa");
+      expect(appLocalizationsNoContext().localeName, "en");
       expect(bus.state.themeCode.themeMode, ThemeMode.system);
     },
   );
@@ -214,57 +212,6 @@ void main() {
     );
     expect(LanguageCode.system.textDirection, TextDirection.ltr);
   });
-
-  testWidgets(
-    "UI and background locales agree without rewriting language choices",
-    (tester) async {
-      SharedPreferencesAsyncPlatform.instance =
-          InMemorySharedPreferencesAsync.empty();
-      addTearDown(binding.platformDispatcher.clearLocaleTestValue);
-      addTearDown(binding.platformDispatcher.clearLocalesTestValue);
-      binding.platformDispatcher.localeTestValue = const Locale("zh", "TW");
-      binding.platformDispatcher.localesTestValue = const [Locale("zh", "TW")];
-      final bus = AppEventBus();
-      addTearDown(bus.close);
-      const probe = ValueKey('locale-probe');
-
-      for (final (language, requested) in const [
-        (LanguageCode.system, AppLocalePolicy.traditionalChinese),
-        (LanguageCode.zh, AppLocalePolicy.simplifiedChinese),
-        (LanguageCode.zhHant, AppLocalePolicy.traditionalChinese),
-        (LanguageCode.en, AppLocalePolicy.english),
-        (LanguageCode.ru, Locale("ru")),
-        (LanguageCode.fa, Locale("fa")),
-      ]) {
-        await bus.updateLanguageCode(language);
-        final expected = isLinuxArm64 && requested.languageCode == "zh"
-            ? AppLocalePolicy.english
-            : requested;
-        await tester.pumpWidget(
-          MaterialApp(
-            locale: language == LanguageCode.system ? null : language.locale,
-            localizationsDelegates: AppLocalePolicy.localizationsDelegates,
-            supportedLocales: AppLocalePolicy.normalizeSupportedLocales(
-              AppLocalizations.supportedLocales,
-            ),
-            localeResolutionCallback: AppLocalePolicy.resolve,
-            home: const SizedBox(key: probe),
-          ),
-        );
-        await tester.pumpAndSettle();
-        final context = tester.element(find.byKey(probe));
-        expect(Localizations.localeOf(context), expected);
-        expect(language.locale, expected);
-        expect(
-          AppLocalizations.of(context)!.localeName,
-          appLocalizationsNoContext().localeName,
-        );
-        expect(bus.state.languageCode, language);
-        expect(await PreferencesKey().readLanguageCode(), language.name);
-        expect(tester.takeException(), isNull);
-      }
-    },
-  );
 
   test(
     "approved latency labels accept measured and unavailable values",

@@ -1,17 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
-import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/constants/preferences.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/service/servers/subscription/user_info.dart';
+import 'package:onexray/service/settings/language/service.dart';
 import 'package:onexray/service/shared/notification/scheduled.dart';
 
 /// «Напоминать о продлении»: local notifications at noon three days and one
 /// day before the expiry date from the subscription headers. They follow the
 /// stored subscription, so a renewal moves them and no expiry removes them.
+/// They speak the App's language as of the last [update].
 final class RenewalReminders {
   RenewalReminders({
     required this._notifications,
@@ -98,10 +99,12 @@ final class RenewalReminders {
     for (final slot in _slots) {
       await _notifications.cancel(slot.id);
     }
+    final l = appLocalizationsNoContext();
+    // Android lists the channel in its settings even with no reminder set.
+    await _notifications.nameChannel(l.notificationChannelReminders);
     if (!await active) return;
     final expiresAt = _expiresAt(await _db.subscriptionDao.allRows);
     if (expiresAt == null) return;
-    final l = lookupAppLocalizations(const Locale(Brand.languageCode));
     final end = expiresAt.toLocal();
     final now = _clock();
     for (final (:id, :days, :title) in _slots) {

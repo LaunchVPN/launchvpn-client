@@ -23,6 +23,9 @@ import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
+import 'package:onexray/core/constants/preferences.dart';
+import 'package:onexray/service/shared/event_bus/enum.dart';
+import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/share/service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -91,7 +94,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // A relaunch: main reads the saved language before the first frame.
   Future<void> pumpRouter(WidgetTester tester) async {
+    final bus = AppEventBus();
+    await tester.runAsync(bus.asyncInitTheme);
     final links = StreamController<Uri>.broadcast(sync: true);
     final share = ShareService.forTesting(
       appLinks: links.stream,
@@ -109,11 +115,19 @@ void main() {
       openLink: (_, _) async {},
     );
     addTearDown(router.dispose);
-    await tester.pumpWidget(BrandApp(routerConfig: router));
+    await tester.pumpWidget(BrandApp(routerConfig: router, eventBus: bus));
     await settle(tester);
   }
 
-  Future<void> pumpApp(WidgetTester tester) async {
+  /// On a Russian phone unless [system] says otherwise.
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    Locale system = const Locale('ru'),
+  }) async {
+    tester.platformDispatcher
+      ..localeTestValue = system
+      ..localesTestValue = [system];
+    addTearDown(tester.platformDispatcher.clearAllTestValues);
     db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     notifications = FakeNotifications();
@@ -425,6 +439,93 @@ void main() {
       await openPresets(tester);
 
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('language', () {
+    test('the last tap wins over a save still running', () async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      // Closing it would dispose the App's services.
+      final bus = AppEventBus();
+      final settings = SettingsController(
+        reminders: RenewalReminders(
+          database: db,
+          notifications: FakeNotifications(),
+        ),
+      );
+      addTearDown(settings.close);
+
+      final english = settings.setLanguage(LanguageCode.en);
+      await settings.setLanguage(LanguageCode.system);
+      await english;
+
+      expect(bus.state.languageCode, LanguageCode.system);
+      expect(await PreferencesKey().readLanguageCode(), 'system');
+    });
+
+    testWidgets('an English phone gets English on Home and in Settings', (
+      tester,
+    ) async {
+      await pumpApp(tester, system: const Locale('en', 'US'));
+
+      expect(find.text('Not connected'), findsOneWidget);
+      expect(find.text('Smart'), findsOneWidget);
+
+      await openTab(tester, 1);
+      expect(find.text('CONNECTION'), findsOneWidget);
+      expect(find.text('Connect at launch'), findsOneWidget);
+      expect(find.text('Language'), findsOneWidget);
+      expect(find.text('Same as system'), findsOneWidget);
+    });
+
+    Tristate selected(WidgetTester tester, String label) => tester
+        .getSemantics(find.bySemanticsLabel(RegExp('^$label')))
+        .flagsCollection
+        .isSelected;
+
+    testWidgets('English applies at once and stays for the next launch', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await tester.runAsync(() async {
+        final row = (await db.subscriptionDao.allRows).single;
+        final expires = DateTime.now().add(const Duration(days: 30));
+        await db.subscriptionDao.updateRow(
+          row.copyWith(
+            expireTimestamp: Value(expires.millisecondsSinceEpoch ~/ 1000),
+          ),
+        );
+      });
+      await openTab(tester, 1);
+      expect(find.text('Как в системе'), findsOneWidget);
+
+      await tester.tap(find.text('Язык'));
+      await settle(tester);
+      expect(find.text('Сейчас русский'), findsOneWidget);
+      expect(selected(tester, 'Как в системе'), Tristate.isTrue);
+      expect(selected(tester, 'Русский'), Tristate.isFalse);
+      expect(selected(tester, 'English'), Tristate.isFalse);
+
+      await tester.tap(find.text('English'));
+      await settle(tester);
+      expect(find.text('Language'), findsOneWidget);
+      expect(find.text('Currently Russian'), findsOneWidget);
+      expect(selected(tester, 'English'), Tristate.isTrue);
+      // The reminders already set are rewritten in English.
+      expect(notifications.shown.map((r) => r.$2), [
+        'Your subscription ends in 3 days',
+        'Your subscription ends tomorrow',
+      ]);
+
+      await tester.tap(find.byIcon(LucideIcons.chevronLeft));
+      await settle(tester);
+      expect(find.text('Connect at launch'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpRouter(tester);
+      expect(find.text('Not connected'), findsOneWidget);
     });
   });
 }

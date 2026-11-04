@@ -66,8 +66,12 @@ void main() {
       calls.add(call);
       return null;
     });
+    // The App follows a Russian phone.
+    binding.platformDispatcher.localeTestValue = const Locale('ru');
+    AppEventBus();
     addTearDown(() {
       binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+      binding.platformDispatcher.clearLocaleTestValue();
       debugDefaultTargetPlatformOverride = previousTarget;
     });
 
@@ -84,6 +88,17 @@ void main() {
     final android = (call.arguments as Map)['platformSpecifics'] as Map;
     expect(android['channelId'], isNot(Brand.androidId));
     expect(android['channelName'], 'Напоминания');
+
+    await SystemNotifications().nameChannel('Reminders');
+    final renamed =
+        calls
+                .singleWhere(
+                  (call) => call.method == 'createNotificationChannel',
+                )
+                .arguments
+            as Map;
+    expect(renamed['id'], android['channelId']);
+    expect(renamed['name'], 'Reminders');
   });
 
   group('public notification entry behavior', () {
