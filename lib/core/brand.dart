@@ -16,10 +16,6 @@ abstract final class Brand {
 
   static const scheme = 'launchvpn';
 
-  /// The interface language until the language setting arrives. Notifications
-  /// the App sets for later speak it too.
-  static const languageCode = 'ru';
-
   /// Host of the deep link that adds a subscription.
   static const subscriptionLinkHost = 'sub';
 

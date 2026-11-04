@@ -13,8 +13,6 @@ import 'package:onexray/pages/shared/connection_action.dart';
 import 'package:onexray/service/connect/connection_permissions.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/manager.dart';
-import 'package:onexray/service/shared/apple_widget/service.dart';
-import 'package:onexray/service/shared/event_bus/enum.dart';
 import 'package:onexray/service/shared/failure.dart';
 import 'package:onexray/service/shared/menu/short_cut/service.dart';
 import 'package:onexray/service/shared/share/service.dart';
@@ -56,13 +54,7 @@ class _BrandShellState extends State<BrandShell> {
   }
 
   Future<void> _initializeServices() =>
-      (widget.initializeServices ?? _defaultInitialize)(context);
-
-  static Future<void> _defaultInitialize(BuildContext context) async {
-    await AppleWidgetService().setLanguage(LanguageCode.ru.name);
-    if (!context.mounted) return;
-    await ServiceManager.serviceInit(context);
-  }
+      (widget.initializeServices ?? ServiceManager.serviceInit)(context);
 
   void _attach() {
     if (_attached) return;

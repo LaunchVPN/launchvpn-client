@@ -23,6 +23,7 @@ import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
+import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/share/service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -91,7 +92,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // A relaunch: main reads the saved language before the first frame.
   Future<void> pumpRouter(WidgetTester tester) async {
+    final bus = AppEventBus();
+    await tester.runAsync(bus.asyncInitTheme);
     final links = StreamController<Uri>.broadcast(sync: true);
     final share = ShareService.forTesting(
       appLinks: links.stream,
@@ -109,11 +113,19 @@ void main() {
       openLink: (_, _) async {},
     );
     addTearDown(router.dispose);
-    await tester.pumpWidget(BrandApp(routerConfig: router));
+    await tester.pumpWidget(BrandApp(routerConfig: router, eventBus: bus));
     await settle(tester);
   }
 
-  Future<void> pumpApp(WidgetTester tester) async {
+  /// On a Russian phone unless [system] says otherwise.
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    Locale system = const Locale('ru'),
+  }) async {
+    tester.platformDispatcher
+      ..localeTestValue = system
+      ..localesTestValue = [system];
+    addTearDown(tester.platformDispatcher.clearAllTestValues);
     db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     notifications = FakeNotifications();

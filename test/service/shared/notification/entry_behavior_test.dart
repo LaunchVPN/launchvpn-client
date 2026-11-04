@@ -66,8 +66,12 @@ void main() {
       calls.add(call);
       return null;
     });
+    // The App follows a Russian phone.
+    binding.platformDispatcher.localeTestValue = const Locale('ru');
+    AppEventBus();
     addTearDown(() {
       binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+      binding.platformDispatcher.clearLocaleTestValue();
       debugDefaultTargetPlatformOverride = previousTarget;
     });
 

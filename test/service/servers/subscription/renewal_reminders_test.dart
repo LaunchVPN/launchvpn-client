@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
+import 'package:onexray/service/shared/event_bus/enum.dart';
+import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // ignore: depend_on_referenced_packages
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -20,14 +22,19 @@ void main() {
   late FakeNotifications notifications;
   late DateTime now;
   late RenewalReminders reminders;
+  late AppEventBus bus;
 
-  setUpAll(
-    () => SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.empty(),
-  );
+  setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+  });
 
   setUp(() async {
     await SharedPreferencesAsync().clear();
+    // Closing the bus would dispose the App's services.
+    bus = AppEventBus();
+    await bus.updateLanguageCode(LanguageCode.ru);
     db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     notifications = FakeNotifications();
@@ -63,6 +70,18 @@ void main() {
     expect(notifications.pending.values.map((r) => r.body).toSet(), {
       'Продлите её, чтобы VPN не отключился.',
     });
+  });
+
+  test('speak the language the App shows', () async {
+    await addSubscription(expires: DateTime(2026, 11, 20, 3));
+    await bus.updateLanguageCode(LanguageCode.en);
+
+    await reminders.update();
+
+    expect(notifications.shown.map((r) => r.$2), [
+      'Your subscription ends in 3 days',
+      'Your subscription ends tomorrow',
+    ]);
   });
 
   test('leaves out a reminder whose time has passed', () async {
@@ -162,7 +181,7 @@ void main() {
   });
 
   test('follow subscription loads and the return to the App', () async {
-    final binding = TestWidgetsFlutterBinding.ensureInitialized();
+    final binding = TestWidgetsFlutterBinding.instance;
     notifications.allowed = false;
     reminders.start();
     addTearDown(reminders.dispose);

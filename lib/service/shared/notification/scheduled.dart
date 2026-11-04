@@ -1,7 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter/widgets.dart' show Locale;
 import 'package:onexray/core/brand.dart';
-import 'package:onexray/l10n/localizations/app_localizations.dart';
+import 'package:onexray/service/settings/language/service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -85,8 +84,7 @@ final class SystemNotifications implements ScheduledNotifications {
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             '${Brand.androidId}.reminders',
-            lookupAppLocalizations(const Locale(Brand.languageCode))
-                .notificationChannelReminders,
+            appLocalizationsNoContext().notificationChannelReminders,
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,

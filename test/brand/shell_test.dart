@@ -48,8 +48,13 @@ void main() {
     },
   );
 
+  // On a Russian phone.
   Future<void> pumpApp(WidgetTester tester, GoRouter config) async {
     addTearDown(config.dispose);
+    tester.platformDispatcher
+      ..localeTestValue = const Locale('ru')
+      ..localesTestValue = const [Locale('ru')];
+    addTearDown(tester.platformDispatcher.clearAllTestValues);
     await tester.pumpWidget(BrandApp(routerConfig: config));
     if (ready == null) {
       await tester.pumpAndSettle();
