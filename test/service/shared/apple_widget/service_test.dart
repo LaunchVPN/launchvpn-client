@@ -149,7 +149,8 @@ void main() {
     addTearDown(binding.platformDispatcher.clearLocaleTestValue);
     await service.setLanguage('system');
     expect(actions, ['stopVpn']);
-    expect(languages, ['zh-Hant', 'ru']);
+    // Chinese is not offered, so it follows the English system.
+    expect(languages, ['en', 'ru']);
   });
 
   test(

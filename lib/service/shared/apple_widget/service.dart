@@ -6,8 +6,8 @@ import 'package:onexray/core/pigeon/flutter_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/core/tools/platform.dart';
-import 'package:onexray/l10n/localizations/app_localizations.dart';
-import 'package:onexray/service/settings/language/locale.dart';
+import 'package:onexray/service/settings/language/brand_language.dart';
+import 'package:onexray/service/shared/event_bus/enum.dart';
 import 'package:onexray/service/shared/menu/short_cut/service.dart';
 
 /// Foreground Apple intents hand off to the existing App connection actions.
@@ -104,14 +104,8 @@ final class AppleWidgetService with WidgetsBindingObserver {
   Future<void> setLanguage(String languageCode) async {
     if (!_enabled) return;
     try {
-      final code = languageCode == 'system'
-          ? AppLocalePolicy.resolve(
-              WidgetsBinding.instance.platformDispatcher.locale,
-              AppLocalePolicy.normalizeSupportedLocales(
-                AppLocalizations.supportedLocales,
-              ),
-            ).toLanguageTag()
-          : languageCode.replaceAll('_', '-');
+      final code = BrandLanguage.of(LanguageCode.fromString(languageCode))
+          .toLanguageTag();
       await _setLanguage(code);
     } catch (error, stack) {
       ygLogger('Apple widget language unavailable: $error\n$stack');
