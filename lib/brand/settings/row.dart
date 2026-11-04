@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/icon_tile.dart';
 import 'package:onexray/brand/theme.dart';
@@ -66,12 +67,53 @@ class SettingsSwitchRow extends StatelessWidget {
   }
 }
 
-class SettingsRow extends StatelessWidget {
-  const SettingsRow({
+/// A row that opens another screen, with the current [value] before the
+/// chevron.
+class SettingsLinkRow extends StatelessWidget {
+  const SettingsLinkRow({
     super.key,
     required this.icon,
     required this.title,
+    required this.value,
     required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+
+  /// Null while unknown.
+  final String? value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => SettingsRow(
+    icon: icon,
+    title: title,
+    value: value,
+    onTap: onTap,
+    trailing: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (value case final value?) ...[
+          Text(value, style: BrandText.caption),
+          const SizedBox(width: 12),
+        ],
+        const Icon(
+          LucideIcons.chevronRight,
+          size: 18,
+          color: BrandColors.muted,
+        ),
+      ],
+    ),
+  );
+}
+
+class SettingsRow extends StatelessWidget {
+  const SettingsRow({
+    super.key,
+    required this.title,
+    required this.onTap,
+    this.icon,
     this.subtitle,
     this.trailing,
     this.value,
@@ -79,7 +121,8 @@ class SettingsRow extends StatelessWidget {
     this.toggled,
   });
 
-  final IconData icon;
+  /// Left out where the mockup draws a plain list of choices.
+  final IconData? icon;
   final String title;
   final String? subtitle;
   final VoidCallback? onTap;
@@ -113,12 +156,14 @@ class SettingsRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                IconTile(
-                  icon: icon,
-                  color: BrandColors.ink,
-                  fill: BrandColors.surfaceRaised,
-                ),
-                const SizedBox(width: 12),
+                if (icon case final icon?) ...[
+                  IconTile(
+                    icon: icon,
+                    color: BrandColors.ink,
+                    fill: BrandColors.surfaceRaised,
+                  ),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

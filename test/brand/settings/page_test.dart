@@ -439,4 +439,70 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('language', () {
+    testWidgets('an English phone gets English on Home and in Settings', (
+      tester,
+    ) async {
+      await pumpApp(tester, system: const Locale('en', 'US'));
+
+      expect(find.text('Not connected'), findsOneWidget);
+      expect(find.text('Smart'), findsOneWidget);
+
+      await openTab(tester, 1);
+      expect(find.text('CONNECTION'), findsOneWidget);
+      expect(find.text('Connect at launch'), findsOneWidget);
+      expect(find.text('Language'), findsOneWidget);
+      expect(find.text('Same as system'), findsOneWidget);
+    });
+
+    Tristate selected(WidgetTester tester, String label) => tester
+        .getSemantics(find.bySemanticsLabel(RegExp('^$label')))
+        .flagsCollection
+        .isSelected;
+
+    testWidgets('English applies at once and stays for the next launch', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await tester.runAsync(() async {
+        final row = (await db.subscriptionDao.allRows).single;
+        final expires = DateTime.now().add(const Duration(days: 30));
+        await db.subscriptionDao.updateRow(
+          row.copyWith(
+            expireTimestamp: Value(expires.millisecondsSinceEpoch ~/ 1000),
+          ),
+        );
+      });
+      await openTab(tester, 1);
+      expect(find.text('Как в системе'), findsOneWidget);
+
+      await tester.tap(find.text('Язык'));
+      await settle(tester);
+      expect(find.text('Сейчас русский'), findsOneWidget);
+      expect(selected(tester, 'Как в системе'), Tristate.isTrue);
+      expect(selected(tester, 'Русский'), Tristate.isFalse);
+      expect(selected(tester, 'English'), Tristate.isFalse);
+
+      await tester.tap(find.text('English'));
+      await settle(tester);
+      expect(find.text('Language'), findsOneWidget);
+      expect(find.text('Currently Russian'), findsOneWidget);
+      expect(selected(tester, 'English'), Tristate.isTrue);
+      // The reminders already set are rewritten in English.
+      expect(notifications.shown.map((r) => r.$2), [
+        'Your subscription ends in 3 days',
+        'Your subscription ends tomorrow',
+      ]);
+
+      await tester.tap(find.byIcon(LucideIcons.chevronLeft));
+      await settle(tester);
+      expect(find.text('Connect at launch'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpRouter(tester);
+      expect(find.text('Not connected'), findsOneWidget);
+    });
+  });
 }

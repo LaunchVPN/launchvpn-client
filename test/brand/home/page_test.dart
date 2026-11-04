@@ -78,6 +78,7 @@ void main() {
     WidgetTester tester, {
     double scale = 1,
     AppDistribution distribution = AppDistribution.current,
+    Locale locale = const Locale('ru'),
   }) async {
     bus = AppEventBus();
     addTearDown(bus.close);
@@ -123,7 +124,7 @@ void main() {
     addTearDown(controller.close);
     await tester.pumpWidget(
       MaterialApp(
-        locale: const Locale('ru'),
+        locale: locale,
         theme: BrandTheme.material(),
         localizationsDelegates: AppLocalePolicy.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -1137,6 +1138,52 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Всё через VPN'), findsOneWidget);
+  });
+
+  group('in English', () {
+    const english = Locale('en');
+
+    testWidgets('without a subscription it says where to get one', (
+      tester,
+    ) async {
+      await pumpHome(tester, locale: english);
+
+      expect(find.text('Not connected'), findsOneWidget);
+      expect(
+        find.text('Open your subscription link from the bot or the website'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('counts the days left', (tester) async {
+      await pumpHome(tester, locale: english);
+      final expire = DateTime.now().add(const Duration(days: 46, hours: 1));
+      await addSubscription(
+        tester,
+        expire: expire.millisecondsSinceEpoch ~/ 1000,
+      );
+
+      expect(find.text('Tap to connect'), findsOneWidget);
+      expect(find.text('47 days'), findsOneWidget);
+    });
+
+    testWidgets('an ended subscription offers renewal', (tester) async {
+      await pumpHome(
+        tester,
+        locale: english,
+        distribution: AppDistribution.apk,
+      );
+      final past =
+          DateTime.now()
+              .subtract(const Duration(days: 1))
+              .millisecondsSinceEpoch ~/
+          1000;
+      await addSubscription(tester, expire: past);
+
+      expect(find.text('Your subscription has ended'), findsOneWidget);
+      expect(find.text('Renew'), findsOneWidget);
+      expect(find.text('Refresh status'), findsOneWidget);
+    });
   });
 }
 

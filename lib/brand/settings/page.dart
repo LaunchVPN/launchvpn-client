@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/settings/controller.dart';
+import 'package:onexray/brand/settings/language_page.dart';
 import 'package:onexray/brand/settings/preset_page.dart';
 import 'package:onexray/brand/settings/row.dart';
 import 'package:onexray/brand/theme.dart';
@@ -13,6 +14,8 @@ import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
+import 'package:onexray/service/shared/event_bus/service.dart';
+import 'package:onexray/service/shared/event_bus/state.dart';
 
 /// The Settings tab. Its other rows arrive with their features.
 class BrandSettingsPage extends StatefulWidget {
@@ -70,6 +73,13 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
     }
   }
 
+  Future<void> _openLanguages() =>
+      Navigator.of(context, rootNavigator: true).push<void>(
+        MaterialPageRoute(
+          builder: (_) => LanguagePage(onSelected: _settings.setLanguage),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -93,29 +103,12 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
                 children: [
                   BlocBuilder<HomeController, HomeState>(
                     bloc: widget.controller,
-                    builder: (context, state) {
-                      final preset = _presetLabel(l, state.preset);
-                      return SettingsRow(
-                        icon: LucideIcons.route,
-                        title: l.settingsPresets,
-                        value: preset,
-                        onTap: _openPresets,
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (preset != null) ...[
-                              Text(preset, style: BrandText.caption),
-                              const SizedBox(width: 12),
-                            ],
-                            const Icon(
-                              LucideIcons.chevronRight,
-                              size: 18,
-                              color: BrandColors.muted,
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                    builder: (context, state) => SettingsLinkRow(
+                      icon: LucideIcons.route,
+                      title: l.settingsPresets,
+                      value: _presetLabel(l, state.preset),
+                      onTap: _openPresets,
+                    ),
                   ),
                   BlocBuilder<SettingsController, SettingsState>(
                     bloc: _settings,
@@ -133,6 +126,15 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
               _SectionLabel(l.settingsApp),
               SettingsCard(
                 children: [
+                  BlocBuilder<AppEventBus, AppEventBusState>(
+                    buildWhen: (a, b) => a.languageCode != b.languageCode,
+                    builder: (context, state) => SettingsLinkRow(
+                      icon: LucideIcons.globe,
+                      title: l.settingsLanguage,
+                      value: languageLabel(l, state.languageCode),
+                      onTap: _openLanguages,
+                    ),
+                  ),
                   BlocBuilder<SettingsController, SettingsState>(
                     bloc: _settings,
                     buildWhen: (a, b) =>

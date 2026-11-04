@@ -1028,5 +1028,9 @@
   "renewalReminderThreeDays": "Подписка закончится через 3 дня",
   "renewalReminderTomorrow": "Подписка закончится завтра",
   "renewalReminderBody": "Продлите её, чтобы VPN не отключился.",
-  "notificationChannelReminders": "Напоминания"
+  "notificationChannelReminders": "Напоминания",
+  "settingsLanguage": "Язык",
+  "settingsLanguageSystem": "Как в системе",
+  "settingsLanguageNowRussian": "Сейчас русский",
+  "settingsLanguageNowEnglish": "Сейчас английский"
 }

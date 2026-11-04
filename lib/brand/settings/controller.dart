@@ -2,6 +2,8 @@ import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
+import 'package:onexray/service/shared/event_bus/enum.dart';
+import 'package:onexray/service/shared/event_bus/service.dart';
 
 class SettingsState {
   const SettingsState({this.connectOnLaunch, this.renewalReminders});
@@ -56,6 +58,19 @@ class SettingsController extends PageCubit<SettingsState> {
     } finally {
       _savingLaunch = false;
     }
+  }
+
+  /// Every screen switches at once. Reminders already set are rewritten in
+  /// the new language.
+  Future<void> setLanguage(LanguageCode value) async {
+    if (value == AppEventBus.instance.state.languageCode) return;
+    try {
+      await AppEventBus.instance.updateLanguageCode(value);
+    } catch (error) {
+      ygLogger('save language failed (${error.runtimeType})');
+      return;
+    }
+    await _reminders.update();
   }
 
   /// Read again when the App returns, since the system settings may have
