@@ -61,10 +61,12 @@ upstream pages kept for merging. They are not reachable in this build.
 - No status or announcement moves the toggle. It sits as centered in the mockup, and higher only on
   a screen too short for an announcement.
 - The location card names the group in use, or otherwise the selected one.
-- With a subscription, Home offers the presets Smart and Everything through VPN, stored as
-  `ConnectionSettings.trafficMode`. A choice while connected reconnects at once without a dialog
+- With a subscription, Home offers the presets Smart and Everything through VPN, and on Android
+  also Apps. `ConnectionPreset` reads and writes them in the stored configuration. A choice while
+  connected reconnects at once without a dialog
   and reads as a reconnect. While a command runs the switch ignores taps. A failed reconnect keeps
-  the choice for the next attempt. See
+  the choice for the next attempt. Apps with no app chosen opens the app list first and stays
+  unpicked if the person leaves it empty. See
   [provider presets](xray-configuration.md#provider-presets).
 - When the panel sends an announcement, Home shows it in a card below the presets until the user
   closes it. See [panel info](subscriptions-and-sharing.md#panel-info).
@@ -83,7 +85,11 @@ upstream pages kept for merging. They are not reachable in this build.
   group.
 - Settings has Connection and App sections so far. Mode opens a screen above the tabs with the same
   presets as Home, through the same `HomeController`, so both tabs show one value and a choice while
-  connected reconnects and reads as a reconnect on Home. A tap returns to Settings. Connect at
+  connected reconnects and reads as a reconnect on Home. A tap returns to Settings. On Android,
+  Apps through VPN shows how many apps are chosen and opens the list above the tabs: apps with a
+  launcher icon, by name, with search, the chosen ones on top as they were when the list opened.
+  The list is saved when the person leaves it, so a running Apps session reconnects once; under
+  another mode the list is only stored. An emptied list returns Apps to Smart. Connect at
   launch is off by default and applies from the next launch. The attempt does not hold the loading
   screen: Home opens at once and shows it, and a tap there stops it. Background updates start after
   the attempt ends, so their first check normally goes through the tunnel. A tunnel that comes up

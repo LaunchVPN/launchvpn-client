@@ -3224,5 +3224,21 @@
   "settingsLanguage": "Language",
   "settingsLanguageSystem": "Same as system",
   "settingsLanguageNowRussian": "Currently Russian",
-  "settingsLanguageNowEnglish": "Currently English"
+  "settingsLanguageNowEnglish": "Currently English",
+  "homePresetApps": "Apps",
+  "settingsPresetAppsHint": "Only the chosen apps use VPN",
+  "settingsVpnApps": "Apps through VPN",
+  "settingsVpnAppsHint": "Other apps connect directly",
+  "vpnAppsSearch": "Search apps",
+  "vpnAppsChosen": "Through VPN · {count}",
+  "@vpnAppsChosen": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vpnAppsOthers": "Other apps",
+  "vpnAppsNone": "Nothing found",
+  "vpnAppsLoadFailed": "Couldn't get the list of apps"
 }

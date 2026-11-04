@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/service/connect/compiler.dart';
+import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/routing/region_catalog.dart';
+import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/settings.dart';
 
 const _catchAll = {
@@ -55,8 +57,18 @@ Map<String, dynamic> _compile(
   TrafficMode preset,
   List<Map<String, dynamic>> rules, {
   List<Map<String, dynamic>> extraOutbounds = const [],
+}) => _compileWith(
+  ConnectionSettings(trafficMode: preset),
+  rules,
+  extraOutbounds: extraOutbounds,
+);
+
+Map<String, dynamic> _compileWith(
+  ConnectionSettings settings,
+  List<Map<String, dynamic>> rules, {
+  List<Map<String, dynamic>> extraOutbounds = const [],
 }) => ConnectionCompiler.compile(
-  settings: ConnectionSettings(trafficMode: preset),
+  settings: settings,
   entries: const [],
   profile: ResolvedProfile(
     id: 1,
@@ -83,6 +95,17 @@ List<Map<String, dynamic>> _panelRules(Map<String, dynamic> config) => [
 void main() {
   test('Smart keeps the panel rules as delivered', () {
     expect(_panelRules(_compile(TrafficMode.smart, [_sites, _catchAll])), [
+      _sites,
+      _catchAll,
+    ]);
+  });
+
+  test('Apps keeps the panel rules as Smart does', () {
+    final apps = ConnectionPreset.apps.applyTo(
+      ConnectionConfiguration().withVpnApps(['org.telegram.messenger']),
+    );
+
+    expect(_panelRules(_compileWith(apps.connection, [_sites, _catchAll])), [
       _sites,
       _catchAll,
     ]);

@@ -10,6 +10,8 @@ import 'package:onexray/brand/home/toggle.dart';
 import 'package:onexray/brand/home/update_banner.dart';
 import 'package:onexray/brand/locations/page.dart';
 import 'package:onexray/brand/mark.dart';
+import 'package:onexray/brand/settings/preset_page.dart';
+import 'package:onexray/brand/settings/vpn_apps_page.dart';
 import 'package:onexray/brand/permission/vpn_permission_page.dart';
 import 'package:onexray/brand/state_hero.dart';
 import 'package:onexray/brand/theme.dart';
@@ -21,7 +23,7 @@ import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
-import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/servers/locations.dart';
 import 'package:onexray/service/servers/subscription/failure.dart';
 import 'package:onexray/service/settings/app_update/service.dart';
@@ -286,9 +288,10 @@ class _HomePageState extends State<HomePage> {
     if (state.subscription != null) ...[
       const SizedBox(height: 20),
       _PresetSwitch(
+        presets: _controller.presets,
         selected: state.preset,
         onSelect: state.canChangeConnection
-            ? (preset) => _controller.selectPreset(preset, _run)
+            ? (preset) => choosePreset(context, _controller, preset, _run)
             : null,
       ),
     ],
@@ -679,21 +682,19 @@ class _AnnouncementBanner extends StatelessWidget {
 }
 
 class _PresetSwitch extends StatelessWidget {
-  const _PresetSwitch({required this.selected, required this.onSelect});
+  const _PresetSwitch({
+    required this.presets,
+    required this.selected,
+    required this.onSelect,
+  });
 
-  final TrafficMode? selected;
-  final ValueChanged<TrafficMode>? onSelect;
+  final List<ConnectionPreset> presets;
+  final ConnectionPreset? selected;
+  final ValueChanged<ConnectionPreset>? onSelect;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    Widget segment(TrafficMode preset, String label) => Expanded(
-      child: _PresetSegment(
-        label: label,
-        selected: preset == selected,
-        onTap: onSelect == null ? null : () => onSelect!(preset),
-      ),
-    );
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -704,10 +705,16 @@ class _PresetSwitch extends StatelessWidget {
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 4,
           children: [
-            segment(TrafficMode.smart, l.homePresetSmart),
-            const SizedBox(width: 4),
-            segment(TrafficMode.allVpn, l.homePresetAllVpn),
+            for (final preset in presets)
+              Expanded(
+                child: _PresetSegment(
+                  label: presetLabel(l, preset),
+                  selected: preset == selected,
+                  onTap: onSelect == null ? null : () => onSelect!(preset),
+                ),
+              ),
           ],
         ),
       ),

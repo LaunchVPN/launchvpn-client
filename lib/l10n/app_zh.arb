@@ -1032,5 +1032,14 @@
   "settingsLanguage": "语言",
   "settingsLanguageSystem": "跟随系统",
   "settingsLanguageNowRussian": "当前为俄语",
-  "settingsLanguageNowEnglish": "当前为英语"
+  "settingsLanguageNowEnglish": "当前为英语",
+  "homePresetApps": "Apps",
+  "settingsPresetAppsHint": "Only the chosen apps use VPN",
+  "settingsVpnApps": "Apps through VPN",
+  "settingsVpnAppsHint": "Other apps connect directly",
+  "vpnAppsSearch": "Search apps",
+  "vpnAppsChosen": "Through VPN · {count}",
+  "vpnAppsOthers": "Other apps",
+  "vpnAppsNone": "Nothing found",
+  "vpnAppsLoadFailed": "Couldn't get the list of apps"
 }

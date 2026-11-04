@@ -12,6 +12,7 @@ import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
@@ -37,6 +38,8 @@ ConnectionRuntime _runtime([ConnectionConfiguration? configuration]) =>
       platform: ConnectionPlatform.android,
       request: StartVpnRequest(null, null, '18003', '{}'),
     );
+
+const _android = ConnectionPlatform.android;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -103,6 +106,7 @@ void main() {
     controller = HomeController(
       database: db,
       coordinator: coordinator,
+      platform: _android,
       pingLocations: (rows, {isCancelled}) {
         sweeps.add([for (final row in rows) row.id]);
         sweepCancels.add(isCancelled);
@@ -886,53 +890,64 @@ void main() {
       start = Completer();
     }
 
-    Future<TrafficMode> stored() async =>
-        (await coordinator.configuration).connection.trafficMode;
+    Future<ConnectionConfiguration> configuration() =>
+        coordinator.configuration;
+
+    Future<ConnectionPreset?> stored() async =>
+        ConnectionPreset.of(await configuration(), platform: _android);
 
     test('takes no choice before the saved preset is known', () async {
-      await controller.selectPreset(TrafficMode.allVpn, run);
+      await controller.selectPreset(ConnectionPreset.allVpn, run);
 
-      final reopened = HomeController(database: db, coordinator: coordinator);
+      final reopened = HomeController(
+        database: db,
+        coordinator: coordinator,
+        platform: _android,
+      );
       addTearDown(reopened.close);
       expect(reopened.state.preset, isNull);
 
-      await reopened.selectPreset(TrafficMode.smart, run);
+      await reopened.selectPreset(ConnectionPreset.smart, run);
 
-      expect(await stored(), TrafficMode.allVpn);
+      expect(await stored(), ConnectionPreset.allVpn);
     });
 
     test('is Smart until the user chooses', () {
-      expect(controller.state.preset, TrafficMode.smart);
+      expect(controller.state.preset, ConnectionPreset.smart);
     });
 
     test(
       'while off, the choice is saved without touching the tunnel',
       () async {
-        await controller.selectPreset(TrafficMode.allVpn, run);
+        await controller.selectPreset(ConnectionPreset.allVpn, run);
 
-        expect(controller.state.preset, TrafficMode.allVpn);
-        expect(await stored(), TrafficMode.allVpn);
+        expect(controller.state.preset, ConnectionPreset.allVpn);
+        expect(await stored(), ConnectionPreset.allVpn);
         expect(stopCalls, 0);
         expect(failures, isEmpty);
       },
     );
 
     test('survives a restart of the screen', () async {
-      await controller.selectPreset(TrafficMode.allVpn, run);
+      await controller.selectPreset(ConnectionPreset.allVpn, run);
 
-      final reopened = HomeController(database: db, coordinator: coordinator);
+      final reopened = HomeController(
+        database: db,
+        coordinator: coordinator,
+        platform: _android,
+      );
       addTearDown(reopened.close);
       await reopened.initialize();
 
-      expect(reopened.state.preset, TrafficMode.allVpn);
+      expect(reopened.state.preset, ConnectionPreset.allVpn);
     });
 
     test('while connected, it reconnects at once and says so', () async {
       await connect();
 
-      final selecting = controller.selectPreset(TrafficMode.allVpn, run);
+      final selecting = controller.selectPreset(ConnectionPreset.allVpn, run);
       expect(controller.state.status, HomeStatus.reconnecting);
-      expect(controller.state.preset, TrafficMode.allVpn);
+      expect(controller.state.preset, ConnectionPreset.allVpn);
       await settle();
       expect(stopCalls, 1);
       expect(controller.state.status, HomeStatus.reconnecting);
@@ -948,7 +963,7 @@ void main() {
       await settle();
 
       expect(controller.state.status, HomeStatus.connected);
-      expect(await stored(), TrafficMode.allVpn);
+      expect(await stored(), ConnectionPreset.allVpn);
       expect(failures, isEmpty);
     });
 
@@ -957,28 +972,28 @@ void main() {
       prepareFailure = () async => throw const ConnectionHostException('x');
       stop.complete(const HostConnection(VpnStatus.disconnected));
 
-      await controller.selectPreset(TrafficMode.allVpn, run);
+      await controller.selectPreset(ConnectionPreset.allVpn, run);
       await settle();
 
       expect(failures, hasLength(1));
-      expect(controller.state.preset, TrafficMode.allVpn);
-      expect(await stored(), TrafficMode.allVpn);
+      expect(controller.state.preset, ConnectionPreset.allVpn);
+      expect(await stored(), ConnectionPreset.allVpn);
     });
 
     test('ignores another choice until the first one is saved', () async {
-      final saving = controller.selectPreset(TrafficMode.allVpn, run);
-      await controller.selectPreset(TrafficMode.smart, run);
+      final saving = controller.selectPreset(ConnectionPreset.allVpn, run);
+      await controller.selectPreset(ConnectionPreset.smart, run);
       await saving;
 
-      expect(controller.state.preset, TrafficMode.allVpn);
-      expect(await stored(), TrafficMode.allVpn);
+      expect(controller.state.preset, ConnectionPreset.allVpn);
+      expect(await stored(), ConnectionPreset.allVpn);
       expect(failures, isEmpty);
     });
 
     test('cannot connect while a choice is being saved', () async {
       await addSubscription();
 
-      final saving = controller.selectPreset(TrafficMode.allVpn, run);
+      final saving = controller.selectPreset(ConnectionPreset.allVpn, run);
       expect(controller.state.canToggle, isFalse);
       await saving;
 
@@ -990,10 +1005,96 @@ void main() {
       unawaited(controller.toggle(run, explain: _explainNever));
       await settle();
 
-      await controller.selectPreset(TrafficMode.allVpn, run);
+      await controller.selectPreset(ConnectionPreset.allVpn, run);
 
-      expect(controller.state.preset, TrafficMode.smart);
-      expect(await stored(), TrafficMode.smart);
+      expect(controller.state.preset, ConnectionPreset.smart);
+      expect(await stored(), ConnectionPreset.smart);
+      // A start left waiting would hold the next test's queue.
+      status = VpnStatus.connected;
+      start.complete(HostConnection(VpnStatus.connected, runtime: runtime));
+      await settle();
+    });
+    test('a custom route stored elsewhere shows no preset and still lets '
+        'the user choose one', () async {
+      await controller.selectPreset(ConnectionPreset.allVpn, run);
+      await coordinator.applyChange(
+        (current) => ConnectionConfiguration(
+          connection: ConnectionSettings(trafficMode: TrafficMode.custom),
+          policy: current.policy,
+        ),
+        restart: false,
+      );
+      await settle();
+      expect(controller.state.preset, isNull);
+
+      await controller.selectPreset(ConnectionPreset.allVpn, run);
+
+      expect(controller.state.preset, ConnectionPreset.allVpn);
+      expect(await stored(), ConnectionPreset.allVpn);
+    });
+
+    group('Apps', () {
+      Future<void> connectWithApps() async {
+        await controller.saveVpnApps(['a.b'], run, select: true);
+        await connect();
+      }
+
+      test('stores the chosen apps and the mode together', () async {
+        await controller.saveVpnApps(['a.b', 'c.d'], run, select: true);
+
+        expect(controller.state.preset, ConnectionPreset.apps);
+        expect(controller.state.vpnApps, ['a.b', 'c.d']);
+        expect(await stored(), ConnectionPreset.apps);
+        expect((await configuration()).vpnApps, ['a.b', 'c.d']);
+      });
+
+      test('a changed list reconnects while Apps runs', () async {
+        await connectWithApps();
+
+        final saving = controller.saveVpnApps(['a.b', 'c.d'], run);
+        expect(controller.state.status, HomeStatus.reconnecting);
+        await settle();
+        status = VpnStatus.disconnected;
+        stop.complete(const HostConnection(VpnStatus.disconnected));
+        await settle();
+        status = VpnStatus.connected;
+        start.complete(HostConnection(VpnStatus.connected, runtime: runtime));
+        await saving;
+        await settle();
+
+        expect(stopCalls, 1);
+        expect((await configuration()).vpnApps, ['a.b', 'c.d']);
+        expect(failures, isEmpty);
+      });
+
+      test('a list changed under another mode only stores', () async {
+        await connect();
+
+        await controller.saveVpnApps(['a.b'], run);
+
+        expect(stopCalls, 0);
+        expect(await stored(), ConnectionPreset.smart);
+        expect(controller.state.vpnApps, ['a.b']);
+      });
+
+      test('an emptied list returns to Smart', () async {
+        await controller.saveVpnApps(['a.b'], run, select: true);
+
+        await controller.saveVpnApps([], run);
+
+        expect(controller.state.preset, ConnectionPreset.smart);
+        expect(await stored(), ConnectionPreset.smart);
+        expect(controller.state.vpnApps, isEmpty);
+      });
+
+      test('an unchanged list touches nothing', () async {
+        await connectWithApps();
+
+        await controller.saveVpnApps(['a.b'], run);
+
+        expect(stopCalls, 0);
+        expect(controller.state.status, HomeStatus.connected);
+      });
     });
   });
 }

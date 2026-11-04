@@ -7,7 +7,7 @@ import 'package:onexray/brand/settings/row.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/brand/top_bar.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
-import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/connect/preset.dart';
 
 /// Lists the presets and pops with the one the user taps. Settings applies the
 /// choice, so a reconnect that outlives this screen still reports to it.
@@ -31,20 +31,15 @@ class PresetPage extends StatelessWidget {
                 child: BlocBuilder<HomeController, HomeState>(
                   bloc: controller,
                   builder: (context, state) {
-                    Widget row(
-                      TrafficMode preset,
-                      IconData icon,
-                      String title,
-                      String hint,
-                    ) {
+                    Widget row(ConnectionPreset preset) {
                       final selected = preset == state.preset;
                       final enabled = state.canChangeConnection;
                       return Opacity(
                         opacity: enabled || selected ? 1 : 0.5,
                         child: SettingsRow(
-                          icon: icon,
-                          title: title,
-                          subtitle: hint,
+                          icon: _icons[preset],
+                          title: presetLabel(l, preset),
+                          subtitle: _hint(l, preset),
                           selected: selected,
                           onTap: enabled
                               ? () => Navigator.of(context).pop(preset)
@@ -70,18 +65,8 @@ class PresetPage extends StatelessWidget {
                       children: [
                         SettingsCard(
                           children: [
-                            row(
-                              TrafficMode.smart,
-                              LucideIcons.route,
-                              l.homePresetSmart,
-                              l.settingsPresetSmartHint,
-                            ),
-                            row(
-                              TrafficMode.allVpn,
-                              LucideIcons.shield,
-                              l.homePresetAllVpn,
-                              l.settingsPresetAllVpnHint,
-                            ),
+                            for (final preset in controller.presets)
+                              row(preset),
                           ],
                         ),
                         Padding(
@@ -103,3 +88,22 @@ class PresetPage extends StatelessWidget {
     );
   }
 }
+
+String presetLabel(AppLocalizations l, ConnectionPreset preset) =>
+    switch (preset) {
+      ConnectionPreset.smart => l.homePresetSmart,
+      ConnectionPreset.allVpn => l.homePresetAllVpn,
+      ConnectionPreset.apps => l.homePresetApps,
+    };
+
+String _hint(AppLocalizations l, ConnectionPreset preset) => switch (preset) {
+  ConnectionPreset.smart => l.settingsPresetSmartHint,
+  ConnectionPreset.allVpn => l.settingsPresetAllVpnHint,
+  ConnectionPreset.apps => l.settingsPresetAppsHint,
+};
+
+const _icons = {
+  ConnectionPreset.smart: LucideIcons.route,
+  ConnectionPreset.allVpn: LucideIcons.shield,
+  ConnectionPreset.apps: LucideIcons.layoutGrid,
+};
