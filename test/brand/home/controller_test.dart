@@ -1014,6 +1014,25 @@ void main() {
       start.complete(HostConnection(VpnStatus.connected, runtime: runtime));
       await settle();
     });
+    test('a custom route stored elsewhere shows no preset and still lets '
+        'the user choose one', () async {
+      await controller.selectPreset(ConnectionPreset.allVpn, run);
+      await coordinator.applyChange(
+        (current) => ConnectionConfiguration(
+          connection: ConnectionSettings(trafficMode: TrafficMode.custom),
+          policy: current.policy,
+        ),
+        restart: false,
+      );
+      await settle();
+      expect(controller.state.preset, isNull);
+
+      await controller.selectPreset(ConnectionPreset.allVpn, run);
+
+      expect(controller.state.preset, ConnectionPreset.allVpn);
+      expect(await stored(), ConnectionPreset.allVpn);
+    });
+
     group('Apps', () {
       Future<void> connectWithApps() async {
         await controller.saveVpnApps(['a.b'], run, select: true);

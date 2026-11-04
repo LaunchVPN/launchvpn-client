@@ -91,11 +91,14 @@ class HomeState {
   final ConnectionView view;
   final ServerCatalog catalog;
 
-  /// Null until the saved preset is read.
+  /// Null until the saved preset is read, and for a mode the App does not
+  /// offer, such as a custom route.
   final ConnectionPreset? preset;
 
   /// What «Приложения» sends through the VPN, kept under the other modes.
   final List<String> vpnApps;
+
+  /// Null until the saved choices are read.
   final ServerSelection? selection;
 
   // A command may wait for permission or the serial queue before it publishes
@@ -180,7 +183,7 @@ class HomeState {
 
   /// A choice made mid-transition would race the command already running.
   bool get canChangeConnection =>
-      preset != null &&
+      selection != null &&
       request == null &&
       const {
         HomeStatus.off,
@@ -247,7 +250,7 @@ class HomeState {
     ConnectionView? view,
     ServerCatalog? catalog,
     bool? restoring,
-    ConnectionPreset? preset,
+    ConnectionPreset? Function()? preset,
     List<String>? vpnApps,
     ServerSelection? selection,
     bool? expired,
@@ -257,7 +260,7 @@ class HomeState {
     catalog: catalog ?? this.catalog,
     request: request,
     restoring: restoring ?? this.restoring,
-    preset: preset ?? this.preset,
+    preset: preset == null ? this.preset : preset(),
     vpnApps: vpnApps ?? this.vpnApps,
     selection: selection ?? this.selection,
     expired: expired ?? this.expired,
@@ -366,7 +369,7 @@ class HomeController extends PageCubit<HomeState> {
       if (isClosed) return;
       emit(
         state.copyWith(
-          preset: ConnectionPreset.of(stored, platform: _platform),
+          preset: () => ConnectionPreset.of(stored, platform: _platform),
           vpnApps: stored.vpnApps,
           selection: stored.connection.selection,
         ),
@@ -384,7 +387,7 @@ class HomeController extends PageCubit<HomeState> {
   ) async {
     if (!state.canChangeConnection || preset == state.preset) return;
     final request = _choiceRequest;
-    emit(state.copyWith(preset: preset));
+    emit(state.copyWith(preset: () => preset));
     await _perform(request, run, () => coordinator.applyChange(preset.applyTo));
     await _showStoredChoices();
   }
@@ -398,19 +401,23 @@ class HomeController extends PageCubit<HomeState> {
     bool select = false,
   }) async {
     final current = state.preset;
-    if (current == null || !state.canChangeConnection) return;
+    if (!state.canChangeConnection) return;
     final preset = apps.isEmpty
         ? (current == ConnectionPreset.apps ? ConnectionPreset.smart : current)
         : (select ? ConnectionPreset.apps : current);
     if (preset == current && _sameApps(apps, state.vpnApps)) return;
     final restart = preset != current || preset == ConnectionPreset.apps;
     final request = restart ? _choiceRequest : HomeRequest.saveChoice;
-    emit(state.copyWith(preset: preset, vpnApps: List.unmodifiable(apps)));
+    emit(
+      state.copyWith(preset: () => preset, vpnApps: List.unmodifiable(apps)),
+    );
     await _perform(
       request,
       run,
       () => coordinator.applyChange(
-        (stored) => preset.applyTo(stored.withVpnApps(apps)),
+        (stored) =>
+            preset?.applyTo(stored.withVpnApps(apps)) ??
+            stored.withVpnApps(apps),
         restart: restart,
       ),
     );

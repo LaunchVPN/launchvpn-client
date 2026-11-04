@@ -18,17 +18,15 @@ enum ConnectionPreset {
   static ConnectionPreset? of(
     ConnectionConfiguration configuration, {
     required ConnectionPlatform platform,
-  }) {
-    if (platform == ConnectionPlatform.android &&
-        configuration._android['appScope'] == _onlyChosen) {
-      return apps;
-    }
-    return switch (configuration.connection.trafficMode) {
-      TrafficMode.smart => smart,
-      TrafficMode.allVpn => allVpn,
-      TrafficMode.custom => null,
-    };
-  }
+  }) => switch (configuration.connection.trafficMode) {
+    TrafficMode.custom => null,
+    _
+        when platform == ConnectionPlatform.android &&
+            configuration._android['appScope'] == _onlyChosen =>
+      apps,
+    TrafficMode.smart => smart,
+    TrafficMode.allVpn => allVpn,
+  };
 
   /// The chosen apps stay stored when another mode is picked.
   ConnectionConfiguration applyTo(ConnectionConfiguration configuration) =>

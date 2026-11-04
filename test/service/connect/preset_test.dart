@@ -71,11 +71,23 @@ void main() {
     );
   });
 
-  test('a custom route is no preset', () {
+  test('a custom route is no preset, whatever the app scope', () {
     final custom = ConnectionConfiguration(
       connection: ConnectionSettings(trafficMode: TrafficMode.custom),
     );
 
     expect(ConnectionPreset.of(custom, platform: _android), isNull);
+    expect(
+      ConnectionPreset.of(
+        ConnectionConfiguration(
+          connection: custom.connection,
+          policy: ConnectionPreset.apps
+              .applyTo(stored.withVpnApps(['a.b']))
+              .policy,
+        ),
+        platform: _android,
+      ),
+      isNull,
+    );
   });
 }
