@@ -538,6 +538,23 @@ void main() {
       expect(find.text('Ничего не найдено'), findsOneWidget);
     });
 
+    testWidgets('builds only the rows on screen', (tester) async {
+      await pumpApp(
+        tester,
+        platform: ConnectionPlatform.android,
+        apps: [
+          for (var i = 100; i < 300; i++)
+            AndroidAppInfo(name: 'App $i', packageName: 'app.n$i'),
+        ],
+      );
+      await openTab(tester, 1);
+      await tester.tap(find.text(title));
+      await settle(tester);
+
+      expect(find.text('App 100'), findsOneWidget);
+      expect(find.text('App 299'), findsNothing);
+    });
+
     testWidgets('a refused list keeps the choice', (tester) async {
       await pumpApp(tester, platform: ConnectionPlatform.android);
       await tester.runAsync(

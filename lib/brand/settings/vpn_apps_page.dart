@@ -135,43 +135,85 @@ class _VpnAppsPageState extends State<VpnAppsPage> {
     }
     final first = state.first;
     final others = state.others;
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        BrandSpacing.page,
-        0,
-        BrandSpacing.page,
-        MediaQuery.paddingOf(context).bottom + 20,
-      ),
-      children: [
-        _SearchField(hint: l.vpnAppsSearch, onChanged: _controller.search),
-        const SizedBox(height: 24),
+    // Rows build as they scroll in, so only visible apps ask for icons.
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            BrandSpacing.page,
+            0,
+            BrandSpacing.page,
+            24,
+          ),
+          sliver: SliverToBoxAdapter(
+            child: _SearchField(
+              hint: l.vpnAppsSearch,
+              onChanged: _controller.search,
+            ),
+          ),
+        ),
         if (first.isEmpty && others.isEmpty)
-          Text(l.vpnAppsNone, style: BrandText.hint),
-        if (first.isNotEmpty) ...[
-          SettingsSectionLabel(l.vpnAppsChosen(state.chosen.length)),
-          _group(first, state.chosen),
-          const SizedBox(height: 24),
-        ],
-        if (others.isNotEmpty) ...[
-          SettingsSectionLabel(l.vpnAppsOthers),
-          _group(others, state.chosen),
-        ],
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: BrandSpacing.page),
+            sliver: SliverToBoxAdapter(
+              child: Text(l.vpnAppsNone, style: BrandText.hint),
+            ),
+          ),
+        if (first.isNotEmpty)
+          ..._group(
+            l.vpnAppsChosen(state.chosen.length),
+            first,
+            state.chosen,
+            last: others.isEmpty,
+          ),
+        if (others.isNotEmpty)
+          ..._group(l.vpnAppsOthers, others, state.chosen, last: true),
       ],
     );
   }
 
-  Widget _group(List<AndroidAppInfo> apps, Set<String> chosen) => SettingsCard(
-    children: [
-      for (final app in apps)
-        SettingsSwitchRow(
-          key: ValueKey(app.packageName),
-          leading: _AppIcon(app.packageName),
-          title: app.name,
-          value: chosen.contains(app.packageName),
-          onChanged: (_) => _controller.toggle(app.packageName),
+  /// A labelled card of rows, as [SettingsCard] draws it.
+  List<Widget> _group(
+    String label,
+    List<AndroidAppInfo> apps,
+    Set<String> chosen, {
+    required bool last,
+  }) => [
+    SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: BrandSpacing.page),
+      sliver: SliverToBoxAdapter(child: SettingsSectionLabel(label)),
+    ),
+    SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        BrandSpacing.page,
+        0,
+        BrandSpacing.page,
+        last ? MediaQuery.paddingOf(context).bottom + 20 : 24,
+      ),
+      sliver: DecoratedSliver(
+        decoration: BoxDecoration(
+          color: BrandColors.surface,
+          borderRadius: BorderRadius.circular(BrandRadii.card),
+          border: Border.all(color: BrandColors.line),
         ),
-    ],
-  );
+        sliver: SliverList.separated(
+          itemCount: apps.length,
+          separatorBuilder: (_, _) =>
+              const Divider(height: 1, color: BrandColors.line),
+          itemBuilder: (_, index) {
+            final app = apps[index];
+            return SettingsSwitchRow(
+              key: ValueKey(app.packageName),
+              leading: _AppIcon(app.packageName),
+              title: app.name,
+              value: chosen.contains(app.packageName),
+              onChanged: (_) => _controller.toggle(app.packageName),
+            );
+          },
+        ),
+      ),
+    ),
+  ];
 }
 
 class _AppIcon extends StatelessWidget {
