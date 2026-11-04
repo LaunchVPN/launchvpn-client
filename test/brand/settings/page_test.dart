@@ -18,6 +18,7 @@ import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
@@ -123,6 +124,8 @@ void main() {
   Future<void> pumpApp(
     WidgetTester tester, {
     Locale system = const Locale('ru'),
+    ConnectionPlatform platform = ConnectionPlatform.ios,
+    List<AndroidAppInfo> apps = const [],
   }) async {
     tester.platformDispatcher
       ..localeTestValue = system
@@ -164,6 +167,8 @@ void main() {
       coordinator: coordinator,
       pingLocations: (_, {isCancelled}) async {},
       dismissAnnounce: db.subscriptionDao.dismissAnnounce,
+      platform: platform,
+      installedApps: () async => apps,
     );
     addTearDown(controller.close);
     await pumpRouter(tester);
@@ -336,7 +341,7 @@ void main() {
         .flagsCollection
         .isSelected;
 
-    testWidgets('marks the current mode and offers both presets', (
+    testWidgets('marks the current mode and offers both presets on iOS', (
       tester,
     ) async {
       await pumpApp(tester);
@@ -418,7 +423,7 @@ void main() {
       await pumpApp(tester);
       final applying = Completer<void>();
       final choice = controller.selectPreset(
-        TrafficMode.allVpn,
+        ConnectionPreset.allVpn,
         (_) => applying.future,
       );
       await tester.pump();
@@ -439,6 +444,141 @@ void main() {
       await openPresets(tester);
 
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('apps through VPN', () {
+    const title = 'Приложения через VPN';
+    final apps = [
+      AndroidAppInfo(
+        name: 'YouTube',
+        packageName: 'com.google.android.youtube',
+      ),
+      AndroidAppInfo(name: 'Telegram', packageName: 'org.telegram.messenger'),
+      AndroidAppInfo(name: 'Госуслуги', packageName: 'ru.rostel'),
+      AndroidAppInfo(name: 'LaunchVPN', packageName: 'com.launchvpn.app'),
+    ];
+
+    Future<void> pumpAndroid(WidgetTester tester) async {
+      await pumpApp(tester, platform: ConnectionPlatform.android, apps: apps);
+      await openTab(tester, 1);
+    }
+
+    Future<void> leave(WidgetTester tester) async {
+      await tester.tap(find.byIcon(LucideIcons.chevronLeft));
+      await settle(tester);
+    }
+
+    Future<ConnectionConfiguration> stored(WidgetTester tester) async =>
+        (await tester.runAsync(() => coordinator.configuration))!;
+
+    double top(WidgetTester tester, String text) =>
+        tester.getTopLeft(find.text(text)).dy;
+
+    testWidgets('is not on iOS', (tester) async {
+      await pumpApp(tester);
+      await openTab(tester, 1);
+
+      expect(find.text(title), findsNothing);
+    });
+
+    testWidgets('Apps with nothing chosen opens the list, which then '
+        'counts in settings', (tester) async {
+      await pumpAndroid(tester);
+      expect(find.text('Остальные идут напрямую'), findsOneWidget);
+      await tester.tap(find.text('Режим'));
+      await settle(tester);
+
+      await tester.tap(find.text('Приложения'));
+      await settle(tester);
+      await tester.tap(find.text('Telegram'));
+      await tester.pump();
+      await leave(tester);
+
+      expect(find.text('Приложения'), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
+      final configuration = await stored(tester);
+      expect(
+        ConnectionPreset.of(
+          configuration,
+          platform: ConnectionPlatform.android,
+        ),
+        ConnectionPreset.apps,
+      );
+      expect(configuration.vpnApps, ['org.telegram.messenger']);
+    });
+
+    testWidgets('lists the chosen apps first and finds apps by name', (
+      tester,
+    ) async {
+      await pumpAndroid(tester);
+      await tester.runAsync(
+        () => coordinator.applyChange(
+          (current) => current.withVpnApps(['ru.rostel']),
+          restart: false,
+        ),
+      );
+      await settle(tester);
+      await tester.tap(find.text(title));
+      await settle(tester);
+
+      expect(find.text('ЧЕРЕЗ VPN · 1'), findsOneWidget);
+      expect(find.text('LaunchVPN'), findsNothing);
+      expect(top(tester, 'Госуслуги'), lessThan(top(tester, 'ОСТАЛЬНЫЕ')));
+      expect(top(tester, 'Telegram'), lessThan(top(tester, 'YouTube')));
+
+      await tester.enterText(find.byType(TextField), 'tele');
+      await tester.pump();
+      expect(find.text('Telegram'), findsOneWidget);
+      expect(find.text('YouTube'), findsNothing);
+      expect(find.text('Госуслуги'), findsNothing);
+
+      await tester.enterText(find.byType(TextField), 'нет такого');
+      await tester.pump();
+      expect(find.text('Ничего не найдено'), findsOneWidget);
+    });
+
+    testWidgets('a refused list keeps the choice', (tester) async {
+      await pumpApp(tester, platform: ConnectionPlatform.android);
+      await tester.runAsync(
+        () => coordinator.applyChange(
+          (current) =>
+              ConnectionPreset.apps.applyTo(current.withVpnApps(['ru.rostel'])),
+          restart: false,
+        ),
+      );
+      await openTab(tester, 1);
+      await tester.tap(find.text(title));
+      await settle(tester);
+
+      expect(find.text('Не удалось получить список приложений'), findsOne);
+      await leave(tester);
+
+      final configuration = await stored(tester);
+      expect(configuration.vpnApps, ['ru.rostel']);
+      expect(
+        ConnectionPreset.of(
+          configuration,
+          platform: ConnectionPlatform.android,
+        ),
+        ConnectionPreset.apps,
+      );
+    });
+
+    testWidgets('a list changed under another mode keeps the mode', (
+      tester,
+    ) async {
+      await pumpAndroid(tester);
+      await tester.tap(find.text(title));
+      await settle(tester);
+
+      await tester.tap(find.text('YouTube'));
+      await tester.pump();
+      await leave(tester);
+
+      expect(find.text('Умный'), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
+      expect((await stored(tester)).vpnApps, ['com.google.android.youtube']);
     });
   });
 

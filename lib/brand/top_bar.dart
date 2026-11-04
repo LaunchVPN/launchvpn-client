@@ -22,7 +22,7 @@ class BrandTopBar extends StatelessWidget {
           button: true,
           label: MaterialLocalizations.of(context).backButtonTooltip,
           child: GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () => Navigator.of(context).maybePop(),
             child: Container(
               width: 40,
               height: 40,

@@ -3,10 +3,14 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/db/database/database.dart';
+import 'package:onexray/core/pigeon/host_api.dart';
+import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/connect/connection_permissions.dart';
+import 'package:onexray/service/advanced/platform_policy.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/catalog.dart';
@@ -64,6 +68,9 @@ typedef LocationPing = Future<void> Function(
 
 typedef AnnouncementDismissal = Future<void> Function(int subId, String text);
 
+/// The apps Android lists, as the bridge returns them.
+typedef InstalledApps = Future<List<AndroidAppInfo>> Function();
+
 typedef SubscriptionRefresh = Future<SubscriptionRefreshResult> Function(
   SubscriptionData row,
 );
@@ -75,6 +82,7 @@ class HomeState {
     this.request,
     this.restoring = false,
     this.preset,
+    this.vpnApps = const [],
     this.selection,
     this.expired = false,
     this.refreshing = false,
@@ -84,7 +92,10 @@ class HomeState {
   final ServerCatalog catalog;
 
   /// Null until the saved preset is read.
-  final TrafficMode? preset;
+  final ConnectionPreset? preset;
+
+  /// What «Приложения» sends through the VPN, kept under the other modes.
+  final List<String> vpnApps;
   final ServerSelection? selection;
 
   // A command may wait for permission or the serial queue before it publishes
@@ -236,7 +247,8 @@ class HomeState {
     ConnectionView? view,
     ServerCatalog? catalog,
     bool? restoring,
-    TrafficMode? preset,
+    ConnectionPreset? preset,
+    List<String>? vpnApps,
     ServerSelection? selection,
     bool? expired,
     bool? refreshing,
@@ -246,6 +258,7 @@ class HomeState {
     request: request,
     restoring: restoring ?? this.restoring,
     preset: preset ?? this.preset,
+    vpnApps: vpnApps ?? this.vpnApps,
     selection: selection ?? this.selection,
     expired: expired ?? this.expired,
     refreshing: refreshing ?? this.refreshing,
@@ -257,6 +270,7 @@ class HomeState {
     request: request,
     restoring: restoring,
     preset: preset,
+    vpnApps: vpnApps,
     selection: selection,
     expired: expired,
     refreshing: refreshing,
@@ -270,7 +284,11 @@ class HomeController extends PageCubit<HomeState> {
     LocationPing? pingLocations,
     AnnouncementDismissal? dismissAnnounce,
     SubscriptionRefresh? refreshSubscription,
+    ConnectionPlatform? platform,
+    InstalledApps? installedApps,
   }) : _db = database ?? AppDatabase(),
+       installedApps = installedApps ?? AppHostApi().getInstalledApps,
+       _platform = platform ?? connectionPlatform,
        coordinator = coordinator ?? ConnectionCoordinator.instance,
        _pingLocations = pingLocations ?? PingService().pingLocations,
        _dismissAnnounce =
@@ -284,6 +302,10 @@ class HomeController extends PageCubit<HomeState> {
   }
 
   final AppDatabase _db;
+  final ConnectionPlatform _platform;
+
+  /// What «Приложения через VPN» lists.
+  final InstalledApps installedApps;
   final ConnectionCoordinator coordinator;
   late final _permissions = ConnectionPermissions(coordinator);
   final LocationPing _pingLocations;
@@ -298,6 +320,9 @@ class HomeController extends PageCubit<HomeState> {
   /// checks again at least this often. Otherwise a later expiry is checked
   /// when the subscription refreshes or the App returns.
   static const _expiryWatch = Duration(days: 1);
+
+  /// What Home and «Режим» offer on this device.
+  List<ConnectionPreset> get presets => ConnectionPreset.offeredOn(_platform);
 
   void _connectionChanged() {
     final view = coordinator.state.value;
@@ -341,7 +366,8 @@ class HomeController extends PageCubit<HomeState> {
       if (isClosed) return;
       emit(
         state.copyWith(
-          preset: stored.connection.trafficMode,
+          preset: ConnectionPreset.of(stored, platform: _platform),
+          vpnApps: stored.vpnApps,
           selection: stored.connection.selection,
         ),
       );
@@ -353,15 +379,46 @@ class HomeController extends PageCubit<HomeState> {
   /// Saves the preset. A running tunnel reconnects at once, because a preset
   /// that only applies later would show a mode that is not in effect.
   Future<void> selectPreset(
-    TrafficMode preset,
+    ConnectionPreset preset,
     ConnectionActionRunner run,
   ) async {
     if (!state.canChangeConnection || preset == state.preset) return;
     final request = _choiceRequest;
     emit(state.copyWith(preset: preset));
-    await _perform(request, run, () => coordinator.applyTrafficMode(preset));
+    await _perform(request, run, () => coordinator.applyChange(preset.applyTo));
     await _showStoredChoices();
   }
+
+  /// Saves what «Приложения» sends through the VPN, and with [select] also
+  /// picks that mode. The running tunnel reconnects only when the change
+  /// reaches it. An empty list cannot run, so it returns to «Умный».
+  Future<void> saveVpnApps(
+    List<String> apps,
+    ConnectionActionRunner run, {
+    bool select = false,
+  }) async {
+    final current = state.preset;
+    if (current == null || !state.canChangeConnection) return;
+    final preset = apps.isEmpty
+        ? (current == ConnectionPreset.apps ? ConnectionPreset.smart : current)
+        : (select ? ConnectionPreset.apps : current);
+    if (preset == current && _sameApps(apps, state.vpnApps)) return;
+    final restart = preset != current || preset == ConnectionPreset.apps;
+    final request = restart ? _choiceRequest : HomeRequest.saveChoice;
+    emit(state.copyWith(preset: preset, vpnApps: List.unmodifiable(apps)));
+    await _perform(
+      request,
+      run,
+      () => coordinator.applyChange(
+        (stored) => preset.applyTo(stored.withVpnApps(apps)),
+        restart: restart,
+      ),
+    );
+    await _showStoredChoices();
+  }
+
+  static bool _sameApps(List<String> a, List<String> b) =>
+      const SetEquality<String>().equals(a.toSet(), b.toSet());
 
   /// Saves the location, with the same immediate reconnect as a preset. After
   /// a failed attempt it also connects, the same location included, since the

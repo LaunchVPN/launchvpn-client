@@ -304,6 +304,10 @@ Smart (`TrafficMode.smart`) runs the provider graph as described above. Everythi
 session, never to the stored one, so it is the exception to the rule-preservation statements above.
 Home's preset switch also reconnects a provider session, unlike upstream's routing controls.
 
+Apps, on Android only, routes as Smart and sets the platform policy's Android app scope to the
+chosen packages, so upstream's allowed-apps tunnel carries only those apps and the rest bypass the
+VPN. Smart and Everything through VPN set the scope back to all apps and keep the list.
+
 A rule whose `outboundTag` names a `freedom` outbound changes as follows:
 
 - `ip` entries that are `geoip:private` or inside a special-use range stay direct, and the rule

@@ -33,14 +33,16 @@ class SettingsCard extends StatelessWidget {
 class SettingsSwitchRow extends StatelessWidget {
   const SettingsSwitchRow({
     super.key,
-    required this.icon,
     required this.title,
     required this.value,
     required this.onChanged,
+    this.icon,
+    this.leading,
     this.subtitle,
   });
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget? leading;
   final String title;
   final String? subtitle;
   final bool? value;
@@ -51,6 +53,7 @@ class SettingsSwitchRow extends StatelessWidget {
     final current = value;
     return SettingsRow(
       icon: icon,
+      leading: leading,
       title: title,
       subtitle: subtitle,
       toggled: current ?? false,
@@ -76,19 +79,24 @@ class SettingsLinkRow extends StatelessWidget {
     required this.title,
     required this.value,
     required this.onTap,
+    this.subtitle,
   });
 
   final IconData icon;
   final String title;
+  final String? subtitle;
 
   /// Null while unknown.
   final String? value;
-  final VoidCallback onTap;
+
+  /// Null disables the row.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => SettingsRow(
     icon: icon,
     title: title,
+    subtitle: subtitle,
     value: value,
     onTap: onTap,
     trailing: Row(
@@ -114,6 +122,7 @@ class SettingsRow extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.icon,
+    this.leading,
     this.subtitle,
     this.trailing,
     this.value,
@@ -123,6 +132,9 @@ class SettingsRow extends StatelessWidget {
 
   /// Left out where the mockup draws a plain list of choices.
   final IconData? icon;
+
+  /// Takes the place of [icon] where the picture is not a glyph.
+  final Widget? leading;
   final String title;
   final String? subtitle;
   final VoidCallback? onTap;
@@ -156,14 +168,15 @@ class SettingsRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                if (icon case final icon?) ...[
+                if (icon case final icon?)
                   IconTile(
                     icon: icon,
                     color: BrandColors.ink,
                     fill: BrandColors.surfaceRaised,
-                  ),
-                  const SizedBox(width: 12),
-                ],
+                  )
+                else
+                  ?leading,
+                if (icon != null || leading != null) const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,5 +196,18 @@ class SettingsRow extends StatelessWidget {
         ),
       ),
     ),
+  );
+}
+
+/// The small capitals above a card.
+class SettingsSectionLabel extends StatelessWidget {
+  const SettingsSectionLabel(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 4, 8),
+    child: Text(text.toUpperCase(), style: BrandText.sectionLabel),
   );
 }

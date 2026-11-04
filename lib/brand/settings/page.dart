@@ -9,10 +9,11 @@ import 'package:onexray/brand/settings/controller.dart';
 import 'package:onexray/brand/settings/language_page.dart';
 import 'package:onexray/brand/settings/preset_page.dart';
 import 'package:onexray/brand/settings/row.dart';
+import 'package:onexray/brand/settings/vpn_apps_page.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
-import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/event_bus/state.dart';
@@ -63,13 +64,13 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
   // Above the tab bar, as the mockup has it.
   Future<void> _openPresets() async {
     final chosen = await Navigator.of(context, rootNavigator: true)
-        .push<TrafficMode>(
+        .push<ConnectionPreset>(
           MaterialPageRoute(
             builder: (_) => PresetPage(controller: widget.controller),
           ),
         );
     if (chosen != null && mounted) {
-      await widget.controller.selectPreset(chosen, _run);
+      await choosePreset(context, widget.controller, chosen, _run);
     }
   }
 
@@ -98,7 +99,7 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
             children: [
               Text(l.prototypeSettings, style: BrandText.screenTitle),
               const SizedBox(height: 16),
-              _SectionLabel(l.settingsConnection),
+              SettingsSectionLabel(l.settingsConnection),
               SettingsCard(
                 children: [
                   BlocBuilder<HomeController, HomeState>(
@@ -106,10 +107,33 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
                     builder: (context, state) => SettingsLinkRow(
                       icon: LucideIcons.route,
                       title: l.settingsPresets,
-                      value: _presetLabel(l, state.preset),
+                      value: switch (state.preset) {
+                        final preset? => presetLabel(l, preset),
+                        null => null,
+                      },
                       onTap: _openPresets,
                     ),
                   ),
+                  if (widget.controller.presets.contains(ConnectionPreset.apps))
+                    BlocBuilder<HomeController, HomeState>(
+                      bloc: widget.controller,
+                      buildWhen: (a, b) =>
+                          a.vpnApps != b.vpnApps ||
+                          a.canChangeConnection != b.canChangeConnection,
+                      builder: (context, state) => SettingsLinkRow(
+                        icon: LucideIcons.layoutGrid,
+                        title: l.settingsVpnApps,
+                        subtitle: l.settingsVpnAppsHint,
+                        value: state.vpnApps.isEmpty
+                            ? null
+                            : '${state.vpnApps.length}',
+                        // A list saved mid-command would be lost.
+                        onTap: state.canChangeConnection
+                            ? () =>
+                                  editVpnApps(context, widget.controller, _run)
+                            : null,
+                      ),
+                    ),
                   BlocBuilder<SettingsController, SettingsState>(
                     bloc: _settings,
                     buildWhen: (a, b) => a.connectOnLaunch != b.connectOnLaunch,
@@ -123,7 +147,7 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
                 ],
               ),
               const SizedBox(height: 24),
-              _SectionLabel(l.settingsApp),
+              SettingsSectionLabel(l.settingsApp),
               SettingsCard(
                 children: [
                   BlocBuilder<AppEventBus, AppEventBusState>(
@@ -156,23 +180,3 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
     );
   }
 }
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 4, 8),
-    child: Text(text.toUpperCase(), style: BrandText.sectionLabel),
-  );
-}
-
-/// Null for a preset this screen does not offer, or before it is read.
-String? _presetLabel(AppLocalizations l, TrafficMode? preset) =>
-    switch (preset) {
-      TrafficMode.smart => l.homePresetSmart,
-      TrafficMode.allVpn => l.homePresetAllVpn,
-      TrafficMode.custom || null => null,
-    };

@@ -24,6 +24,7 @@ import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
@@ -40,6 +41,11 @@ import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 const _largeScale = 3.0;
+
+Tristate isSelected(WidgetTester tester, String label) => tester
+    .getSemantics(find.bySemanticsLabel(label))
+    .flagsCollection
+    .isSelected;
 
 ConnectionRuntime _runtime(DateTime startedAt) => ConnectionRuntime.create(
   configuration: ConnectionConfiguration(),
@@ -79,6 +85,8 @@ void main() {
     double scale = 1,
     AppDistribution distribution = AppDistribution.current,
     Locale locale = const Locale('ru'),
+    ConnectionPlatform platform = ConnectionPlatform.ios,
+    List<AndroidAppInfo> apps = const [],
   }) async {
     bus = AppEventBus();
     addTearDown(bus.close);
@@ -120,6 +128,8 @@ void main() {
       pingLocations: (_, {isCancelled}) async => sweeps++,
       dismissAnnounce: db.subscriptionDao.dismissAnnounce,
       refreshSubscription: (row) => refresh(row),
+      platform: platform,
+      installedApps: () async => apps,
     );
     addTearDown(controller.close);
     await tester.pumpWidget(
@@ -1115,13 +1125,7 @@ void main() {
     await tester.runAsync(() => pumpEventQueue(times: 20));
     await tester.pump();
 
-    expect(
-      tester
-          .getSemantics(find.bySemanticsLabel('Всё через VPN'))
-          .flagsCollection
-          .isSelected,
-      Tristate.isTrue,
-    );
+    expect(isSelected(tester, 'Всё через VPN'), Tristate.isTrue);
     await tester.runAsync(() async {
       expect(
         (await coordinator.configuration).connection.trafficMode,
@@ -1133,11 +1137,83 @@ void main() {
   testWidgets('the preset switch fits with the largest system font', (
     tester,
   ) async {
-    await pumpHome(tester, scale: _largeScale);
+    await pumpHome(
+      tester,
+      scale: _largeScale,
+      platform: ConnectionPlatform.android,
+    );
     await addSubscription(tester);
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Всё через VPN'), findsOneWidget);
+    expect(find.text('Приложения'), findsOneWidget);
+  });
+
+  group('Apps', () {
+    final telegram = AndroidAppInfo(
+      name: 'Telegram',
+      packageName: 'org.telegram.messenger',
+    );
+
+    Future<void> settle(WidgetTester tester) async {
+      await tester.runAsync(() => pumpEventQueue(times: 20));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> openApps(WidgetTester tester) async {
+      await pumpHome(
+        tester,
+        platform: ConnectionPlatform.android,
+        apps: [telegram],
+      );
+      await addSubscription(tester);
+      await tester.tap(find.text('Приложения'));
+      await settle(tester);
+    }
+
+    Future<void> leave(WidgetTester tester) async {
+      await tester.tap(find.bySemanticsLabel('Назад'));
+      await settle(tester);
+    }
+
+    Future<ConnectionConfiguration> stored(WidgetTester tester) async =>
+        (await tester.runAsync(() => coordinator.configuration))!;
+
+    testWidgets('is not offered on iOS', (tester) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+
+      expect(find.text('Умный'), findsOneWidget);
+      expect(find.text('Приложения'), findsNothing);
+    });
+
+    testWidgets('with nothing chosen opens the list first', (tester) async {
+      await openApps(tester);
+      expect(find.text('Приложения через VPN'), findsOneWidget);
+
+      await tester.tap(find.text('Telegram'));
+      await tester.pump();
+      await leave(tester);
+
+      expect(isSelected(tester, 'Приложения'), Tristate.isTrue);
+      final configuration = await stored(tester);
+      expect(
+        ConnectionPreset.of(
+          configuration,
+          platform: ConnectionPlatform.android,
+        ),
+        ConnectionPreset.apps,
+      );
+      expect(configuration.vpnApps, ['org.telegram.messenger']);
+    });
+
+    testWidgets('stays off when the list is left empty', (tester) async {
+      await openApps(tester);
+
+      await leave(tester);
+
+      expect(isSelected(tester, 'Приложения'), Tristate.isFalse);
+      expect(isSelected(tester, 'Умный'), Tristate.isTrue);
+    });
   });
 
   group('in English', () {

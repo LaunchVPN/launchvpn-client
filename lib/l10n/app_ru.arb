@@ -1032,5 +1032,14 @@
   "settingsLanguage": "Язык",
   "settingsLanguageSystem": "Как в системе",
   "settingsLanguageNowRussian": "Сейчас русский",
-  "settingsLanguageNowEnglish": "Сейчас английский"
+  "settingsLanguageNowEnglish": "Сейчас английский",
+  "homePresetApps": "Приложения",
+  "settingsPresetAppsHint": "Через VPN только выбранные приложения",
+  "settingsVpnApps": "Приложения через VPN",
+  "settingsVpnAppsHint": "Остальные идут напрямую",
+  "vpnAppsSearch": "Поиск приложений",
+  "vpnAppsChosen": "Через VPN · {count}",
+  "vpnAppsOthers": "Остальные",
+  "vpnAppsNone": "Ничего не найдено",
+  "vpnAppsLoadFailed": "Не удалось получить список приложений"
 }
