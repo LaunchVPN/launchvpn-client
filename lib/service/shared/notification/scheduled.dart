@@ -34,12 +34,18 @@ abstract interface class ScheduledNotifications {
   Future<void> schedule(ScheduledNotification notification);
 
   Future<void> cancel(int id);
+
+  /// Names the reminders channel Android lists in its settings. Elsewhere it
+  /// does nothing.
+  Future<void> nameChannel(String name);
 }
 
 /// The phone's notifications, through the plugin `NotificationService`
 /// initializes. Scheduled ones are reminders: Android puts them in their own
 /// channel and delivers them inexactly, without the exact alarm permission.
 final class SystemNotifications implements ScheduledNotifications {
+  static const _channel = '${Brand.androidId}.reminders';
+
   final _plugin = FlutterLocalNotificationsPlugin();
 
   AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
@@ -83,7 +89,7 @@ final class SystemNotifications implements ScheduledNotifications {
         // Apart from the VPN status channel, so muting one keeps the other.
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
-            '${Brand.androidId}.reminders',
+            _channel,
             appLocalizationsNoContext().notificationChannelReminders,
           ),
         ),
@@ -92,4 +98,9 @@ final class SystemNotifications implements ScheduledNotifications {
 
   @override
   Future<void> cancel(int id) => _plugin.cancel(id: id);
+
+  // Creating an existing channel again renames it.
+  @override
+  Future<void> nameChannel(String name) async => _android
+      ?.createNotificationChannel(AndroidNotificationChannel(_channel, name));
 }

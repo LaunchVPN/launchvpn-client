@@ -84,6 +84,18 @@ void main() {
     ]);
   });
 
+  test(
+    'rename their Android channel with the language, even when off',
+    () async {
+      await reminders.disable();
+      await bus.updateLanguageCode(LanguageCode.en);
+
+      await reminders.update();
+
+      expect(notifications.channel, 'Reminders');
+    },
+  );
+
   test('leaves out a reminder whose time has passed', () async {
     now = DateTime(2026, 11, 17, 12, 1);
     await addSubscription(expires: DateTime(2026, 11, 20, 3));

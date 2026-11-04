@@ -88,6 +88,17 @@ void main() {
     final android = (call.arguments as Map)['platformSpecifics'] as Map;
     expect(android['channelId'], isNot(Brand.androidId));
     expect(android['channelName'], 'Напоминания');
+
+    await SystemNotifications().nameChannel('Reminders');
+    final renamed =
+        calls
+                .singleWhere(
+                  (call) => call.method == 'createNotificationChannel',
+                )
+                .arguments
+            as Map;
+    expect(renamed['id'], android['channelId']);
+    expect(renamed['name'], 'Reminders');
   });
 
   group('public notification entry behavior', () {

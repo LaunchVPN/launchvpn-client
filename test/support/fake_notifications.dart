@@ -10,6 +10,9 @@ final class FakeNotifications implements ScheduledNotifications {
   int requests = 0;
   int settingsOpened = 0;
 
+  /// The name Android shows for the reminders channel.
+  String? channel;
+
   /// While set, the system prompt stays open until it completes.
   Completer<void>? prompt;
 
@@ -33,6 +36,9 @@ final class FakeNotifications implements ScheduledNotifications {
 
   @override
   Future<void> cancel(int id) async => pending.remove(id);
+
+  @override
+  Future<void> nameChannel(String name) async => channel = name;
 
   /// Time and title of each pending notification, earliest first.
   List<(DateTime, String)> get shown =>

@@ -99,10 +99,12 @@ final class RenewalReminders {
     for (final slot in _slots) {
       await _notifications.cancel(slot.id);
     }
+    final l = appLocalizationsNoContext();
+    // Android lists the channel in its settings even with no reminder set.
+    await _notifications.nameChannel(l.notificationChannelReminders);
     if (!await active) return;
     final expiresAt = _expiresAt(await _db.subscriptionDao.allRows);
     if (expiresAt == null) return;
-    final l = appLocalizationsNoContext();
     final end = expiresAt.toLocal();
     final now = _clock();
     for (final (:id, :days, :title) in _slots) {
