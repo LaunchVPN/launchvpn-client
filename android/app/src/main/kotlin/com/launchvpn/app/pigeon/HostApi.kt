@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity.RESULT_OK
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.net.VpnService
@@ -189,17 +190,19 @@ class AppHostApi(
         scope.launch {
             checkInstalledAppPermission {
                 if (it) {
+                    // Apps a person can open from the launcher. System services
+                    // without an icon there would bury them in the list.
                     val packageManager = context.packageManager
-                    val installedApps = packageManager.getInstalledApplications(0)
-                    val apps = mutableListOf<AndroidAppInfo>()
-                    for (info in installedApps) {
-                        val appInfo =
+                    val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                    val apps = packageManager.queryIntentActivities(launcher, 0)
+                        .map { it.activityInfo.applicationInfo }
+                        .distinctBy { it.packageName }
+                        .map {
                             AndroidAppInfo(
-                                packageManager.getApplicationLabel(info).toString(),
-                                info.packageName,
+                                packageManager.getApplicationLabel(it).toString(),
+                                it.packageName,
                             )
-                        apps.add(appInfo)
-                    }
+                        }
                     callback(Result.success(apps))
                 } else {
                     callback(Result.success(listOf()))
