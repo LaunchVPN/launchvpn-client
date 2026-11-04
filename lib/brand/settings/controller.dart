@@ -30,6 +30,7 @@ class SettingsController extends PageCubit<SettingsState> {
   final RenewalReminders _reminders;
   bool _savingLaunch = false;
   bool _savingReminders = false;
+  Future<void> _languageSaves = Future.value();
 
   Future<void> initialize() async {
     try {
@@ -61,8 +62,12 @@ class SettingsController extends PageCubit<SettingsState> {
   }
 
   /// Every screen switches at once. Reminders already set are rewritten in
-  /// the new language.
-  Future<void> setLanguage(LanguageCode value) async {
+  /// the new language. Each tap waits for the save before it, so the last
+  /// one wins.
+  Future<void> setLanguage(LanguageCode value) =>
+      _languageSaves = _languageSaves.then((_) => _saveLanguage(value));
+
+  Future<void> _saveLanguage(LanguageCode value) async {
     if (value == AppEventBus.instance.state.languageCode) return;
     try {
       await AppEventBus.instance.updateLanguageCode(value);

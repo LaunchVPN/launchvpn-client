@@ -23,6 +23,8 @@ import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
+import 'package:onexray/core/constants/preferences.dart';
+import 'package:onexray/service/shared/event_bus/enum.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/share/service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -441,6 +443,27 @@ void main() {
   });
 
   group('language', () {
+    test('the last tap wins over a save still running', () async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      // Closing it would dispose the App's services.
+      final bus = AppEventBus();
+      final settings = SettingsController(
+        reminders: RenewalReminders(
+          database: db,
+          notifications: FakeNotifications(),
+        ),
+      );
+      addTearDown(settings.close);
+
+      final english = settings.setLanguage(LanguageCode.en);
+      await settings.setLanguage(LanguageCode.system);
+      await english;
+
+      expect(bus.state.languageCode, LanguageCode.system);
+      expect(await PreferencesKey().readLanguageCode(), 'system');
+    });
+
     testWidgets('an English phone gets English on Home and in Settings', (
       tester,
     ) async {
