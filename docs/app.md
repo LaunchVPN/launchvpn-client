@@ -126,7 +126,18 @@ upstream pages kept for merging. They are not reachable in this build.
   (Sign in, «Нет аккаунта? Создать») and back. The button waits for both fields. A refusal shows its
   text under the fields: wrong email or password, email already registered, invalid email or a
   password under 8 characters, too many attempts, no connection, and one general text for the rest.
-  Telegram sign-in is not offered yet.
+- On Android, «Вход» also offers «Войти через Telegram» below the form, after «или»; iOS does not
+  (App Store guideline 4.8 would require Sign in with Apple). A tap makes a PKCE verifier, kept in
+  memory for this attempt only, and opens `<api>/api/auth/telegram/start?mode=app_login` with the
+  App's language and the verifier's S256 challenge in the external browser. The form stays usable
+  meanwhile, since the person may come back without finishing, and a second tap replaces the
+  attempt. The browser returns to `launchvpn://auth`, which Android registers next to `sub`; the
+  shell hands it to `TelegramBrowserAuth` instead of the subscription flow. `?code=` is exchanged
+  with the verifier at `/api/app/auth/exchange` while the button shows progress. `?error=cancelled`
+  changes nothing; any other error, or a refused exchange, shows «Не получилось войти через
+  Telegram. Попробуйте ещё раз» under the button. A return no attempt waits for, a repeat or one
+  after the App restarted, is ignored. The return's `mode` names what the attempt was for, so
+  linking Telegram can reuse the same piece.
 - Create account (`/api/app/auth/signup`) mails a code and replaces the form with «Проверьте почту»
   on the same page; signing in with an unconfirmed email does the same with the attempt the backend
   returns. The attempt's `signupToken` stays in memory for this flow only. The code field takes
@@ -135,7 +146,7 @@ upstream pages kept for merging. They are not reachable in this build.
   or burned one asks for a new code. Resend counts down from the backend's `resendIn`, or its
   `retryAfter` when it refuses an early resend; an attempt the backend no longer knows asks to start
   over. «Не та почта? Изменить», or Back, returns to the form with the email kept.
-- A sign-in, by password or by code, stores the session, then the account's subscription becomes a
+- A sign-in, by password, code or Telegram, stores the session, then the account's subscription becomes a
   `launchvpn://sub/add` link in the same queue system links take, so it is added, confirmed and
   reported the same way, and its URL is kept as the account's. An account without an active
   subscription claims the trial once (`/api/app/trial`) and adds the subscription it brings. When
