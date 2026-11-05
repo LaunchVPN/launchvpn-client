@@ -31,8 +31,13 @@ void main() {
           },
         ),
       ],
-      tags: {'server': '198.51.100.20'},
-      contexts: Contexts()
+      tags: {
+        'server': '198.51.100.20',
+        'v6': '2001:db8:: and ::1',
+        'upper': 'VPN.EXAMPLE.COM',
+        'tld': 'vpn.example.so',
+      },
+      contexts: Contexts(device: SentryDevice(name: 'Pixel of Ivan'))
         ..['flutter_error_details'] = {
           'information': ['Text "nl-2.example.org" overflowed'],
         },
@@ -59,6 +64,10 @@ void main() {
       'сервер.рф',
       'nl-2.example.org',
       '198.51.100.20',
+      '2001:db8::',
+      '::1',
+      'VPN.EXAMPLE.COM',
+      'example.so',
     ]) {
       expect(sent, isNot(contains(personal)), reason: personal);
     }

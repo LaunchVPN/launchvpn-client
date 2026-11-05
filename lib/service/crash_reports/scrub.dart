@@ -26,6 +26,7 @@ SentryEvent scrubEvent(SentryEvent event) {
       final id? => SentryUser(id: id),
       null => null,
     };
+  event.contexts.device?.name = null;
   // ignore: deprecated_member_use
   event.extra = _scrubMap(event.extra);
   // Flutter's error details, such as the text of an overflowing widget. The
@@ -67,36 +68,46 @@ final List<_Pattern> _patterns = [
     '<id>',
   ),
   _fixed(RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b'), '<ip>'),
-  // Three colons at least, or a `::`, so times such as 12:30:45 stay.
+  // Three colons at least, or a `::` anywhere (`2001:db8::`, `::1`), so times
+  // such as 12:30:45 stay.
   _fixed(
     RegExp(
-      r'(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}|[0-9a-f:]*::[0-9a-f:]*[0-9a-f]',
+      r'(?<![0-9a-z:])(?:'
+      r'(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}'
+      r'|(?:[0-9a-f]{1,4}:)+:(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4})*)?'
+      r'|::[0-9a-f]{1,4}(?::[0-9a-f]{1,4})*'
+      r')(?![0-9a-z:])',
       caseSensitive: false,
     ),
     '<ip>',
   ),
-  // Lowercase letters of any script, for names such as `vpn.сервер.рф`.
-  // Hosts reach errors lowercase, while Dart names such as
-  // `AppLifecycleState.resumed` have capitals and stay.
+  // Letters of any script, for names such as `vpn.сервер.рф`.
   (
     match: RegExp(
       r'(?<![\p{L}\p{N}-])'
-      r'(?:[\p{Ll}\p{N}](?:[\p{Ll}\p{N}-]*[\p{Ll}\p{N}])?\.)+(\p{Ll}{2,24})'
+      r'(?:[\p{L}\p{N}](?:[\p{L}\p{N}-]*[\p{L}\p{N}])?\.)+(\p{L}{2,24})'
       r'(?![\p{L}\p{N}-])',
       unicode: true,
     ),
-    // File names look like hosts and help find the bug.
+    // File names and Dart names such as `AppLifecycleState.resumed` look like
+    // hosts and help find the bug. A host is one case per label.
     replace: (match) =>
-        _fileExtensions.contains(match[1]) ? match[0]! : '<host>',
+        _fileExtensions.contains(match[1]!.toLowerCase()) ||
+            match[0]!.split('.').any(_mixedCase.hasMatch)
+        ? match[0]!
+        : '<host>',
   ),
 ];
 
 _Pattern _fixed(RegExp match, String placeholder) =>
     (match: match, replace: (_) => placeholder);
 
+final _mixedCase = RegExp(r'^(?=.*\p{Lu})(?=.*\p{Ll})', unicode: true);
+
+// No `so`: it is also Somalia's domain.
 const _fileExtensions = {
-  'dart', 'db', 'json', 'yaml', 'txt', 'log', 'dat', 'so', 'kt', 'java', //
-  'swift', 'plist', 'xml', 'png', 'jpg', 'html', 'js', 'sqlite', 'ttf',
+  'dart', 'db', 'json', 'yaml', 'txt', 'log', 'dat', 'kt', 'java', 'swift', //
+  'plist', 'xml', 'png', 'jpg', 'html', 'js', 'sqlite', 'ttf',
 };
 
 String? _scrubNullable(String? text) => text == null ? null : scrubText(text);
