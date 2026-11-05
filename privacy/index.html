@@ -35,7 +35,8 @@
   panel:</p>
   <ul>
     <li>a device identifier (HWID). On Android it is the identifier the system
-    gives the app, and it changes after a factory reset. On iOS it is a random
+    gives the app. It changes after a factory reset, and the version from
+    Google Play gets a different one than the version from GitHub. On iOS it is a random
     identifier the app creates on first launch and keeps in the Keychain, so it
     survives a reinstall;</li>
     <li>the operating system, its version and the device model;</li>
@@ -66,11 +67,14 @@
     <li>if you signed in with Telegram or linked it: your Telegram ID, first
     name, last name and username from Telegram;</li>
     <li>the language for emails with codes;</li>
-    <li>the identifier and platform (Android or iOS) of the devices you signed
-    in from;</li>
+    <li>the identifiers of the devices you signed in from;</li>
     <li>your subscription, its end date and the payments made in the account
-    Cabinet or in the bot.</li>
+    Cabinet or in the bot. If you saved a card for automatic renewal, also its
+    last four digits and card network.</li>
   </ul>
+  <p>The trial is given once. For that, the server keeps hashes of the emails
+  and device identifiers that already got it. The hashes are not linked to an
+  account and stay after it is deleted.</p>
   <p>On sign-in and sign-up the server looks at the IP address to limit the
   number of attempts. The address is not stored. The app keeps its sign-in
   keys in the system's secure storage: the Keychain on iOS and the Keystore on
@@ -82,12 +86,14 @@
   on it are lost, including those received in the bot if Telegram is linked.
   Deletion cannot be undone.</p>
   <ul>
-    <li>If there were no payments, we delete everything: the account, the user
-    in the panel and the devices.</li>
+    <li>If there were no payments, we delete the account, the user in the
+    panel and the devices. Only the trial hashes stay.</li>
     <li>If there were payments, we delete access: the user in the panel,
-    email sign-in and sign-in keys. The record of payments stays, together with
-    the Telegram ID if one was linked. It is needed to account for the
-    payments.</li>
+    email sign-in and sign-in keys. To account for the payments, the user
+    record stays: the Telegram ID if one was linked, the language, the sign-up
+    date, who invited you and where you came from, the history of
+    subscriptions and payments, and, if you used the bot, the log of messages
+    to it.</li>
   </ul>
 
   <h2>Crash reports</h2>
@@ -95,12 +101,15 @@
   <a href="https://sentry.io/privacy/">Sentry</a>, a crash reporting service.
   Reports are kept on Sentry's servers in Germany for 90 days.</p>
   <p>A report holds the error type, the place in the code where it happened,
-  the app version, the device model, the system version and a random
-  installation identifier that shows how many devices hit the same crash.</p>
-  <p>Before sending, the app removes from the report links, including the
-  subscription link, email addresses, IP addresses, server and site names,
-  device identifiers and the device name. Sentry does not store the IP address
-  a report comes from.</p>
+  the app version, a random installation identifier that shows how many
+  devices hit the same crash, and device details: the model, system version,
+  language, time zone, screen, memory and free storage.</p>
+  <p>Before sending an error report, the app removes from it links, including
+  the subscription link, email addresses, IP addresses, server and site names,
+  the device identifier and the device name. A crash in the app's native part
+  is reported by Sentry itself: the report holds the call stack and the same
+  device details. Sentry does not store the IP address a report comes
+  from.</p>
   <p>Sending is on by default, and the app says so on first launch. You can
   turn it off in Settings with the Crash reports switch. While it is off, the
   app sends nothing.</p>
@@ -118,6 +127,8 @@
 
   <h2>Other requests</h2>
   <ul>
+    <li>While the VPN is on, the app downloads updated routing address
+    databases from the v2fly project on GitHub every three days.</li>
     <li>The Android version downloaded from GitHub asks GitHub for the latest
     version number at launch, to offer an update. Versions from the App Store
     and Google Play leave updates to the store.</li>
