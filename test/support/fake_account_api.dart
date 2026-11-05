@@ -120,12 +120,14 @@ final class FakeAccountApi implements HttpClientAdapter {
             : {'active': true, 'configLink': configLink},
       );
 
-  void me({required String email, required bool telegramLinked}) =>
+  /// The account as `/api/me` describes it; no [email] for one that has only
+  /// Telegram.
+  void me({required String? email, required bool telegramLinked}) =>
       _routes['/api/me'] = (_) async => (
         200,
         {
           'email': email,
-          'emailVerified': true,
+          'emailVerified': email != null,
           'telegramLinked': telegramLinked,
         },
       );

@@ -43,10 +43,14 @@ void main() {
     AppDistribution distribution = AppDistribution.store,
     bool signedIn = true,
     String? linkSubscription,
+    bool telegramOnly = false,
   }) async {
     api.loginWith(access: 'a1', refresh: 'r1');
     api.subscription('https://sub.launch.tel/abc');
-    api.me(email: 'ivan@proton.me', telegramLinked: false);
+    api.me(
+      email: telegramOnly ? null : 'ivan@proton.me',
+      telegramLinked: telegramOnly,
+    );
     api.devices([
       {'hwid': 'device-hwid', 'deviceModel': 'Pixel 9', 'platform': 'Android'},
       {
@@ -150,6 +154,16 @@ void main() {
       expect(launcher.opened, ['https://t.me/launchbotsupport']);
     });
   }
+
+  testWidgets('an account with only Telegram says it signs in with Telegram', (
+    tester,
+  ) async {
+    await pumpAccount(tester, telegramOnly: true);
+
+    expect(find.text('Telegram'), findsOneWidget);
+    expect(find.text('Вход через Telegram'), findsOneWidget);
+    expect(find.text('Привязать Telegram'), findsNothing);
+  });
 
   testWidgets('the APK build renews on the site', (tester) async {
     await pumpAccount(tester, distribution: AppDistribution.apk);

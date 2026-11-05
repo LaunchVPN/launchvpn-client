@@ -20,6 +20,7 @@ import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/account/failure.dart';
+import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/service.dart';
 
 /// «Аккаунт»: days and traffic for everyone; the devices, the account,
@@ -278,15 +279,23 @@ class _AccountPageState extends State<AccountPage> {
     final profile = state.profile;
     final support = state.subscription?.supportUrl ?? Brand.supportUrl;
     return [
-      if (profile?.email case final email?)
-        SettingsRow(
+      ?switch (profile) {
+        AccountProfile(:final email?, :final telegramLinked) => SettingsRow(
           icon: LucideIcons.user,
           title: email,
-          subtitle: profile!.telegramLinked
+          subtitle: telegramLinked
               ? l.accountTelegramLinked
               : l.accountEmailSignIn,
           onTap: null,
         ),
+        AccountProfile() => SettingsRow(
+          icon: LucideIcons.send,
+          title: l.accountTelegram,
+          subtitle: l.accountTelegramSignIn,
+          onTap: null,
+        ),
+        null => null,
+      },
       if (state.signedIn && profile != null && !profile.telegramLinked)
         SettingsRow(
           icon: LucideIcons.send,

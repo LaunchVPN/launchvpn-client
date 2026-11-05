@@ -3317,6 +3317,8 @@
   "accountDeviceRemoveFailed": "Couldn't remove the device. Try again",
   "accountTelegramLinked": "Telegram linked",
   "accountEmailSignIn": "Signs in with email",
+  "accountTelegram": "Telegram",
+  "accountTelegramSignIn": "Signs in with Telegram",
   "accountLinkTelegram": "Link Telegram",
   "accountLinkTelegramHint": "Days from the bot are added to your subscription",
   "accountLinkTelegramFailed": "Couldn't link Telegram. Try again",

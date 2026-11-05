@@ -1082,6 +1082,8 @@
   "accountDeviceRemoveFailed": "Не получилось удалить устройство. Попробуйте ещё раз",
   "accountTelegramLinked": "Telegram привязан",
   "accountEmailSignIn": "Вход по email",
+  "accountTelegram": "Telegram",
+  "accountTelegramSignIn": "Вход через Telegram",
   "accountLinkTelegram": "Привязать Telegram",
   "accountLinkTelegramHint": "Дни из бота добавятся к подписке",
   "accountLinkTelegramFailed": "Не получилось привязать Telegram. Попробуйте ещё раз",
