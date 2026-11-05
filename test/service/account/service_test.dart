@@ -881,6 +881,31 @@ void main() {
       );
     }
 
+    test(
+      'a confirmed email the signup offered no trial does not claim it',
+      () async {
+        api.verifyWith(access: 'a1', refresh: 'r1', trialGranted: false);
+        api.subscription(null);
+        api.trialGrants(_configLink);
+        final service = account();
+
+        await service.email.verifyCode(
+          const PendingSignup(
+            email: 'ivan@proton.me',
+            token: 'st1',
+            resendIn: Duration(seconds: 60),
+            trialAvailable: false,
+          ),
+          '123456',
+        );
+
+        expect(api.bodies('/api/app/trial'), isEmpty);
+        expect(added, isEmpty);
+        expect(service.session.signedIn.value, isTrue);
+        expect(service.data.subscriptionMissing, isTrue);
+      },
+    );
+
     test('a used trial leaves the account without a subscription', () async {
       api.verifyWith(access: 'a1', refresh: 'r1', trialGranted: false);
       api.subscription(null);

@@ -173,7 +173,7 @@ upstream pages kept for merging. They are not reachable in this build.
   `launchvpn://sub/add` link in the same queue system links take, so it is added, confirmed and
   reported the same way, and its URL is kept as the account's. An account without an active
   subscription claims the trial (`/api/app/trial`) and adds the subscription it brings, unless the
-  code from the email already started it. A password or Telegram sign-in cannot tell an account
+  code from the email already started it or the signup said `trialAvailable: false`. A password or Telegram sign-in cannot tell an account
   that never had a subscription from an ended one, so it claims and the backend refuses one whose
   trial was used. When
   the trial was used, Home and Account show Subscription ended, whose refresh reads the account's

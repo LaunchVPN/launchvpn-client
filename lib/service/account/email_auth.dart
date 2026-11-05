@@ -72,7 +72,8 @@ final class EmailAuth {
   }
 
   /// Confirms [signup] with the mailed [code], signs in and adds the
-  /// account's subscription as [login] does.
+  /// account's subscription as [login] does. The trial is claimed only when
+  /// the signup offered it.
   Future<void> verifyCode(PendingSignup signup, String code) async {
     final device = await _device();
     await _data.signIn(
@@ -85,6 +86,7 @@ final class EmailAuth {
           ...device.toJson(),
         },
       ),
+      trialAvailable: signup.trialAvailable,
     );
   }
 

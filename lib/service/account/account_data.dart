@@ -38,18 +38,21 @@ final class AccountData {
   /// Keeps the session from a token pair answer, then reads the account's
   /// subscription and adds it once signed in. An account without one claims
   /// the trial, which the backend refuses to one that had it, unless the
-  /// answer says the trial already started. Only the code from the email
-  /// says so; a login cannot tell an account that never had a subscription
-  /// from an ended one.
-  Future<void> signIn(Map<String, Object?> answer) async {
-    final trialStarted = answer['trialGranted'] == true;
+  /// answer says the trial already started or [trialAvailable] says there is
+  /// none. Only the code from the email can tell; a login cannot tell an
+  /// account that never had a subscription from an ended one.
+  Future<void> signIn(
+    Map<String, Object?> answer, {
+    bool trialAvailable = true,
+  }) async {
+    final claimTrial = trialAvailable && answer['trialGranted'] != true;
     final link = await _session.start(answer, () {
       _forcedSignOut = null;
       _subscriptionMissing = false;
       return _readQuietly(
         () async =>
             await _subscriptionLink() ??
-            (trialStarted ? null : await _claimTrial()),
+            (claimTrial ? await _claimTrial() : null),
       );
     });
     if (link != null) addSubscription(link);
