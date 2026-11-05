@@ -3327,7 +3327,7 @@
   "accountSupport": "Support",
   "accountLogout": "Sign out",
   "accountLogoutTitle": "Sign out?",
-  "accountLogoutBody": "Your subscription stays. You can sign in again at any time.",
+  "accountLogoutBody": "Sign in again to connect.",
   "accountDelete": "Delete account",
   "accountDeleteTitle": "Delete account?",
   "accountDeleteBody": "Your subscription and remaining days will be gone, including those from the bot. Deletion can't be undone.",

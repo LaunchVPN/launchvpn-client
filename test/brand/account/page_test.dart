@@ -214,6 +214,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('account-logout')));
     await settle(tester);
     expect(find.text('Выйти из аккаунта?'), findsOneWidget);
+    expect(find.text('Войдите снова, чтобы подключиться.'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, 'Выйти'));
     await settle(tester);
 

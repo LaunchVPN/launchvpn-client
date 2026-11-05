@@ -1089,7 +1089,7 @@
   "accountSupport": "Поддержка",
   "accountLogout": "Выйти",
   "accountLogoutTitle": "Выйти из аккаунта?",
-  "accountLogoutBody": "Подписка сохранится. Войти снова можно в любой момент.",
+  "accountLogoutBody": "Войдите снова, чтобы подключиться.",
   "accountDelete": "Удалить аккаунт",
   "accountDeleteTitle": "Удалить аккаунт?",
   "accountDeleteBody": "Подписка и оставшиеся дни пропадут, в том числе полученные в боте. Отменить удаление нельзя.",
