@@ -279,14 +279,19 @@ final class AccountService {
   }
 
   /// Keeps the session from a token pair answer, then reads the account's
-  /// subscription. An account without one claims the trial, once; one that
-  /// had its trial stays without.
+  /// subscription. An account without one claims the trial, which the
+  /// backend refuses to one that had it, unless the answer says the trial
+  /// already started. Only the code from the email says so; a login cannot
+  /// tell an account that never had a subscription from an ended one.
   Future<Uri?> _signIn(Map<String, Object?> answer) async {
     await _keep(_tokenPair(answer));
     _unfinishedDeletion = false;
+    final trialStarted = answer['trialGranted'] == true;
     Uri? link;
     try {
-      link = await _subscriptionLink() ?? await _claimTrial();
+      link =
+          await _subscriptionLink() ??
+          (trialStarted ? null : await _claimTrial());
     } on AccountException catch (error) {
       ygLogger('read account subscription failed (${error.error.name})');
     }

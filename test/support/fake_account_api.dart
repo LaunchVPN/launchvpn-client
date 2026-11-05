@@ -52,12 +52,16 @@ final class FakeAccountApi implements HttpClientAdapter {
     },
   );
 
-  /// The right code: the email is confirmed and the device signed in.
-  void verifyWith({required String access, required String refresh}) =>
-      _routes['/api/app/auth/verify-code'] = (_) async {
-        final (status, pair) = _pair(access, refresh);
-        return (status, {...pair, 'trialGranted': true});
-      };
+  /// The right code: the email is confirmed and the device signed in, with
+  /// the trial started unless [trialGranted] says otherwise.
+  void verifyWith({
+    required String access,
+    required String refresh,
+    bool? trialGranted = true,
+  }) => _routes['/api/app/auth/verify-code'] = (_) async {
+    final (status, pair) = _pair(access, refresh);
+    return (status, {...pair, 'trialGranted': ?trialGranted});
+  };
 
   void resendWith({int resendIn = 60}) =>
       _routes['/api/app/auth/resend-code'] = (_) async =>

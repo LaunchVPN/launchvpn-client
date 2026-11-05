@@ -680,20 +680,45 @@ void main() {
       expect(api.authorizations('/api/app/trial'), ['Bearer a1']);
     });
 
-    test('a used trial leaves the account without a subscription', () async {
+    const signup = PendingSignup(
+      email: 'ivan@proton.me',
+      token: 'st1',
+      resendIn: Duration(seconds: 60),
+    );
+
+    test('a confirmed email whose trial started does not claim it', () async {
       api.verifyWith(access: 'a1', refresh: 'r1');
+      api.subscription(null);
+      api.trialGrants(_configLink);
+
+      expect(await account().verifyCode(signup, '123456'), isNull);
+      expect(api.bodies('/api/app/trial'), isEmpty);
+    });
+
+    for (final granted in [false, null]) {
+      test(
+        'a confirmed email with trialGranted $granted claims the trial',
+        () async {
+          api.verifyWith(access: 'a1', refresh: 'r1', trialGranted: granted);
+          api.subscription(null);
+          api.trialGrants(_configLink);
+
+          expect(
+            await account().verifyCode(signup, '123456'),
+            _subscriptionLink,
+          );
+          expect(api.bodies('/api/app/trial'), hasLength(1));
+        },
+      );
+    }
+
+    test('a used trial leaves the account without a subscription', () async {
+      api.verifyWith(access: 'a1', refresh: 'r1', trialGranted: false);
       api.subscription(null);
       api.refuse('/api/app/trial', 403, 'trial_used');
       final service = account();
 
-      final link = await service.verifyCode(
-        const PendingSignup(
-          email: 'ivan@proton.me',
-          token: 'st1',
-          resendIn: Duration(seconds: 60),
-        ),
-        '123456',
-      );
+      final link = await service.verifyCode(signup, '123456');
 
       expect(link, isNull);
       expect(service.signedIn.value, isTrue);
