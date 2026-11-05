@@ -7,6 +7,7 @@ import 'package:onexray/core/pigeon/host_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/account/failure.dart';
+import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/session_store.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 
@@ -21,8 +22,12 @@ final class AccountService {
     required this._dio,
     AccountSessionStore? store,
     Future<DeviceIdentity?> Function()? readDevice,
+    Future<void> Function(String url)? removeSubscription,
   }) : _store = store ?? AccountSessionStore(),
-       _readDevice = readDevice ?? AppHostApi().deviceIdentity {
+       _readDevice = readDevice ?? AppHostApi().deviceIdentity,
+       _removeSubscription =
+           removeSubscription ??
+           ((url) => SubscriptionLinkService().remove(url)) {
     _dio.interceptors.add(_BearerInterceptor(this));
   }
 
@@ -39,6 +44,7 @@ final class AccountService {
   final Dio _dio;
   final AccountSessionStore _store;
   final Future<DeviceIdentity?> Function() _readDevice;
+  final Future<void> Function(String url) _removeSubscription;
   final _signedIn = ValueNotifier(false);
   AccountTokens? _tokens;
   Future<AccountTokens?>? _refreshing;
@@ -102,8 +108,32 @@ final class AccountService {
     return link.uri;
   }
 
-  /// Revokes this device's session. Signs out here even when the backend
-  /// cannot be reached.
+  /// What the backend knows about the account.
+  Future<AccountProfile> profile() async => AccountProfile.fromJson(
+    await _send(() => _dio.get<Object?>('/api/me', options: _bearer)),
+  );
+
+  /// The devices on the account's subscription, this one marked.
+  Future<AccountDevices> devices() async {
+    final device = await _device();
+    return AccountDevices.fromJson(
+      await _send(() => _dio.get<Object?>('/api/devices', options: _bearer)),
+      currentHwid: device.hwid,
+    );
+  }
+
+  /// Takes another device off the subscription, which frees its place.
+  Future<void> removeDevice(String hwid) => _send(
+    () => _dio.post<Object?>(
+      '/api/devices/disconnect',
+      data: {'hwid': hwid},
+      options: _bearer,
+    ),
+  );
+
+  /// Revokes this device's session and removes the subscription the account
+  /// brought, keeping one added from a link. Signs out here even when the
+  /// backend cannot be reached.
   Future<void> logout() async {
     try {
       await _send(
@@ -111,9 +141,16 @@ final class AccountService {
       );
     } on AccountException catch (error) {
       ygLogger('revoke account session failed (${error.error.name})');
-    } finally {
-      await _signOut();
     }
+    try {
+      if (await _store.readSubscriptionUrl() case final url?) {
+        await _removeSubscription(url);
+        await _store.clearSubscriptionUrl();
+      }
+    } catch (error) {
+      ygLogger('remove account subscription failed (${error.runtimeType})');
+    }
+    await _signOut();
   }
 
   static final _bearer = Options(extra: {_BearerInterceptor.bearer: true});

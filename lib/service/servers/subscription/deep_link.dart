@@ -92,6 +92,15 @@ final class SubscriptionLinkService {
     }
   }
 
+  /// Deletes the subscription [url] names, and with it a tunnel that runs
+  /// through it. Nothing happens when the device does not have it.
+  Future<void> remove(String url) async {
+    for (final row in await _database.subscriptionDao.allRows) {
+      if (row.url != url) continue;
+      await _servers.remove(await _servers.previewRemoval(sourceId: row.id));
+    }
+  }
+
   Future<SubscriptionInsertResult> _load(
     SubscriptionDeepLink link,
     SubscriptionData? current,

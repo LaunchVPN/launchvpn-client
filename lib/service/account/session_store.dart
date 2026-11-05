@@ -50,4 +50,8 @@ final class AccountSessionStore {
   /// it and keep one added from a link.
   Future<void> saveSubscriptionUrl(String url) =>
       _storage.write(key: _subscription, value: url);
+
+  Future<String?> readSubscriptionUrl() => _storage.read(key: _subscription);
+
+  Future<void> clearSubscriptionUrl() => _storage.delete(key: _subscription);
 }

@@ -53,6 +53,34 @@ final class FakeAccountApi implements HttpClientAdapter {
             : {'active': true, 'configLink': configLink},
       );
 
+  void me({required String email, required bool telegramLinked}) =>
+      _routes['/api/me'] = (_) async => (
+        200,
+        {
+          'email': email,
+          'emailVerified': true,
+          'telegramLinked': telegramLinked,
+        },
+      );
+
+  /// The panel's devices for the account, as `/api/devices` passes them on.
+  /// Removing one takes it off the list.
+  void devices(List<Map<String, Object?>> devices, {required int max}) {
+    final listed = [...devices];
+    _routes['/api/devices'] = (_) async =>
+        (200, {'devices': listed, 'maxDevices': max});
+    _routes['/api/devices/disconnect'] = (options) async {
+      final hwid = (options.data as Map)['hwid'];
+      listed.removeWhere((device) => device['hwid'] == hwid);
+      return (200, <String, Object?>{'ok': true});
+    };
+  }
+
+  /// The panel fails to remove a device.
+  void refuseDeviceRemoval() =>
+      _routes['/api/devices/disconnect'] = (_) async =>
+          (502, {'ok': false, 'code': 'disconnect_failed'});
+
   /// Every bearer route answers 401 to [access], as when it expired.
   void rejectAccess(String access) => _rejected.add(access);
 
@@ -108,9 +136,14 @@ final class FakeAccountApi implements HttpClientAdapter {
   );
 }
 
-/// An [AccountService] that talks to [api] from a Pixel 9.
-AccountService accountServiceFor(FakeAccountApi api) => AccountService(
+/// An [AccountService] that talks to [api] from a Pixel 9, with this device's
+/// subscriptions behind [removeSubscription].
+AccountService accountServiceFor(
+  FakeAccountApi api, {
+  Future<void> Function(String url)? removeSubscription,
+}) => AccountService(
   dio: Dio(BaseOptions(baseUrl: 'https://api.test'))..httpClientAdapter = api,
+  removeSubscription: removeSubscription ?? (_) async {},
   readDevice: () async => DeviceIdentity(
     hwid: 'device-hwid',
     os: 'Android',
