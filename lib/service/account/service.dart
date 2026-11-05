@@ -6,6 +6,7 @@ import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/pigeon/host_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
+import 'package:onexray/service/account/device_claim.dart';
 import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/session_store.dart';
@@ -100,9 +101,8 @@ final class AccountService {
           data: {
             'email': email,
             'password': password,
-            'hwid': device.hwid,
-            'platform': device.os.toLowerCase(),
-            if (device.model.isNotEmpty) 'deviceModel': device.model,
+            ...device.toJson(),
+            'deviceModel': ?device.model,
           },
         ),
         email: email,
@@ -123,8 +123,7 @@ final class AccountService {
         data: {
           'email': email,
           'password': password,
-          'hwid': device.hwid,
-          'platform': device.os.toLowerCase(),
+          ...device.toJson(),
           'language': _language(),
         },
       ),
@@ -153,8 +152,7 @@ final class AccountService {
             'email': signup.email,
             'code': code,
             'signupToken': signup.token,
-            'hwid': device.hwid,
-            'platform': device.os.toLowerCase(),
+            ...device.toJson(),
           },
         ),
       ),
@@ -189,22 +187,8 @@ final class AccountService {
 
   /// Signs in with the code from [openTelegramLogin] and returns the
   /// account's subscription as [login] does.
-  Future<Uri?> exchangeTelegramLogin(TelegramCode code) async {
-    final device = await _device();
-    return _signIn(
-      await _send(
-        () => _dio.post<Object?>(
-          '/api/app/auth/exchange',
-          data: {
-            'code': code.code,
-            'verifier': code.verifier,
-            'hwid': device.hwid,
-            'platform': device.os.toLowerCase(),
-          },
-        ),
-      ),
-    );
-  }
+  Future<Uri?> exchangeTelegramLogin(TelegramCode code) async =>
+      _signIn(await _exchange(code));
 
   /// Opens Telegram's page for linking it to the signed-in account and
   /// completes with its code once the person is back. Throws
@@ -235,7 +219,6 @@ final class AccountService {
   /// Throws [AccountException], [AccountError.telegramTaken] when that
   /// Telegram has an account with an email of its own.
   Future<TelegramLink> exchangeTelegramLink(TelegramCode code) async {
-    final device = await _device();
     final previous = await _store.readSubscriptionUrl();
     // The trip through the browser may outlast the access token, and a
     // refused exchange burns the code, so it goes out freshly refreshed and
@@ -244,25 +227,11 @@ final class AccountService {
     if (tokens == null || await _refreshAfter(_header(tokens)) == null) {
       throw const AccountException(AccountError.signedOut);
     }
-    final answer = await _send(
-      () => _dio.post<Object?>(
-        '/api/app/auth/exchange',
-        data: {
-          'code': code.code,
-          'verifier': code.verifier,
-          'hwid': device.hwid,
-          'platform': device.os.toLowerCase(),
-        },
-        options: _bearerOnce,
-      ),
-    );
+    final answer = await _exchange(code, options: _bearerOnce);
     await _keep(_tokenPair(answer));
-    SubscriptionDeepLink? current;
-    try {
-      current = (await accountSubscription()).link;
-    } on AccountException catch (error) {
-      ygLogger('read account subscription failed (${error.error.name})');
-    }
+    final current = await _readSubscription(
+      () async => (await accountSubscription()).link,
+    );
     final changed = current != null && current.url != previous;
     if (changed && previous != null) {
       try {
@@ -289,16 +258,43 @@ final class AccountService {
     await _keep(_tokenPair(answer));
     _unfinishedDeletion = false;
     final trialStarted = answer['trialGranted'] == true;
-    Uri? link;
-    try {
-      link =
+    final link = await _readSubscription(
+      () async =>
           await _subscriptionLink() ??
-          (trialStarted ? null : await _claimTrial());
-    } on AccountException catch (error) {
-      ygLogger('read account subscription failed (${error.error.name})');
-    }
+          (trialStarted ? null : await _claimTrial()),
+    );
     _signedIn.value = true;
     return link;
+  }
+
+  /// Signs in, or links Telegram, with the code from the browser.
+  Future<Map<String, Object?>> _exchange(
+    TelegramCode code, {
+    Options? options,
+  }) async {
+    final device = await _device();
+    return _send(
+      () => _dio.post<Object?>(
+        '/api/app/auth/exchange',
+        data: {
+          'code': code.code,
+          'verifier': code.verifier,
+          ...device.toJson(),
+        },
+        options: options,
+      ),
+    );
+  }
+
+  /// What [read] makes of the account's subscription; null when the backend
+  /// could not tell, which only the log keeps.
+  static Future<T?> _readSubscription<T>(Future<T?> Function() read) async {
+    try {
+      return await read();
+    } on AccountException catch (error) {
+      ygLogger('read account subscription failed (${error.error.name})');
+      return null;
+    }
   }
 
   Future<Uri?> _claimTrial() async {
@@ -431,15 +427,7 @@ final class AccountService {
     extra: {_BearerInterceptor.bearer: true, _BearerInterceptor.retried: true},
   );
 
-  Future<DeviceIdentity> _device() async {
-    try {
-      final device = await _readDevice();
-      if (device != null) return device;
-    } catch (error) {
-      ygLogger('read device identity failed (${error.runtimeType})');
-    }
-    throw const AccountException(AccountError.unexpected);
-  }
+  Future<DeviceClaim> _device() => DeviceClaim.read(_readDevice);
 
   Future<void> _keep(AccountTokens tokens) async {
     await _store.saveTokens(tokens);
