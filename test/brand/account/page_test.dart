@@ -37,11 +37,12 @@ void main() {
 
   /// Signed in on a Russian phone, on «Аккаунт», with this device and a
   /// Pixel 8 on the subscription. Not [signedIn], a subscription from a link
-  /// keeps the tabs.
+  /// keeps the tabs; [linkSubscription] puts one on the device.
   Future<void> pumpAccount(
     WidgetTester tester, {
     AppDistribution distribution = AppDistribution.store,
     bool signedIn = true,
+    String? linkSubscription,
   }) async {
     api.loginWith(access: 'a1', refresh: 'r1');
     api.subscription('https://sub.launch.tel/abc');
@@ -62,6 +63,17 @@ void main() {
     }
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
+    if (linkSubscription != null) {
+      await tester.runAsync(
+        () => db.subscriptionDao.insertRow(
+          SubscriptionCompanion.insert(
+            name: 'LaunchVPN',
+            url: linkSubscription,
+            timestamp: DateTime(2026),
+          ),
+        ),
+      );
+    }
     final controller = AccountController(
       account: account,
       openLink: (_) {},
@@ -90,7 +102,8 @@ void main() {
         distribution: distribution,
       ),
       account: account,
-      watchSubscription: () => Stream.value(!signedIn),
+      watchSubscription: () =>
+          Stream.value(!signedIn || linkSubscription != null),
       shareService: share,
       initializeServices: (_) => share.init(),
       openLink: (_, _) async {},
@@ -290,6 +303,39 @@ void main() {
       expect(find.byType(NavigationBar), findsOneWidget);
       expect(find.byKey(const ValueKey('account-delete')), findsOneWidget);
       expect(removed, isEmpty);
+    });
+
+    testWidgets('with the session already gone, «Вход» asks to sign in again '
+        'to delete', (tester) async {
+      await pumpAccount(tester);
+      api.rejectAccess('a1');
+      api.refuseRefresh();
+
+      await deleteAndConfirm(tester);
+
+      expect(find.text('Войдите снова, чтобы удалить аккаунт'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Войти'), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(removed, ['https://sub.launch.tel/abc']);
+    });
+
+    testWidgets('with the session gone and a subscription from a link kept, '
+        '«Вход» opens over the tabs', (tester) async {
+      await pumpAccount(
+        tester,
+        linkSubscription: 'https://sub.launch.tel/from-bot',
+      );
+      api.rejectAccess('a1');
+      api.refuseRefresh();
+
+      await deleteAndConfirm(tester);
+
+      expect(find.text('Войдите снова, чтобы удалить аккаунт'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Войти'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.text('Войти'), findsOneWidget);
     });
 
     testWidgets('is not offered without an account', (tester) async {

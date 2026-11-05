@@ -251,13 +251,13 @@ String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
   AccountError.telegramFailed => l.loginErrorTelegram,
   AccountError.accountBlocked => l.loginErrorAccountBlocked,
   AccountError.appNotAvailable => l.loginErrorAppNotAvailable,
+  AccountError.signedOut => l.loginErrorSignInToDelete,
   AccountError.invalidCode ||
   AccountError.codeExpired ||
   AccountError.trialUsed ||
   AccountError.cancelled ||
   AccountError.telegramTaken ||
   AccountError.alreadyLinked ||
-  AccountError.signedOut ||
   AccountError.unexpected => l.loginErrorUnexpected,
 };
 

@@ -62,6 +62,7 @@ final class AccountService {
   AccountTokens? _tokens;
   Future<AccountTokens?>? _refreshing;
   bool _subscriptionMissing = false;
+  bool _unfinishedDeletion = false;
 
   ValueListenable<bool> get signedIn => _signedIn;
 
@@ -282,6 +283,7 @@ final class AccountService {
   /// had its trial stays without.
   Future<Uri?> _signIn(Map<String, Object?> answer) async {
     await _keep(_tokenPair(answer));
+    _unfinishedDeletion = false;
     Uri? link;
     try {
       link = await accountSubscription() ?? await _claimTrial();
@@ -365,9 +367,10 @@ final class AccountService {
   }
 
   /// Deletes the account on the backend, then forgets it here as [logout]
-  /// does. A session the backend refuses even after a refresh counts as an
-  /// account already gone. Throws [AccountException] and stays signed in when
-  /// the deletion did not happen.
+  /// does. Throws [AccountException] and stays signed in when the deletion
+  /// did not happen. A session the backend refuses even after a refresh
+  /// deletes nothing: it signs out here, throws [AccountError.signedOut] and
+  /// leaves [takeUnfinishedDeletion] for «Вход».
   Future<void> deleteAccount() async {
     try {
       await _send(
@@ -379,8 +382,20 @@ final class AccountService {
       );
     } on AccountException catch (error) {
       if (error.error != AccountError.signedOut) rethrow;
+      // Before signing out: «Вход» may open as soon as the session ends.
+      _unfinishedDeletion = true;
+      await _forget();
+      rethrow;
     }
     await _forget();
+  }
+
+  /// Whether a deletion found the session gone since the last sign-in, so
+  /// the person signs in again to delete the account. Reading clears it.
+  bool takeUnfinishedDeletion() {
+    final unfinished = _unfinishedDeletion;
+    _unfinishedDeletion = false;
+    return unfinished;
   }
 
   /// Removes the subscription the account brought and signs out here.

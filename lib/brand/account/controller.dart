@@ -73,6 +73,18 @@ final class AccountState {
   );
 }
 
+/// How «Удалить аккаунт» ended.
+enum AccountDeletion {
+  deleted,
+
+  /// The session was already gone: nothing was deleted, the device signed
+  /// out, and the person signs in again to delete the account.
+  signInAgain,
+
+  /// The backend could not delete the account, which stays signed in.
+  failed,
+}
+
 /// How «Привязать Telegram» ended, for the tab to tell.
 sealed class TelegramLinkOutcome {
   const TelegramLinkOutcome();
@@ -250,16 +262,21 @@ final class AccountController extends PageCubit<AccountState> {
   Future<void> logout() => _account.logout();
 
   /// «Удалить аккаунт». Once deleted the gate shows «Вход» as after
-  /// [logout]. False when the account stays because the backend could not
-  /// delete it.
-  Future<bool> deleteAccount() async {
+  /// [logout]. A session already gone signs out the same way and asks to
+  /// sign in again; [AccountState.subscription] then says whether a
+  /// subscription from a link keeps the tabs.
+  Future<AccountDeletion> deleteAccount() async {
     emit(state.copyWith(deletingAccount: true));
     try {
       await _account.deleteAccount();
-      return true;
+      return AccountDeletion.deleted;
     } on AccountException catch (error) {
       ygLogger('delete account failed (${error.error.name})');
-      return false;
+      if (error.error != AccountError.signedOut) return AccountDeletion.failed;
+      // Read now: the stream may not have seen the removal yet.
+      final row = (await _db.subscriptionDao.allRows).lastOrNull;
+      if (!isClosed) emit(state.copyWith(subscription: () => row));
+      return AccountDeletion.signInAgain;
     } finally {
       if (!isClosed) emit(state.copyWith(deletingAccount: false));
     }

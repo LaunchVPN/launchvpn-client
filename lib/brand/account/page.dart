@@ -97,7 +97,9 @@ class _AccountPageState extends State<AccountPage> {
     if (confirmed) await _controller.logout();
   }
 
-  /// Deletes the account once confirmed; one that stays says so.
+  /// Deletes the account once confirmed; one that stays says so. A session
+  /// already gone leads to «Вход»: the gate's, or over the tabs a
+  /// subscription from a link keeps.
   Future<void> _deleteAccount() async {
     final l = AppLocalizations.of(context)!;
     final confirmed = await ConfirmSheet.show(
@@ -106,8 +108,19 @@ class _AccountPageState extends State<AccountPage> {
       body: l.accountDeleteBody,
       action: l.accountDelete,
     );
-    if (!confirmed || await _controller.deleteAccount() || !mounted) return;
-    ContextAlert.showToast(context, l.accountDeleteFailed);
+    if (!confirmed) return;
+    final deletion = await _controller.deleteAccount();
+    if (!mounted) return;
+    switch (deletion) {
+      case AccountDeletion.deleted:
+        break;
+      case AccountDeletion.signInAgain:
+        if (_controller.state.subscription != null) {
+          await _openLogin(LoginMode.signIn);
+        }
+      case AccountDeletion.failed:
+        ContextAlert.showToast(context, l.accountDeleteFailed);
+    }
   }
 
   /// Tells how «Привязать Telegram» ended; turning Telegram down says nothing.

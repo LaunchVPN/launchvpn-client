@@ -27,6 +27,8 @@ final class LoginState {
   bool get busy => submitting || redeemingTelegram;
 
   /// Why the last attempt failed, shown under the fields until the next one.
+  /// [AccountError.signedOut] when «Удалить аккаунт» found the session gone
+  /// and the form opens to sign in again for it.
   final AccountError? error;
 
   /// Why the last Telegram sign-in failed, shown under its button:
@@ -47,7 +49,13 @@ final class LoginController extends PageCubit<LoginState> {
     required this._account,
     required this._openLink,
     LoginMode mode = LoginMode.create,
-  }) : super(LoginState(mode: mode));
+  }) : super(LoginState(mode: mode)) {
+    if (_account.takeUnfinishedDeletion()) {
+      emit(
+        const LoginState(mode: LoginMode.signIn, error: AccountError.signedOut),
+      );
+    }
+  }
 
   final AccountService _account;
   final void Function(Uri) _openLink;

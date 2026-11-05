@@ -1054,6 +1054,7 @@
   "loginErrorEmailNotVerified": "Your email isn't confirmed yet. Try signing in again",
   "loginErrorAccountBlocked": "This account is blocked. Contact support",
   "loginErrorAppNotAvailable": "Signing in to the app isn't available yet",
+  "loginErrorSignInToDelete": "Sign in again to delete the account",
   "loginErrorRateLimited": "Too many attempts. Wait a little",
   "loginErrorNetwork": "Can't reach the server. Try again",
   "loginErrorUnexpected": "Couldn't sign in. Try again later",

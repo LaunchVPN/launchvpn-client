@@ -256,4 +256,38 @@ void main() {
       expect(restarted.signedIn.value, isFalse);
     },
   );
+
+  group('«Удалить аккаунт»', () {
+    test('deletes the account', () async {
+      final controller = controllerFor(await signedIn());
+
+      expect(await controller.deleteAccount(), AccountDeletion.deleted);
+      expect(controller.state.deletingAccount, isFalse);
+    });
+
+    test('a backend failure keeps the account', () async {
+      final controller = controllerFor(await signedIn());
+      api.refuse('/api/app/account/delete', 502, 'panel_failed');
+
+      expect(await controller.deleteAccount(), AccountDeletion.failed);
+      expect(controller.state.signedIn, isTrue);
+    });
+
+    test('a session already gone asks to sign in again, with the '
+        'subscription the device kept', () async {
+      final service = await signedIn();
+      await addRow('https://sub.launch.tel/from-bot');
+      final controller = controllerFor(service);
+      await controller.refresh();
+      api.rejectAccess('a1');
+      api.refuseRefresh();
+
+      expect(await controller.deleteAccount(), AccountDeletion.signInAgain);
+      expect(controller.state.signedIn, isFalse);
+      expect(
+        controller.state.subscription?.url,
+        'https://sub.launch.tel/from-bot',
+      );
+    });
+  });
 }

@@ -167,15 +167,35 @@ void main() {
       await expectSignedOut(service);
     });
 
-    test('an account the backend no longer knows counts as deleted', () async {
+    test('a session already gone deletes nothing, signs out here and asks to '
+        'sign in again', () async {
       final service = await signedIn();
       api.rejectAccess('a1');
       api.refuseRefresh();
 
-      await service.deleteAccount();
+      await expectLater(
+        service.deleteAccount(),
+        throwsA(_error(AccountError.signedOut)),
+      );
 
       await expectSignedOut(service);
+      expect(service.takeUnfinishedDeletion(), isTrue);
+      expect(service.takeUnfinishedDeletion(), isFalse);
     });
+
+    test(
+      'signing in again drops the request to sign in for deletion',
+      () async {
+        final service = await signedIn();
+        api.rejectAccess('a1');
+        api.refuseRefresh();
+        await expectLater(service.deleteAccount(), throwsA(anything));
+
+        await service.login(email: 'ivan@proton.me', password: 'pw');
+
+        expect(service.takeUnfinishedDeletion(), isFalse);
+      },
+    );
 
     for (final (name, fail, expected) in [
       (
