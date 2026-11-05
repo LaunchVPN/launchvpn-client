@@ -22,6 +22,7 @@ void main() {
   late AccountService account;
   late List<String> removed;
   late FakeBrowser browser;
+  late StreamController<Uri> links;
 
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
@@ -44,6 +45,7 @@ void main() {
     bool signedIn = true,
     String? linkSubscription,
     bool telegramOnly = false,
+    bool openAccount = true,
   }) async {
     api.loginWith(access: 'a1', refresh: 'r1');
     api.subscription('https://sub.launch.tel/abc', maxDevices: 5);
@@ -87,7 +89,7 @@ void main() {
       ),
     );
     addTearDown(controller.close);
-    final links = StreamController<Uri>.broadcast(sync: true);
+    links = StreamController<Uri>.broadcast(sync: true);
     final share = ShareService.forTesting(
       appLinks: links.stream,
       receiveWidgetUri: (_) => false,
@@ -128,6 +130,7 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(BrandApp(routerConfig: router));
     await tester.pumpAndSettle();
+    if (!openAccount) return;
     await tester.tap(find.text('Аккаунт'));
     await settle(tester);
   }
@@ -231,6 +234,35 @@ void main() {
         expect(find.text('Вход по email'), findsNothing);
       });
     }
+
+    testWidgets('a link the system closed the App during completes after the '
+        'restart on «Аккаунт»', (tester) async {
+      await pumpAccount(tester);
+      api.linkStartWith('https://app.test/api/auth/telegram/start?ticket=t1');
+      await tester.ensureVisible(find.text('Привязать Telegram'));
+      await tester.tap(find.text('Привязать Telegram'));
+      await settle(tester);
+      expect(browser.opened, hasLength(1));
+      api.refreshWith(access: 'a2', refresh: 'r2');
+      api.exchangeWith(access: 'a3', refresh: 'r3', addedDays: 30);
+      // In the test's zone: the attempt completes in the zone it was
+      // restored in.
+      account = accountServiceFor(
+        api,
+        removeSubscription: (url) async => removed.add(url),
+        browser: browser,
+      );
+      await account.restore();
+      await pumpAccount(tester, openAccount: false);
+      expect(find.text('home-body'), findsOneWidget);
+      api.me(email: 'ivan@proton.me', telegramLinked: true);
+
+      links.add(Uri.parse('launchvpn://auth?code=c1&mode=link'));
+      await settle(tester);
+
+      expect(find.text('Telegram привязан, 30 дней добавлены'), findsOneWidget);
+      expect(find.text('Привязать Telegram'), findsNothing);
+    });
 
     testWidgets('a Telegram taken by another email account explains it in a '
         'sheet', (tester) async {

@@ -27,8 +27,9 @@ import 'package:onexray/service/shared/share/service.dart';
 /// neither a session nor a subscription. Incoming links and the iOS Widget's
 /// foreground actions are handled here because they need a ready UI:
 /// `launchvpn://auth` returns go to the Telegram attempt waiting for them,
-/// every other link to the subscription flow. A sign-in the system closed
-/// the App during, which no «Вход» took back, opens one over the tabs.
+/// every other link to the subscription flow. A return to linking opens
+/// «Аккаунт», which tells the outcome; a sign-in the system closed the App
+/// during, which no «Вход» took back, opens one over the tabs.
 class BrandShell extends StatefulWidget {
   const BrandShell({
     super.key,
@@ -131,6 +132,8 @@ class _BrandShellState extends State<BrandShell> {
   void _showTelegramOutcome(Uri uri) {
     final telegram = _account.telegram;
     switch (TelegramBrowserAuth.purposeOf(uri)) {
+      case TelegramAuthPurpose.link:
+        widget.navigationShell.goBranch(BrandRoutes.accountBranch);
       case TelegramAuthPurpose.login
           when !_account.signedIn.value &&
               telegram.awaitsResume(TelegramAuthPurpose.login):

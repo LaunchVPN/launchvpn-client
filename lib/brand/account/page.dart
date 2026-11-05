@@ -59,7 +59,10 @@ class _AccountPageState extends State<AccountPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final visible = TickerMode.valuesOf(context).enabled;
-    if (visible && !_visible) unawaited(_controller.refresh());
+    if (visible && !_visible) {
+      unawaited(_controller.refresh());
+      WidgetsBinding.instance.addPostFrameCallback((_) => _tellResumedLink());
+    }
     _visible = visible;
   }
 
@@ -107,10 +110,22 @@ class _AccountPageState extends State<AccountPage> {
     }
   }
 
-  /// Tells how «Привязать Telegram» ended; turning Telegram down says nothing.
   Future<void> _linkTelegram() async {
     final outcome = await _controller.linkTelegram();
-    if (!mounted) return;
+    if (mounted) await _tellLink(outcome);
+  }
+
+  /// Tells, once the tab shows, how a link the system closed the App during
+  /// ended.
+  void _tellResumedLink() {
+    final outcome = _controller.state.resumedLink;
+    if (!mounted || !_visible || outcome == null) return;
+    _controller.resumedLinkShown();
+    unawaited(_tellLink(outcome));
+  }
+
+  /// Tells how «Привязать Telegram» ended; turning Telegram down says nothing.
+  Future<void> _tellLink(TelegramLinkOutcome outcome) async {
     final l = AppLocalizations.of(context)!;
     switch (outcome) {
       case TelegramLinked(:final addedDays):
@@ -143,8 +158,12 @@ class _AccountPageState extends State<AccountPage> {
       child: Scaffold(
         body: SafeArea(
           bottom: false,
-          child: BlocBuilder<AccountController, AccountState>(
+          child: BlocConsumer<AccountController, AccountState>(
             bloc: _controller,
+            listenWhen: (previous, current) =>
+                current.resumedLink != null &&
+                current.resumedLink != previous.resumedLink,
+            listener: (_, _) => _tellResumedLink(),
             builder: (context, state) {
               final devices = state.devices;
               return ListView(

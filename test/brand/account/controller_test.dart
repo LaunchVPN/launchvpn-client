@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
@@ -285,6 +287,40 @@ void main() {
     ]);
     expect(controller.state.profile?.telegramLinked, isTrue);
     expect(controller.state.linkingTelegram, isFalse);
+  });
+
+  test('linking Telegram the system closed the App during completes once '
+      'the tab is back, and tells it once', () async {
+    final service = await signedIn();
+    await addRow(_configLink);
+    const telegramLink = 'https://sub.launch.tel/telegram';
+    api.linkStartWith('https://app.test/api/auth/telegram/start?ticket=t1');
+    api.refreshWith(access: 'a2', refresh: 'r2');
+    api.exchangeWith(access: 'a3', refresh: 'r3', addedDays: 30);
+    api.subscription(telegramLink);
+    api.me(email: 'ivan@proton.me', telegramLinked: true);
+    unawaited(service.openTelegramLink());
+    await pumpEventQueue();
+    final restarted = account();
+    await restarted.restore();
+    final controller = controllerFor(restarted);
+
+    restarted.telegram.handleReturn(
+      Uri.parse('launchvpn://auth?code=c1&mode=link'),
+    );
+    await pumpEventQueue(times: 50);
+
+    expect(
+      controller.state.resumedLink,
+      isA<TelegramLinked>().having((o) => o.addedDays, 'addedDays', 30),
+    );
+    expect(opened, [
+      Uri.parse(
+        'launchvpn://sub/add?url=${Uri.encodeQueryComponent(telegramLink)}',
+      ),
+    ]);
+    controller.resumedLinkShown();
+    expect(controller.state.resumedLink, isNull);
   });
 
   test(

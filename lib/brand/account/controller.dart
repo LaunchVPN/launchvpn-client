@@ -9,6 +9,7 @@ import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/service.dart';
+import 'package:onexray/service/account/telegram_auth.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/servers/subscription/service.dart';
 import 'package:onexray/service/servers/subscription/user_info.dart';
@@ -23,6 +24,7 @@ final class AccountState {
     this.inactive = false,
     this.refreshing = false,
     this.linkingTelegram = false,
+    this.resumedLink,
     this.deletingAccount = false,
   });
 
@@ -53,6 +55,10 @@ final class AccountState {
   /// Back from Telegram, the App is linking it with the code it brought.
   final bool linkingTelegram;
 
+  /// How a link the system closed the App during ended, until the tab told
+  /// it.
+  final TelegramLinkOutcome? resumedLink;
+
   /// [AccountController.deleteAccount] is running.
   final bool deletingAccount;
 
@@ -71,6 +77,7 @@ final class AccountState {
     bool? inactive,
     bool? refreshing,
     bool? linkingTelegram,
+    TelegramLinkOutcome? Function()? resumedLink,
     bool? deletingAccount,
   }) => AccountState(
     signedIn: signedIn ?? this.signedIn,
@@ -82,6 +89,7 @@ final class AccountState {
     inactive: inactive ?? this.inactive,
     refreshing: refreshing ?? this.refreshing,
     linkingTelegram: linkingTelegram ?? this.linkingTelegram,
+    resumedLink: resumedLink == null ? this.resumedLink : resumedLink(),
     deletingAccount: deletingAccount ?? this.deletingAccount,
   );
 }
@@ -138,6 +146,9 @@ final class AccountController extends PageCubit<AccountState> {
          ),
        ) {
     _account.signedIn.addListener(_sessionChanged);
+    if (_account.telegram.resume(TelegramAuthPurpose.link) case final code?) {
+      unawaited(_resumeLink(code));
+    }
   }
 
   final AccountService _account;
@@ -256,8 +267,26 @@ final class AccountController extends PageCubit<AccountState> {
     if (state.linkingTelegram) {
       return const TelegramLinkFailed(AccountError.cancelled);
     }
+    return _finishLink(_account.openTelegramLink());
+  }
+
+  /// A link the system closed the App during, finished with the code
+  /// [pending] brings back. Its outcome waits in [AccountState.resumedLink].
+  Future<void> _resumeLink(Future<TelegramCode> pending) async {
+    final outcome = await _finishLink(pending);
+    if (isClosed) return;
+    // Another attempt replaced it, which tells its own outcome.
+    if (outcome case TelegramLinkFailed(error: AccountError.cancelled)) return;
+    emit(state.copyWith(resumedLink: () => outcome));
+  }
+
+  /// The tab told [AccountState.resumedLink].
+  void resumedLinkShown() => emit(state.copyWith(resumedLink: () => null));
+
+  /// Links Telegram with the code [pending] brings back.
+  Future<TelegramLinkOutcome> _finishLink(Future<TelegramCode> pending) async {
     try {
-      final code = await _account.openTelegramLink();
+      final code = await pending;
       emit(state.copyWith(linkingTelegram: true));
       try {
         final linked = await _account.exchangeTelegramLink(code);

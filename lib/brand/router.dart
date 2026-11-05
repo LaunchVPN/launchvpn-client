@@ -15,6 +15,7 @@ abstract final class BrandRoutes {
   static const account = '/account';
   static const settings = '/settings';
   static const homeBranch = 0;
+  static const accountBranch = 1;
 }
 
 /// The whole navigable app. Upstream's pages are not registered, so nothing can
