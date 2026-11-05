@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/theme.dart';
 
@@ -14,6 +15,7 @@ class BrandTextField extends StatelessWidget {
     this.keyboardType,
     this.textInputAction,
     this.autofillHints,
+    this.inputFormatters,
     this.obscureText = false,
     this.autofocus = false,
     this.enabled = true,
@@ -27,6 +29,7 @@ class BrandTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
+  final List<TextInputFormatter>? inputFormatters;
   final bool obscureText;
   final bool autofocus;
   final bool enabled;
@@ -44,6 +47,7 @@ class BrandTextField extends StatelessWidget {
     keyboardType: keyboardType,
     textInputAction: textInputAction,
     autofillHints: autofillHints,
+    inputFormatters: inputFormatters,
     obscureText: obscureText,
     autocorrect: !obscureText,
     autofocus: autofocus,

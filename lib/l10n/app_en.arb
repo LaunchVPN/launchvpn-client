@@ -3322,5 +3322,33 @@
   },
   "homeDeviceLimitBodyAccount": "Every device place on the subscription is taken. Remove one to connect this phone.",
   "homeDeviceLimitBodySupport": "Every device place on the subscription is taken. Write to support to free one.",
-  "homeDeviceLimitRefresh": "Refresh"
+  "homeDeviceLimitRefresh": "Refresh",
+  "loginCreateSubtitle": "Create an account and get 3 days free. No card needed.",
+  "loginCreate": "Create account",
+  "loginHaveAccount": "Already have an account?",
+  "loginNoAccount": "No account yet?",
+  "loginToCreate": "Create one",
+  "loginErrorEmailTaken": "This email is already registered. Sign in instead",
+  "loginErrorInvalidRequest": "Check the email. The password needs at least 8 characters",
+  "codeTitle": "Check\nyour email",
+  "codeBody": "We sent a code to {email}. Enter it and your 3 free days start right away.",
+  "@codeBody": {
+    "placeholders": {"email": {"type": "String"}}
+  },
+  "codeHint": "6-digit code",
+  "codeSubmit": "Confirm",
+  "codeResend": "Send the code again",
+  "codeResendIn": "Send the code again · {time}",
+  "@codeResendIn": {
+    "placeholders": {"time": {"type": "String"}}
+  },
+  "codeWrongEmail": "Wrong email?",
+  "codeChangeEmail": "Change",
+  "codeErrorWrong": "Wrong code",
+  "codeErrorWrongLeft": "Wrong code. Attempts left: {count}",
+  "@codeErrorWrongLeft": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "codeErrorExpired": "This code no longer works. Send a new one",
+  "codeErrorAttemptGone": "This attempt has expired. Tap Change and start again"
 }

@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:onexray/brand/login/code_view.dart';
 import 'package:onexray/brand/login/controller.dart';
+import 'package:onexray/brand/login/footer_link.dart';
 import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/text_field.dart';
 import 'package:onexray/brand/theme.dart';
@@ -17,13 +19,21 @@ import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 
 /// «Вход», in place of the tabs while the device has neither a session nor a
-/// subscription. Both sign-in and a pasted link hand their subscription to
-/// [openLink], the queue incoming links go through.
+/// subscription. It creates an account, as it opens by default, or signs in;
+/// a new account, or an unconfirmed email, continues to «Проверьте почту» on
+/// the same page. Sign-in, the code and a pasted link hand their
+/// subscription to [openLink], the queue incoming links go through.
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key, required this.account, required this.openLink});
+  const LoginPage({
+    super.key,
+    required this.account,
+    required this.openLink,
+    this.mode = LoginMode.create,
+  });
 
   final AccountService account;
   final void Function(Uri) openLink;
+  final LoginMode mode;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -33,6 +43,7 @@ class _LoginPageState extends State<LoginPage> {
   late final _login = LoginController(
     account: widget.account,
     openLink: widget.openLink,
+    mode: widget.mode,
   );
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -81,86 +92,129 @@ class _LoginPageState extends State<LoginPage> {
     final l = AppLocalizations.of(context)!;
     return AnnotatedRegion(
       value: BrandTheme.statusBar,
-      child: Scaffold(
-        backgroundColor: BrandColors.bg,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              BrandSpacing.page,
-              48,
-              BrandSpacing.page,
-              BrandSpacing.page,
-            ),
-            child: AutofillGroup(
-              child: BlocBuilder<LoginController, LoginState>(
-                bloc: _login,
-                builder: (context, state) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: _MarkTile(),
-                    ),
-                    const SizedBox(height: 36),
-                    Text(l.loginTitle, style: BrandText.heroTitle),
-                    const SizedBox(height: 36),
-                    BrandTextField(
-                      icon: LucideIcons.mail,
-                      hint: l.loginEmail,
-                      controller: _email,
-                      enabled: !state.submitting,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.email],
-                    ),
-                    const SizedBox(height: 12),
-                    BrandTextField(
-                      icon: LucideIcons.lock,
-                      hint: l.loginPassword,
-                      controller: _password,
-                      enabled: !state.submitting,
-                      obscureText: true,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.password],
-                      onSubmitted: (_) => _submit(),
-                    ),
-                    if (state.error case final error?) ...[
+      child: BlocBuilder<LoginController, LoginState>(
+        bloc: _login,
+        builder: (context, state) {
+          final signup = state.signup;
+          return PopScope(
+            // Back from the code returns to the form, as «Изменить» does.
+            canPop: signup == null,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) _login.changeEmail();
+            },
+            child: Scaffold(
+              backgroundColor: BrandColors.bg,
+              body: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    BrandSpacing.page,
+                    48,
+                    BrandSpacing.page,
+                    BrandSpacing.page,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: _MarkTile(),
+                      ),
+                      const SizedBox(height: 36),
+                      Text(
+                        signup == null ? l.loginTitle : l.codeTitle,
+                        style: BrandText.heroTitle,
+                      ),
                       const SizedBox(height: 12),
-                      Semantics(
-                        liveRegion: true,
-                        child: Text(
-                          _errorMessage(l, error),
-                          style: BrandText.caption.copyWith(
-                            color: BrandColors.danger,
-                          ),
+                      if (signup == null)
+                        _form(l, state)
+                      else
+                        EmailCodeView(
+                          key: ValueKey(signup),
+                          signup: signup,
+                          account: widget.account,
+                          openLink: widget.openLink,
+                          onChangeEmail: _login.changeEmail,
                         ),
-                      ),
                     ],
-                    const SizedBox(height: 12),
-                    ListenableBuilder(
-                      listenable: Listenable.merge([_email, _password]),
-                      builder: (_, _) => FilledButton(
-                        style: BrandTheme.primaryButton,
-                        onPressed: _canSubmit ? _submit : null,
-                        child: ButtonProgress(
-                          busy: state.submitting,
-                          child: Text(l.loginSubmit),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton.icon(
-                      style: BrandTheme.quietButton,
-                      onPressed: state.submitting ? null : _addLink,
-                      icon: const Icon(LucideIcons.link),
-                      label: Text(l.loginHaveLink),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _form(AppLocalizations l, LoginState state) {
+    final creates = state.mode == LoginMode.create;
+    return AutofillGroup(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (creates) Text(l.loginCreateSubtitle, style: BrandText.hint),
+          const SizedBox(height: 24),
+          BrandTextField(
+            icon: LucideIcons.mail,
+            hint: l.loginEmail,
+            controller: _email,
+            enabled: !state.submitting,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.email],
           ),
-        ),
+          const SizedBox(height: 12),
+          BrandTextField(
+            icon: LucideIcons.lock,
+            hint: l.loginPassword,
+            controller: _password,
+            enabled: !state.submitting,
+            obscureText: true,
+            textInputAction: TextInputAction.done,
+            autofillHints: [
+              if (creates)
+                AutofillHints.newPassword
+              else
+                AutofillHints.password,
+            ],
+            onSubmitted: (_) => _submit(),
+          ),
+          if (state.error case final error?) ...[
+            const SizedBox(height: 12),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                _errorMessage(l, error),
+                style: BrandText.caption.copyWith(color: BrandColors.danger),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          ListenableBuilder(
+            listenable: Listenable.merge([_email, _password]),
+            builder: (_, _) => FilledButton(
+              style: BrandTheme.primaryButton,
+              onPressed: _canSubmit ? _submit : null,
+              child: ButtonProgress(
+                busy: state.submitting,
+                child: Text(creates ? l.loginCreate : l.loginSubmit),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            style: BrandTheme.quietButton,
+            onPressed: state.submitting ? null : _addLink,
+            icon: const Icon(LucideIcons.link),
+            label: Text(l.loginHaveLink),
+          ),
+          const SizedBox(height: 12),
+          LoginFooterLink(
+            question: creates ? l.loginHaveAccount : l.loginNoAccount,
+            action: creates ? l.loginSubmit : l.loginToCreate,
+            onPressed: state.submitting ? null : _login.switchMode,
+          ),
+        ],
       ),
     );
   }
@@ -170,7 +224,12 @@ String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
   AccountError.invalidCredentials => l.loginErrorInvalidCredentials,
   AccountError.emailNotVerified => l.loginErrorEmailNotVerified,
   AccountError.rateLimited => l.loginErrorRateLimited,
+  AccountError.emailTaken => l.loginErrorEmailTaken,
+  AccountError.invalidRequest => l.loginErrorInvalidRequest,
   AccountError.network => l.loginErrorNetwork,
+  AccountError.invalidCode ||
+  AccountError.codeExpired ||
+  AccountError.trialUsed ||
   AccountError.accountBlocked ||
   AccountError.appNotAvailable ||
   AccountError.signedOut ||

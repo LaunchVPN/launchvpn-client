@@ -296,6 +296,14 @@ abstract final class BrandTheme {
     foregroundColor: BrandColors.muted,
     minimumSize: const Size.fromHeight(44),
   ).merge(_wideButton);
+
+  /// A link inside a line of text, such as «Войти» after «Уже есть аккаунт?».
+  static final inlineLinkButton = TextButton.styleFrom(
+    foregroundColor: BrandColors.accent,
+    textStyle: BrandText.cardTitle,
+    minimumSize: const Size(48, 44),
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+  );
   static final _wideButton = ButtonStyle(
     minimumSize: const WidgetStatePropertyAll(Size.fromHeight(52)),
     iconSize: const WidgetStatePropertyAll(20),
