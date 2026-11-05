@@ -10,6 +10,14 @@
 #   ANDROID_KEYSTORE_PASSWORD  store password
 #   ANDROID_KEY_PASSWORD       key password
 #   ANDROID_KEY_ALIAS          key alias
+#
+# Main also signs the iOS app and uploads it to TestFlight once these are set;
+# without them it builds unsigned. The team is the variable APPLE_TEAM_ID.
+#   APPLE_DISTRIBUTION_P12_BASE64  base64 of the Apple Distribution .p12
+#   KEYCHAIN_PASSWORD              password of the .p12
+#   FASTLANE_ASC_KEY_ID            App Store Connect API key ID
+#   FASTLANE_ASC_ISSUER_ID         App Store Connect issuer ID
+#   FASTLANE_ASC_KEY_BASE64        base64 of the API key (.p8)
 
 name: LaunchVPN Build
 
@@ -281,8 +289,8 @@ jobs:
             --draft --verify-tag --generate-notes \
             --title "LaunchVPN ${GITHUB_REF_NAME#v}"
 
-  # Proves the iOS app and its extensions compile. Signing and TestFlight need
-  # the Apple Developer account.
+  # Proves the iOS app and its extensions compile. Main signs the build with
+  # the test account's com.launchvpn.dev IDs and uploads it to TestFlight.
   ios:
     runs-on: xcode-27 # macOS 27 ARM64 (public preview)
     timeout-minutes: 60
@@ -318,25 +326,86 @@ jobs:
         with:
           app-path: launchvpn-client
 
+      # Outputs the Runner.app the checks below read.
+      - name: Choose signing
+        id: signing
+        env:
+          P12_B64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
+          ASC_KEY_B64: ${{ secrets.FASTLANE_ASC_KEY_BASE64 }}
+          TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: |
+          app=build/ios/iphoneos/Runner.app
+          if [ "$GITHUB_REF" = refs/heads/main ]; then
+            if [ -n "$P12_B64" ] && [ -n "$ASC_KEY_B64" ] && [ -n "$TEAM_ID" ]; then
+              echo "upload=true" >> "$GITHUB_OUTPUT"
+              app=build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+            else
+              echo "::warning::Apple signing is not set up, building without signing and TestFlight"
+            fi
+          fi
+          echo "app=$app" >> "$GITHUB_OUTPUT"
+
       - name: Build without signing
+        if: steps.signing.outputs.upload != 'true'
         run: flutter build ios --release --no-codesign --build-number "$BUILD_NUMBER"
+
+      - name: Restore the App Store Connect API key
+        if: steps.signing.outputs.upload == 'true'
+        env:
+          ASC_KEY_B64: ${{ secrets.FASTLANE_ASC_KEY_BASE64 }}
+        working-directory: launchvpn-client/ios
+        run: echo "$ASC_KEY_B64" | base64 -d > fastlane/AuthKey.p8
+
+      - name: Import the Apple Distribution certificate
+        if: steps.signing.outputs.upload == 'true'
+        uses: Apple-Actions/import-codesign-certs@288b8ec97b82c66b6f2a6baaf7acc8dfbcbe331c # v7.2.0
+        with:
+          p12-file-base64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
+          p12-password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          keychain: signing_temp
+
+      # The deploy lane fetches the three App Store profiles, archives, exports
+      # the IPA and uploads it. agvtool gives the app and both extensions the
+      # run number, since TestFlight takes each build number once. The team
+      # comes from a variable, so the organization account later changes only it.
+      - name: Sign and upload to TestFlight
+        if: steps.signing.outputs.upload == 'true'
+        env:
+          FASTLANE_ASC_KEY_ID: ${{ secrets.FASTLANE_ASC_KEY_ID }}
+          FASTLANE_ASC_ISSUER_ID: ${{ secrets.FASTLANE_ASC_ISSUER_ID }}
+          FLUTTER_XCODE_DEVELOPMENT_TEAM: ${{ vars.APPLE_TEAM_ID }}
+        working-directory: launchvpn-client/ios
+        run: |
+          xcrun agvtool new-version -all "$BUILD_NUMBER"
+          fastlane deploy
+
+      - name: Check the app embeds the tunnel and the Widget
+        env:
+          APP: ${{ steps.signing.outputs.app }}
+        run: |
+          test -d "$APP/PlugIns/tunnel.appex"
+          test -d "$APP/PlugIns/widgetExtension.appex"
 
       # An upstream merge can bring its artwork back into the build.
       - name: Check the app has no upstream artwork
+        env:
+          APP: ${{ steps.signing.outputs.app }}
         run: |
-          app=build/ios/iphoneos/Runner.app
-          assets=$app/Frameworks/App.framework/flutter_assets/assets
+          assets=$APP/Frameworks/App.framework/flutter_assets/assets
           test -d "$assets/dat"
           for path in logo.png icon app_icon macos_icon; do
             test ! -e "$assets/$path"
           done
-          info=$(plutil -p "$app/Info.plist")
+          info=$(plutil -p "$APP/Info.plist")
           ! grep CFBundleAlternateIcons <<< "$info"
 
       # An upstream merge can bring back its QR scanner and photo picker.
       - name: Check the app asks for no camera or photos
+        env:
+          APP: ${{ steps.signing.outputs.app }}
         run: |
-          info=$(plutil -p build/ios/iphoneos/Runner.app/Info.plist)
+          info=$(plutil -p "$APP/Info.plist")
           grep -q CFBundleIdentifier <<< "$info"
           if grep -E 'NSCameraUsageDescription|NSPhotoLibrary(Add)?UsageDescription' <<< "$info"; then
             exit 1
