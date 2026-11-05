@@ -1,12 +1,17 @@
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/pages/shared/page_cubit.dart';
+import 'package:onexray/service/crash_reports/service.dart';
 import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
 import 'package:onexray/service/shared/event_bus/enum.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 
 class SettingsState {
-  const SettingsState({this.connectOnLaunch, this.renewalReminders});
+  const SettingsState({
+    this.connectOnLaunch,
+    this.renewalReminders,
+    this.crashReports,
+  });
 
   /// Null until the saved value is read.
   final bool? connectOnLaunch;
@@ -15,21 +20,31 @@ class SettingsState {
   /// system allows notifications.
   final bool? renewalReminders;
 
-  SettingsState copyWith({bool? connectOnLaunch, bool? renewalReminders}) =>
-      SettingsState(
-        connectOnLaunch: connectOnLaunch ?? this.connectOnLaunch,
-        renewalReminders: renewalReminders ?? this.renewalReminders,
-      );
+  /// Null until the saved value is read.
+  final bool? crashReports;
+
+  SettingsState copyWith({
+    bool? connectOnLaunch,
+    bool? renewalReminders,
+    bool? crashReports,
+  }) => SettingsState(
+    connectOnLaunch: connectOnLaunch ?? this.connectOnLaunch,
+    renewalReminders: renewalReminders ?? this.renewalReminders,
+    crashReports: crashReports ?? this.crashReports,
+  );
 }
 
 class SettingsController extends PageCubit<SettingsState> {
-  SettingsController({RenewalReminders? reminders})
+  SettingsController({RenewalReminders? reminders, CrashReports? crashReports})
     : _reminders = reminders ?? RenewalReminders.instance,
+      _crashReports = crashReports ?? CrashReports.instance,
       super(const SettingsState());
 
   final RenewalReminders _reminders;
+  final CrashReports _crashReports;
   bool _savingLaunch = false;
   bool _savingReminders = false;
+  bool _savingCrashReports = false;
   Future<void> _languageSaves = Future.value();
 
   Future<void> initialize() async {
@@ -42,6 +57,13 @@ class SettingsController extends PageCubit<SettingsState> {
       emit(state.copyWith(connectOnLaunch: false));
     }
     await readRenewalReminders();
+    try {
+      emit(state.copyWith(crashReports: await _crashReports.enabled));
+    } catch (error) {
+      ygLogger('read crash reports failed (${error.runtimeType})');
+      // What the launch assumes when the value is unreadable.
+      emit(state.copyWith(crashReports: true));
+    }
   }
 
   /// A failed save puts the switch back. Taps during a save are ignored, so an
@@ -108,5 +130,22 @@ class SettingsController extends PageCubit<SettingsState> {
       _savingReminders = false;
     }
     await readRenewalReminders();
+  }
+
+  /// Off stops sending at once; on starts it at once. A failed save puts the
+  /// switch back, and taps during a save are ignored.
+  Future<void> setCrashReports(bool value) async {
+    if (_savingCrashReports) return;
+    _savingCrashReports = true;
+    final previous = state.crashReports;
+    emit(state.copyWith(crashReports: value));
+    try {
+      await _crashReports.setEnabled(value);
+    } catch (error) {
+      ygLogger('save crash reports failed (${error.runtimeType})');
+      if (!isClosed) emit(state.copyWith(crashReports: previous));
+    } finally {
+      _savingCrashReports = false;
+    }
   }
 }

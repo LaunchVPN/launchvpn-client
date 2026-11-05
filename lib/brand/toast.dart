@@ -7,9 +7,13 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 /// device a removal freed or the days Telegram added.
 const _readingTime = Duration(seconds: 3);
 
-/// Shows [message] the way `ContextAlert.showToast` does, for [_readingTime]
+/// Shows [message] the way `ContextAlert.showToast` does, for [duration]
 /// instead of its two seconds.
-void showReadingToast(BuildContext context, String message) {
+void showReadingToast(
+  BuildContext context,
+  String message, {
+  Duration duration = _readingTime,
+}) {
   final size = MediaQuery.sizeOf(context);
   final compact = size.width < 600;
   final availableWidth = math.max(0.0, size.width - 32);
@@ -32,7 +36,7 @@ void showReadingToast(BuildContext context, String message) {
       padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 36, 14),
       crossAxisAlignment: CrossAxisAlignment.start,
       showCloseIconOnlyWhenHovered: false,
-      duration: _readingTime,
+      duration: duration,
     ),
   );
 }

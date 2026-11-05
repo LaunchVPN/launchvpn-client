@@ -133,6 +133,24 @@ class PreferencesKey {
   Future<void> saveRenewalReminders(bool value) =>
       _prefs.setBool(_renewalReminders, value);
 
+  static const _crashReports = "${_namespace}crashReports";
+
+  /// On until the person turns crash reports off.
+  Future<bool> readCrashReports() async =>
+      await _prefs.getBool(_crashReports) ?? true;
+
+  Future<void> saveCrashReports(bool value) =>
+      _prefs.setBool(_crashReports, value);
+
+  static const _crashReportsNoticeShown =
+      "${_namespace}crashReportsNoticeShown";
+
+  Future<bool> readCrashReportsNoticeShown() async =>
+      await _prefs.getBool(_crashReportsNoticeShown) ?? false;
+
+  Future<void> saveCrashReportsNoticeShown() =>
+      _prefs.setBool(_crashReportsNoticeShown, true);
+
   static const _autoUpdate = "${_namespace}autoUpdate";
 
   Future<Map<String, dynamic>?> readAutoUpdate() async {

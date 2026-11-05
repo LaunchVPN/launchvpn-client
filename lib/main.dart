@@ -5,6 +5,7 @@ import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/core/tools/platform.dart';
 import 'package:onexray/brand/app.dart';
+import 'package:onexray/service/crash_reports/service.dart';
 import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/menu/short_cut/service.dart';
@@ -18,6 +19,7 @@ const _minimumDesktopWindowSize = Size(480, 600);
 
 Future<void> main(List<String> _) async {
   WidgetsFlutterBinding.ensureInitialized();
+  await CrashReports.instance.start();
 
   await ShortCutService().initialize();
   ShareService().startAppLinks();
