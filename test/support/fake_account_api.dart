@@ -58,9 +58,21 @@ final class FakeAccountApi implements HttpClientAdapter {
     return (200, <String, Object?>{'ok': true, 'endDate': '2026-11-08'});
   };
 
-  /// The code from a Telegram return signs in with this token pair.
-  void exchangeWith({required String access, required String refresh}) =>
-      _routes['/api/app/auth/exchange'] = (_) async => _pair(access, refresh);
+  /// The code from a Telegram return signs in with this token pair. A link
+  /// code also says how many days Telegram's side added.
+  void exchangeWith({
+    required String access,
+    required String refresh,
+    int? addedDays,
+  }) => _routes['/api/app/auth/exchange'] = (_) async {
+    final (status, pair) = _pair(access, refresh);
+    return (status, {...pair, 'addedDays': ?addedDays});
+  };
+
+  /// Linking Telegram starts in the browser at [url].
+  void linkStartWith(String url) =>
+      _routes['/api/app/link/telegram/start'] = (_) async =>
+          (200, <String, Object?>{'ok': true, 'url': url});
 
   /// Bodies sent to [path], in order.
   List<Object?> bodies(String path) => [

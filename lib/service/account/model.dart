@@ -14,6 +14,20 @@ final class PendingSignup {
   final Duration resendIn;
 }
 
+/// Telegram linked to the signed-in account, which may now be another one:
+/// the merge keeps the Telegram side's.
+final class TelegramLink {
+  const TelegramLink({required this.addedDays, this.subscription});
+
+  /// What the Telegram side's subscription added; 0 when it had none.
+  final int addedDays;
+
+  /// The account's subscription as a `launchvpn://sub/add` link when it
+  /// changed, the previous one already removed from the device. Null when it
+  /// stayed, and when the account has none.
+  final Uri? subscription;
+}
+
 /// What `GET /api/me` says about the signed-in account.
 final class AccountProfile {
   const AccountProfile({required this.email, required this.telegramLinked});

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/service.dart';
+import 'package:onexray/service/account/telegram_auth.dart';
 
 import '../../support/fake_account_api.dart';
 
@@ -392,6 +393,150 @@ void main() {
         browser.opened.map((url) => url.queryParameters['challenge']).toSet(),
         hasLength(2),
       );
+    });
+  });
+
+  group('Telegram link', () {
+    const startUrl =
+        'https://app.test/api/auth/telegram/start?mode=app_link&ticket=t1';
+    const telegramLink = 'https://sub.launch.tel/telegram';
+    late FakeBrowser browser;
+    late List<String> removed;
+
+    setUp(() {
+      browser = FakeBrowser();
+      removed = [];
+    });
+
+    /// Signed in with tokens `a1`/`r1` and the account's subscription kept
+    /// as [_configLink]; Telegram's side brings [telegramLink].
+    Future<AccountService> signedIn() async {
+      api.loginWith(access: 'a1', refresh: 'r1');
+      api.subscription(_configLink);
+      final service = accountServiceFor(
+        api,
+        browser: browser,
+        random: _CountingRandom(),
+        removeSubscription: (url) async => removed.add(url),
+      );
+      await service.login(email: 'ivan@proton.me', password: 'pw');
+      api.requests.clear();
+      api.linkStartWith(startUrl);
+      api.refreshWith(access: 'a2', refresh: 'r2');
+      api.exchangeWith(access: 'a3', refresh: 'r3', addedDays: 30);
+      api.subscription(telegramLink);
+      return service;
+    }
+
+    /// Starts linking and comes back from the browser with [ret].
+    Future<TelegramCode> linkAndReturn(AccountService service, String ret) {
+      final attempt = service.openTelegramLink();
+      return pumpEventQueue().then((_) {
+        service.telegram.handleReturn(Uri.parse(ret));
+        return attempt;
+      });
+    }
+
+    test('starts with the challenge, then merges with the verifier and the '
+        'session, and swaps the tokens and the subscription', () async {
+      final service = await signedIn();
+
+      final code = await linkAndReturn(
+        service,
+        'launchvpn://auth?code=c1&mode=link',
+      );
+      final linked = await service.exchangeTelegramLink(code);
+
+      expect(browser.opened, [Uri.parse(startUrl)]);
+      expect(api.bodies('/api/app/link/telegram/start'), [
+        {
+          'challenge': '6oZqdX5MOLq_qBJ8vppAnT4fk6AP8UiP9zX8-Rev_9A',
+          'lang': 'ru',
+        },
+      ]);
+      expect(api.authorizations('/api/app/link/telegram/start'), ['Bearer a1']);
+      expect(api.bodies('/api/app/auth/exchange'), [
+        {
+          'code': 'c1',
+          'verifier': 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+          'hwid': 'device-hwid',
+          'platform': 'android',
+        },
+      ]);
+      // Refreshed first: the trip through the browser may outlast the
+      // access token, and a refused exchange burns the code.
+      expect(api.authorizations('/api/app/auth/exchange'), ['Bearer a2']);
+      expect(linked.addedDays, 30);
+      expect(
+        linked.subscription,
+        Uri.parse(
+          'launchvpn://sub/add?url=${Uri.encodeQueryComponent(telegramLink)}',
+        ),
+      );
+      expect(removed, [_configLink]);
+      expect(api.authorizations('/api/subscription'), ['Bearer a3']);
+
+      final restarted = account();
+      await restarted.restore();
+      await restarted.profile();
+      expect(api.authorizations('/api/me'), ['Bearer a3']);
+    });
+
+    test('a subscription that stays is left on the device', () async {
+      final service = await signedIn();
+      api.exchangeWith(access: 'a3', refresh: 'r3');
+      api.subscription(_configLink);
+
+      final linked = await service.exchangeTelegramLink(
+        await linkAndReturn(service, 'launchvpn://auth?code=c1&mode=link'),
+      );
+
+      expect(linked.addedDays, 0);
+      expect(linked.subscription, isNull);
+      expect(removed, isEmpty);
+    });
+
+    test('a Telegram with its own email account is refused and nothing '
+        'changes', () async {
+      final service = await signedIn();
+      api.refuse('/api/app/auth/exchange', 409, 'telegram_taken');
+
+      await expectLater(
+        service.exchangeTelegramLink(
+          await linkAndReturn(service, 'launchvpn://auth?code=c1&mode=link'),
+        ),
+        throwsA(_error(AccountError.telegramTaken)),
+      );
+
+      expect(removed, isEmpty);
+      expect(service.signedIn.value, isTrue);
+      expect(api.bodies('/api/app/auth/exchange'), hasLength(1));
+      await service.profile();
+      expect(api.authorizations('/api/me'), ['Bearer a2']);
+    });
+
+    test(
+      'an account that has Telegram already never opens the browser',
+      () async {
+        final service = await signedIn();
+        api.refuse('/api/app/link/telegram/start', 409, 'already_linked');
+
+        await expectLater(
+          service.openTelegramLink(),
+          throwsA(_error(AccountError.alreadyLinked)),
+        );
+        expect(browser.opened, isEmpty);
+      },
+    );
+
+    test('a cancelled return exchanges nothing', () async {
+      final service = await signedIn();
+
+      await expectLater(
+        linkAndReturn(service, 'launchvpn://auth?error=cancelled&mode=link'),
+        throwsA(_error(AccountError.cancelled)),
+      );
+      expect(api.bodies('/api/app/auth/exchange'), isEmpty);
     });
   });
 

@@ -198,6 +198,80 @@ final class AccountService {
     );
   }
 
+  /// Opens Telegram's page for linking it to the signed-in account and
+  /// completes with its code once the person is back. Throws
+  /// [AccountException], [AccountError.alreadyLinked] among others.
+  Future<TelegramCode> openTelegramLink() =>
+      telegram.authorize(TelegramAuthPurpose.link, (challenge) async {
+        final data = await _send(
+          () => _dio.post<Object?>(
+            '/api/app/link/telegram/start',
+            data: {'challenge': challenge, 'lang': _language()},
+            options: _bearer,
+          ),
+        );
+        final url = switch (data['url']) {
+          final String url => Uri.tryParse(url),
+          _ => null,
+        };
+        // Only a web page goes to the browser.
+        if (url == null || !(url.isScheme('https') || url.isScheme('http'))) {
+          throw const AccountException(AccountError.unexpected);
+        }
+        return url;
+      });
+
+  /// Links Telegram with the code from [openTelegramLink]. The backend merges
+  /// the two accounts and answers with the survivor's session, which replaces
+  /// this one, and the account's subscription replaces the previous one.
+  /// Throws [AccountException], [AccountError.telegramTaken] when that
+  /// Telegram has an account with an email of its own.
+  Future<TelegramLink> exchangeTelegramLink(TelegramCode code) async {
+    final device = await _device();
+    final previous = await _store.readSubscriptionUrl();
+    // The trip through the browser may outlast the access token, and a
+    // refused exchange burns the code, so it goes out freshly refreshed and
+    // without a retry.
+    final tokens = _tokens;
+    if (tokens == null || await _refreshAfter(_header(tokens)) == null) {
+      throw const AccountException(AccountError.signedOut);
+    }
+    final answer = await _send(
+      () => _dio.post<Object?>(
+        '/api/app/auth/exchange',
+        data: {
+          'code': code.code,
+          'verifier': code.verifier,
+          'hwid': device.hwid,
+          'platform': device.os.toLowerCase(),
+        },
+        options: _bearerOnce,
+      ),
+    );
+    await _keep(_tokenPair(answer));
+    SubscriptionDeepLink? current;
+    try {
+      current = await _subscription();
+    } on AccountException catch (error) {
+      ygLogger('read account subscription failed (${error.error.name})');
+    }
+    final changed = current != null && current.url != previous;
+    if (changed && previous != null) {
+      try {
+        await _removeSubscription(previous);
+      } catch (error) {
+        ygLogger('remove account subscription failed (${error.runtimeType})');
+      }
+    }
+    return TelegramLink(
+      addedDays: switch (answer['addedDays']) {
+        final int days when days > 0 => days,
+        _ => 0,
+      },
+      subscription: changed ? current.uri : null,
+    );
+  }
+
   /// Keeps the session from a token pair answer, then reads the account's
   /// subscription. An account without one claims the trial, once; one that
   /// had its trial stays without.
@@ -232,7 +306,9 @@ final class AccountService {
 
   /// The account's subscription as a `launchvpn://sub/add` link, marked as
   /// the account's, or null when it has none.
-  Future<Uri?> accountSubscription() async {
+  Future<Uri?> accountSubscription() async => (await _subscription())?.uri;
+
+  Future<SubscriptionDeepLink?> _subscription() async {
     final data = await _send(
       () => _dio.get<Object?>('/api/subscription', options: _bearer),
     );
@@ -243,7 +319,7 @@ final class AccountService {
     final link = SubscriptionDeepLink.fromUrl(configLink);
     if (link == null) throw const AccountException(AccountError.unexpected);
     await _store.saveSubscriptionUrl(link.url);
-    return link.uri;
+    return link;
   }
 
   /// What the backend knows about the account.
@@ -292,6 +368,11 @@ final class AccountService {
   }
 
   static final _bearer = Options(extra: {_BearerInterceptor.bearer: true});
+
+  /// A bearer request a 401 does not refresh and repeat.
+  static final _bearerOnce = Options(
+    extra: {_BearerInterceptor.bearer: true, _BearerInterceptor.retried: true},
+  );
 
   Future<DeviceIdentity> _device() async {
     try {
@@ -416,7 +497,7 @@ final class _BearerInterceptor extends Interceptor {
   _BearerInterceptor(this._account);
 
   static const bearer = 'account.bearer';
-  static const _retried = 'account.retried';
+  static const retried = 'account.retried';
 
   final AccountService _account;
 
@@ -444,7 +525,7 @@ final class _BearerInterceptor extends Interceptor {
     final options = err.requestOptions;
     if (err.response?.statusCode != 401 ||
         options.extra[bearer] != true ||
-        options.extra[_retried] == true) {
+        options.extra[retried] == true) {
       return handler.next(err);
     }
     try {
@@ -456,7 +537,7 @@ final class _BearerInterceptor extends Interceptor {
           err.copyWith(error: const AccountException(AccountError.signedOut)),
         );
       }
-      options.extra[_retried] = true;
+      options.extra[retried] = true;
       handler.resolve(await _account._dio.fetch<Object?>(options));
     } on AccountException catch (error) {
       handler.next(err.copyWith(error: error));

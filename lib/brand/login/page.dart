@@ -251,6 +251,8 @@ String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
   AccountError.codeExpired ||
   AccountError.trialUsed ||
   AccountError.cancelled ||
+  AccountError.telegramTaken ||
+  AccountError.alreadyLinked ||
   AccountError.accountBlocked ||
   AccountError.appNotAvailable ||
   AccountError.signedOut ||

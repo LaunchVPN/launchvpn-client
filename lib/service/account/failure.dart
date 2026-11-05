@@ -31,6 +31,12 @@ enum AccountError {
   /// Telegram's sign-in did not finish in the browser.
   telegramFailed,
 
+  /// Linking: that Telegram belongs to another account with an email.
+  telegramTaken,
+
+  /// Linking: the account has Telegram already.
+  alreadyLinked,
+
   /// The backend could not be reached.
   network,
 
@@ -53,6 +59,8 @@ enum AccountError {
     'trial_used' => trialUsed,
     'cancelled' => cancelled,
     'telegram_failed' => telegramFailed,
+    'telegram_taken' => telegramTaken,
+    'already_linked' => alreadyLinked,
     'invalid_token' => signedOut,
     _ => unexpected,
   };
