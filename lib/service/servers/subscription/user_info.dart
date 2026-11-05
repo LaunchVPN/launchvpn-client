@@ -97,4 +97,12 @@ class SubscriptionUserInfo {
   }
 
   bool isExpired(DateTime now) => expiresAt?.isAfter(now) == false;
+
+  /// Null when the panel sets no expiry. A partial day counts as a whole one.
+  int? daysLeft(DateTime now) {
+    final expiresAt = this.expiresAt;
+    if (expiresAt == null) return null;
+    final left = expiresAt.difference(now).inMilliseconds;
+    return left <= 0 ? 0 : (left / Duration.millisecondsPerDay).ceil();
+  }
 }

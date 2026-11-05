@@ -3240,5 +3240,142 @@
   },
   "vpnAppsOthers": "Other apps",
   "vpnAppsNone": "Nothing found",
-  "vpnAppsLoadFailed": "Couldn't get the list of apps"
+  "vpnAppsLoadFailed": "Couldn't get the list of apps",
+  "loginTitle": "Internet\nwithout borders",
+  "loginEmail": "Email",
+  "loginPassword": "Password",
+  "loginSubmit": "Sign in",
+  "loginHaveLink": "I have a subscription link",
+  "loginOr": "or",
+  "loginTelegram": "Sign in with Telegram",
+  "loginErrorTelegram": "Couldn't sign in with Telegram. Try again",
+  "loginErrorInvalidCredentials": "Wrong email or password",
+  "loginErrorEmailNotVerified": "Your email isn't confirmed yet. Try signing in again",
+  "loginErrorAccountBlocked": "This account is blocked. Contact support",
+  "loginErrorAppNotAvailable": "Signing in to the app isn't available yet",
+  "loginErrorSessionEnded": "Your session has ended. Sign in again",
+  "loginErrorSignInToDelete": "Sign in again to delete the account",
+  "loginErrorRateLimited": "Too many attempts. Wait a little",
+  "loginErrorNetwork": "Can't reach the server. Try again",
+  "loginErrorUnexpected": "Couldn't sign in. Try again later",
+  "loginLinkTitle": "Subscription link",
+  "loginLinkHint": "The link from the bot or the site",
+  "loginLinkAdd": "Add",
+  "accountTab": "Account",
+  "accountUntil": "until {date}",
+  "@accountUntil": {
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "accountTrafficUnlimited": "{used} this period · no limit",
+  "@accountTrafficUnlimited": {
+    "placeholders": {"used": {"type": "String"}}
+  },
+  "accountTrafficLimited": "{used} this period · of {limit}",
+  "@accountTrafficLimited": {
+    "placeholders": {"used": {"type": "String"}, "limit": {"type": "String"}}
+  },
+  "accountBytes": "{value} {unit, select, b {B} kb {KB} mb {MB} gb {GB} other {TB}}",
+  "@accountBytes": {
+    "placeholders": {"value": {"type": "String"}, "unit": {"type": "String"}}
+  },
+  "accountRenew": "Renew subscription",
+  "accountDevices": "Devices · {count} of {max}",
+  "@accountDevices": {
+    "placeholders": {"count": {"type": "int"}, "max": {"type": "int"}}
+  },
+  "accountDevicesUnlimited": "Devices · {count}",
+  "@accountDevicesUnlimited": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "accountDevice": "Device",
+  "accountThisDevice": "this device",
+  "accountSeenToday": "today",
+  "accountSeenDays": "{days, plural, one {{days} day ago} other {{days} days ago}}",
+  "@accountSeenDays": {
+    "placeholders": {"days": {"type": "int"}}
+  },
+  "accountSeenWeeks": "{weeks, plural, one {a week ago} other {{weeks} weeks ago}}",
+  "@accountSeenWeeks": {
+    "placeholders": {"weeks": {"type": "int"}}
+  },
+  "accountSeenMonths": "{months, plural, one {a month ago} other {{months} months ago}}",
+  "@accountSeenMonths": {
+    "placeholders": {"months": {"type": "int"}}
+  },
+  "accountDeviceOnline": "online {seen}",
+  "@accountDeviceOnline": {
+    "placeholders": {"seen": {"type": "String"}}
+  },
+  "accountDeviceSheetBody": "{details}. Once removed, the device loses VPN access and its place on the subscription is freed.",
+  "@accountDeviceSheetBody": {
+    "placeholders": {"details": {"type": "String"}}
+  },
+  "accountDeviceRemove": "Remove device",
+  "accountDeviceRemoved": "{name} removed, its place is free",
+  "@accountDeviceRemoved": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "accountDeviceRemoveFailed": "Couldn't remove the device. Try again",
+  "accountTelegramLinked": "Telegram linked",
+  "accountEmailSignIn": "Signs in with email",
+  "accountTelegram": "Telegram",
+  "accountTelegramSignIn": "Signs in with Telegram",
+  "accountLinkTelegram": "Link Telegram",
+  "accountLinkTelegramHint": "Days from the bot are added to your subscription",
+  "accountLinkTelegramFailed": "Couldn't link Telegram. Try again",
+  "accountTelegramLinkedDays": "{days, plural, one {Telegram linked, {days} day added} other {Telegram linked, {days} days added}}",
+  "@accountTelegramLinkedDays": {
+    "placeholders": {"days": {"type": "int"}}
+  },
+  "accountTelegramTakenTitle": "This Telegram is already taken",
+  "accountTelegramTakenBody": "It belongs to another account with an email. To see its subscription, sign out and sign in with that email.",
+  "accountTelegramTakenOk": "Got it",
+  "accountSupport": "Support",
+  "accountLogout": "Sign out",
+  "accountLogoutTitle": "Sign out?",
+  "accountLogoutBody": "Sign in again to connect.",
+  "accountDelete": "Delete account",
+  "accountDeleteTitle": "Delete account?",
+  "accountDeleteBody": "Your subscription and remaining days will be gone, including those from the bot. Deletion can't be undone.",
+  "accountDeleteFailed": "Couldn't delete the account. Try again",
+  "homeDeviceLimitTitle": "Device limit",
+  "homeDeviceLimitBody": "{count, plural, one {The subscription has {count} device of {max}.} other {The subscription has {count} devices of {max}.}} Remove one to connect this phone.",
+  "@homeDeviceLimitBody": {
+    "placeholders": {"count": {"type": "int"}, "max": {"type": "int"}}
+  },
+  "homeDeviceLimitBodyAccount": "Every device place on the subscription is taken. Remove one to connect this phone.",
+  "homeDeviceLimitBodyLinkOnly": "Every device place on the subscription is taken. Remove one in the bot or in your account at app.launch.tel to connect this phone.",
+  "homeDeviceLimitRefresh": "Refresh",
+  "loginCreateSubtitle": "Create an account and get 3 days free. No card needed.",
+  "loginCreate": "Create account",
+  "loginHaveAccount": "Already have an account?",
+  "loginNoAccount": "No account yet?",
+  "loginToCreate": "Create one",
+  "loginErrorEmailTaken": "This email is already registered. Sign in instead",
+  "loginErrorInvalidRequest": "Check the email. The password needs at least 8 characters",
+  "codeTitle": "Check\nyour email",
+  "codeBody": "We sent a code to {email}. Enter it and your 3 free days start right away.",
+  "@codeBody": {
+    "placeholders": {"email": {"type": "String"}}
+  },
+  "codeBodyConfirm": "We sent a code to {email}. Enter it to confirm your email.",
+  "@codeBodyConfirm": {
+    "placeholders": {"email": {"type": "String"}}
+  },
+  "codeHint": "6-digit code",
+  "codeSubmit": "Confirm",
+  "codeResend": "Send the code again",
+  "codeResendIn": "Send the code again · {time}",
+  "@codeResendIn": {
+    "placeholders": {"time": {"type": "String"}}
+  },
+  "codeWrongEmail": "Wrong email?",
+  "codeChangeEmail": "Change",
+  "codeErrorWrong": "Wrong code",
+  "codeErrorWrongLeft": "Wrong code. Attempts left: {count}",
+  "@codeErrorWrongLeft": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "codeErrorExpired": "This code no longer works. Send a new one",
+  "codeErrorAttemptGone": "This attempt has expired. Tap Change and start again"
 }

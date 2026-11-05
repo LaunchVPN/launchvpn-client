@@ -46,9 +46,20 @@ _Avoid_: device id, subscription UUID
 **Brand**:
 Everything that distinguishes the LaunchVPN build from upstream: name, package
 identifiers, icons, site colors and fonts, deeplink scheme, subscription User-Agent.
-Collected in a single brand config, `lib/core/brand.dart`. The API address stays out of
-this public repo.
+Collected in a single brand config, `lib/core/brand.dart`, together with the account
+API address, which is the site's own domain.
 _Avoid_: flavor, theme, white-label
+
+**Account**:
+A person's login, by email and password or by Telegram. Signing in on a device opens
+a session there and brings the account's subscription. Without an account a
+subscription can still come from a deeplink.
+_Avoid_: profile, user, cabinet
+
+**Cabinet**:
+The site at app.launch.tel where a person manages the account: renewal, payment and
+the devices on the subscription. The account API lives on the same domain.
+_Avoid_: dashboard, personal area, panel
 
 **Upstream**:
 The OneXray repository. We regularly merge `lib/service`, `lib/core`, the native
@@ -57,7 +68,8 @@ upstream.
 
 **Deeplink**:
 `launchvpn://sub/add?url=<https-url>`: opens the app and makes that link's subscription
-the only one. Only subscriptions from our own domain are accepted.
+the only one. Only subscriptions from our own domain are accepted. The browser returns
+from the Telegram sign-in to `launchvpn://auth`, which is not a Deeplink.
 _Avoid_: intent, universal link
 
 **Flavor**:

@@ -25,7 +25,13 @@ final class SubscriptionDeepLink {
     }
     final values = uri.queryParametersAll['url'];
     if (values == null || values.length != 1) return null;
-    final url = Uri.tryParse(SubscriptionUrl.normalize(values.single));
+    return fromUrl(values.single);
+  }
+
+  /// The link for a subscription URL, such as the one the account API returns.
+  /// Null unless it is https on our own domain.
+  static SubscriptionDeepLink? fromUrl(String value) {
+    final url = Uri.tryParse(SubscriptionUrl.normalize(value));
     if (url == null ||
         !NetClient.isHttpsDownloadUri(url) ||
         !SubscriptionUrl.isOwn(url)) {
@@ -33,6 +39,22 @@ final class SubscriptionDeepLink {
     }
     return SubscriptionDeepLink._(url.toString());
   }
+
+  /// What a person pasted as their subscription, for the queue system links
+  /// take: a `launchvpn://` link as it is, which the queue checks, or the
+  /// link for a subscription URL [fromUrl] accepts. Null for anything else.
+  static Uri? pasted(String text) {
+    final uri = Uri.tryParse(text.trim());
+    return uri?.scheme == Brand.scheme ? uri : fromUrl(text)?.uri;
+  }
+
+  /// The `launchvpn://sub/add` form, which [parse] reads back.
+  Uri get uri => Uri(
+    scheme: Brand.scheme,
+    host: Brand.subscriptionLinkHost,
+    path: '/add',
+    queryParameters: {'url': url},
+  );
 }
 
 /// Keeps a user on the one subscription their latest deep link names.
@@ -41,13 +63,27 @@ final class SubscriptionLinkService {
     AppDatabase? database,
     SubscriptionService? subscriptions,
     ServerAssetService? servers,
-  }) : _database = database ?? AppDatabase(),
+  }) : _databaseOverride = database,
        _subscriptions = subscriptions ?? SubscriptionService(),
-       _servers = servers ?? ServerAssetService();
+       _serversOverride = servers;
 
-  final AppDatabase _database;
+  final AppDatabase? _databaseOverride;
+  final ServerAssetService? _serversOverride;
   final SubscriptionService _subscriptions;
-  final ServerAssetService _servers;
+
+  // Opened on first use: screens built before startup prepares the database
+  // hold this service too.
+  late final _database = _databaseOverride ?? AppDatabase();
+  late final _servers = _serversOverride ?? ServerAssetService();
+
+  /// The subscription on the device as the database changes: the latest one,
+  /// null while there is none.
+  Stream<SubscriptionData?> watchCurrent() =>
+      _database.subscriptionDao.allRowsStream.map((rows) => rows.lastOrNull);
+
+  /// The subscription on the device now, as [watchCurrent] names it.
+  Future<SubscriptionData?> current() async =>
+      (await _database.subscriptionDao.allRows).lastOrNull;
 
   /// Whether [apply] would delete a subscription, which the UI confirms first.
   Future<bool> replacesAnother(SubscriptionDeepLink link) async =>
@@ -75,6 +111,15 @@ final class SubscriptionLinkService {
         status: SubscriptionUpdateResult.writeFailed,
         error: error,
       );
+    }
+  }
+
+  /// Deletes the subscription [url] names, and with it a tunnel that runs
+  /// through it. Nothing happens when the device does not have it.
+  Future<void> remove(String url) async {
+    for (final row in await _database.subscriptionDao.allRows) {
+      if (row.url != url) continue;
+      await _servers.remove(await _servers.previewRemoval(sourceId: row.id));
     }
   }
 

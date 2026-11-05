@@ -128,6 +128,7 @@ class SettingsRow extends StatelessWidget {
     this.value,
     this.selected,
     this.toggled,
+    this.color = BrandColors.ink,
   });
 
   /// Left out where the mockup draws a plain list of choices.
@@ -148,6 +149,9 @@ class SettingsRow extends StatelessWidget {
 
   /// Null where the row is not a switch.
   final bool? toggled;
+
+  /// Of the icon and the title; red for a row that ends something.
+  final Color color;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -171,7 +175,7 @@ class SettingsRow extends StatelessWidget {
                 if (icon case final icon?)
                   IconTile(
                     icon: icon,
-                    color: BrandColors.ink,
+                    color: color,
                     fill: BrandColors.surfaceRaised,
                   )
                 else
@@ -181,7 +185,10 @@ class SettingsRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: BrandText.cardTitle),
+                      Text(
+                        title,
+                        style: BrandText.cardTitle.copyWith(color: color),
+                      ),
                       if (subtitle != null) ...[
                         const SizedBox(height: 2),
                         Text(subtitle!, style: BrandText.caption),

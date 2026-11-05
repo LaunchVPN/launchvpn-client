@@ -59,6 +59,9 @@
                 <data
                     android:host="sub"
                     android:scheme="launchvpn" />
+                <data
+                    android:host="auth"
+                    android:scheme="launchvpn" />
             </intent-filter>
         </activity>
         <receiver

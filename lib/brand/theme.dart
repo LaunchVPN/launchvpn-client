@@ -29,6 +29,18 @@ abstract final class BrandColors {
   static const success = Color(0xFF4BCB71);
 }
 
+/// The colors of `.shader-backdrop` on app.launch.tel, which `ShaderBackdrop`
+/// lays over its veil: a glow on the page background, a tint from the top
+/// left to the bottom right, and two lights.
+abstract final class BrandBackdrop {
+  static const base = BrandColors.bg;
+  static const glow = Color(0x6B42007B);
+  static const tintFrom = Color(0x8C6C00BF);
+  static const tintTo = Color(0xB81B0058);
+  static const highlight = Color(0x479C5EEF);
+  static const lowlight = Color(0x2E4A3CC2);
+}
+
 abstract final class BrandRadii {
   static const segment = 10.0;
   static const iconButton = 12.0;
@@ -64,12 +76,32 @@ abstract final class BrandText {
     letterSpacing: -0.34,
     color: BrandColors.ink,
   );
+
+  /// The large two-line title of «Вход».
+  static const heroTitle = TextStyle(
+    fontFamily: _display,
+    fontWeight: FontWeight.w600,
+    fontSize: 30,
+    height: 36 / 30,
+    letterSpacing: -0.3,
+    color: BrandColors.ink,
+  );
   static const screenTitle = TextStyle(
     fontFamily: _display,
     fontWeight: FontWeight.w600,
     fontSize: 22,
     height: 28 / 22,
     letterSpacing: -0.11,
+    color: BrandColors.ink,
+  );
+
+  /// The days left at the top of «Аккаунт».
+  static const days = TextStyle(
+    fontFamily: _display,
+    fontWeight: FontWeight.w600,
+    fontSize: 40,
+    height: 44 / 40,
+    letterSpacing: -0.4,
     color: BrandColors.ink,
   );
   static const hint = TextStyle(
@@ -106,6 +138,9 @@ abstract final class BrandText {
     color: BrandColors.muted,
   );
   static const preset = caption;
+
+  /// Why an attempt failed, under the field or the button it concerns.
+  static final error = caption.copyWith(color: BrandColors.danger);
   static const topBar = TextStyle(
     fontFamily: _display,
     fontWeight: FontWeight.w500,
@@ -263,6 +298,12 @@ abstract final class BrandTheme {
     foregroundColor: BrandColors.ink,
     side: const BorderSide(color: BrandColors.line),
   ).merge(_wideButton);
+
+  /// The action of a sheet that deletes something.
+  static final dangerButton = FilledButton.styleFrom(
+    backgroundColor: BrandColors.danger,
+    foregroundColor: BrandColors.accentInk,
+  ).merge(_wideButton);
   static final quietButton = TextButton.styleFrom(
     foregroundColor: BrandColors.ink,
   ).merge(_wideButton);
@@ -270,6 +311,14 @@ abstract final class BrandTheme {
     foregroundColor: BrandColors.muted,
     minimumSize: const Size.fromHeight(44),
   ).merge(_wideButton);
+
+  /// A link inside a line of text, such as «Войти» after «Уже есть аккаунт?».
+  static final inlineLinkButton = TextButton.styleFrom(
+    foregroundColor: BrandColors.accent,
+    textStyle: BrandText.cardTitle,
+    minimumSize: const Size(48, 44),
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+  );
   static final _wideButton = ButtonStyle(
     minimumSize: const WidgetStatePropertyAll(Size.fromHeight(52)),
     iconSize: const WidgetStatePropertyAll(20),

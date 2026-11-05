@@ -49,6 +49,7 @@ void main() {
         manifest,
         contains('android:host="${Brand.subscriptionLinkHost}"'),
       );
+      expect(manifest, contains('android:host="${Brand.authLinkHost}"'));
       expect(manifest, contains('"${Brand.androidId}.action.START_VPN"'));
       expect(manifest, contains('"${Brand.androidId}.action.STOP_VPN"'));
     });

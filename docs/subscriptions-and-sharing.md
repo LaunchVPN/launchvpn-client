@@ -192,7 +192,8 @@ While a link is being handled or a dialog is open, later links wait. 相同 URI 
 
 ### System deep link
 
-Apart from the widget link, the app handles one link: `launchvpn://sub/add?url=<percent-encoded https-url>`.
+Apart from the widget link and the Telegram sign-in return (`launchvpn://auth`, see
+[App behavior](app.md)), the app handles one link: `launchvpn://sub/add?url=<percent-encoded https-url>`.
 `SubscriptionDeepLink` rejects any other shape, any other query key, and any URL outside
 `Brand.subscriptionDomain` and its subdomains. A rejected link only shows a message.
 A subscription on that domain cannot redirect off it: such a download fails and changes nothing.
@@ -205,8 +206,8 @@ A subscription on that domain cannot redirect off it: such a download fails and 
   one is deleted, so a failure keeps the old one. Deletion uses the normal server removal, so
   a stale selection falls back to automatic and a VPN running on the old servers reconnects.
 
-Android registers only the `sub` host, so other links do not open the app. iOS registers the
-whole scheme, so they open it and the same check rejects them with a message.
+Android registers only the `sub` and `auth` hosts, so other links do not open the app. iOS
+registers the whole scheme, so they open it and the same check rejects them with a message.
 
 ### Share links
 

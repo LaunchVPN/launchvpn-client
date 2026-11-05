@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/settings/row.dart';
 import 'package:onexray/brand/settings/vpn_apps_controller.dart';
+import 'package:onexray/brand/text_field.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/brand/top_bar.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
@@ -146,9 +147,11 @@ class _VpnAppsPageState extends State<VpnAppsPage> {
             24,
           ),
           sliver: SliverToBoxAdapter(
-            child: _SearchField(
+            child: BrandTextField(
+              icon: LucideIcons.search,
               hint: l.vpnAppsSearch,
               onChanged: _controller.search,
+              textInputAction: TextInputAction.search,
             ),
           ),
         ),
@@ -229,42 +232,4 @@ class _AppIcon extends StatelessWidget {
       child: AppIconView(packageName: packageName),
     ),
   );
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField({required this.hint, required this.onChanged});
-
-  final String hint;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(BrandRadii.md),
-      borderSide: const BorderSide(color: BrandColors.line),
-    );
-    return TextField(
-      onChanged: onChanged,
-      style: BrandText.body,
-      cursorColor: BrandColors.accent,
-      textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: BrandText.hint,
-        filled: true,
-        fillColor: BrandColors.surface,
-        prefixIcon: const Icon(
-          LucideIcons.search,
-          size: 20,
-          color: BrandColors.muted,
-        ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 15),
-        border: border,
-        enabledBorder: border,
-        focusedBorder: border.copyWith(
-          borderSide: const BorderSide(color: BrandColors.accent),
-        ),
-      ),
-    );
-  }
 }

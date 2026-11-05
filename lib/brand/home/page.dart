@@ -5,9 +5,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:onexray/brand/account/controller.dart';
 import 'package:onexray/brand/home/controller.dart';
+import 'package:onexray/brand/home/device_limit.dart';
 import 'package:onexray/brand/home/toggle.dart';
 import 'package:onexray/brand/home/update_banner.dart';
+import 'package:onexray/brand/external_link.dart';
 import 'package:onexray/brand/locations/page.dart';
 import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/settings/preset_page.dart';
@@ -18,7 +21,6 @@ import 'package:onexray/brand/theme.dart';
 import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/distribution.dart';
-import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
@@ -29,16 +31,19 @@ import 'package:onexray/service/servers/subscription/failure.dart';
 import 'package:onexray/service/settings/app_update/service.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/event_bus/state.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({
     super.key,
     required this.controller,
+    required this.account,
     this.distribution = AppDistribution.current,
   });
 
   final HomeController controller;
+
+  /// The account's devices, which «Лимит устройств» lists.
+  final AccountController account;
 
   /// Only an APK build offers a newer release and renewal on the site: a store
   /// updates the rest and takes no payment outside its own.
@@ -90,17 +95,6 @@ class _HomePageState extends State<HomePage> {
         if (!_controller.state.explains(error)) rethrow;
       }
     });
-  }
-
-  /// Opens [uri] outside the App. A device with nothing to open it leaves the
-  /// screen as it is.
-  Future<void> _openLink(Uri uri, String name) async {
-    try {
-      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
-      ygLogger('open $name link failed: nothing handled it');
-    } catch (error) {
-      ygLogger('open $name link failed (${error.runtimeType})');
-    }
   }
 
   Future<void> _toggle() => _controller.toggle(_run, explain: _explain);
@@ -165,55 +159,96 @@ class _HomePageState extends State<HomePage> {
                     ? bus.appUpdateInfo
                     : null,
                 builder: (context, update) =>
-                    BlocBuilder<HomeController, HomeState>(
-                      bloc: _controller,
-                      builder: (context, state) => CustomScrollView(
-                        slivers: [
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                BrandSpacing.page,
-                                8,
-                                BrandSpacing.page,
-                                20,
-                              ),
-                              child: Column(
-                                children: [
-                                  _Header(
-                                    // The screen's title says it instead.
-                                    daysLeft: state.showsExpired
-                                        ? null
-                                        : state.daysLeft(DateTime.now()),
-                                  ),
-                                  if (update != null) ...[
-                                    const SizedBox(height: 20),
-                                    UpdateBanner(
-                                      update: update,
-                                      onUpdate: () => _openLink(
-                                        update.releaseUri,
-                                        'release',
-                                      ),
-                                    ),
-                                  ],
-                                  if (state.showsExpired)
-                                    ..._expiredContent(state)
-                                  else if (state.failure case final failure?)
-                                    ..._failureContent(state, failure)
-                                  else
-                                    ..._connectionContent(
-                                      state,
-                                      _toggleGap(
-                                        constraints.maxHeight,
-                                        banner: update != null,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+                    BlocSelector<
+                      AccountController,
+                      AccountState,
+                      ({bool ended, bool refreshing})
+                    >(
+                      bloc: widget.account,
+                      // A signed-in account without a subscription, its trial
+                      // used, ended as well.
+                      selector: (account) => (
+                        ended: account.signedIn && account.inactive,
+                        refreshing: account.refreshing,
                       ),
+                      builder: (context, account) =>
+                          BlocBuilder<HomeController, HomeState>(
+                            bloc: _controller,
+                            builder: (context, state) {
+                              final accountEnded =
+                                  account.ended && state.subscription == null;
+                              final expired =
+                                  state.showsExpired || accountEnded;
+                              return CustomScrollView(
+                                slivers: [
+                                  SliverFillRemaining(
+                                    hasScrollBody: false,
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        BrandSpacing.page,
+                                        8,
+                                        BrandSpacing.page,
+                                        20,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          _Header(
+                                            // The expired screen's title says it
+                                            // instead; the device limit's mockup
+                                            // leaves it out.
+                                            daysLeft:
+                                                expired ||
+                                                    state.showsDeviceLimit
+                                                ? null
+                                                : state.daysLeft(
+                                                    DateTime.now(),
+                                                  ),
+                                          ),
+                                          if (update != null) ...[
+                                            const SizedBox(height: 20),
+                                            UpdateBanner(
+                                              update: update,
+                                              onUpdate: () => openExternalLink(
+                                                update.releaseUri,
+                                                'release',
+                                              ),
+                                            ),
+                                          ],
+                                          if (expired)
+                                            ..._expiredContent(
+                                              state,
+                                              // Only the account can bring one.
+                                              onRefresh: accountEnded
+                                                  ? (account.refreshing
+                                                        ? null
+                                                        : widget
+                                                              .account
+                                                              .refresh)
+                                                  : (state.refreshing
+                                                        ? null
+                                                        : _refreshStatus),
+                                            )
+                                          else if (state.showsDeviceLimit)
+                                            ..._deviceLimitContent(state)
+                                          else if (state.failure
+                                              case final failure?)
+                                            ..._failureContent(state, failure)
+                                          else
+                                            ..._connectionContent(
+                                              state,
+                                              _toggleGap(
+                                                constraints.maxHeight,
+                                                banner: update != null,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                     ),
               ),
         ),
@@ -229,11 +264,11 @@ class _HomePageState extends State<HomePage> {
     actions,
   ];
 
-  /// Null when the panel sent no support link.
+  /// The error screen offers only the panel's support: null without its link.
   VoidCallback? _contactSupport(HomeState state) =>
       switch (state.subscription?.supportUrl) {
-        final url? => () => _openLink(Uri.parse(url), 'support'),
         null => null,
+        _ => () => openSupport(state.subscription),
       };
 
   List<Widget> _failureContent(HomeState state, HomeFailure failure) =>
@@ -246,7 +281,10 @@ class _HomePageState extends State<HomePage> {
         ),
       );
 
-  List<Widget> _expiredContent(HomeState state) {
+  List<Widget> _expiredContent(
+    HomeState state, {
+    required VoidCallback? onRefresh,
+  }) {
     final l = AppLocalizations.of(context)!;
     final renews = widget.distribution == AppDistribution.apk;
     return _stateContent(
@@ -257,13 +295,21 @@ class _HomePageState extends State<HomePage> {
       ),
       _ExpiredActions(
         onRenew: renews
-            ? () => _openLink(Uri.parse(Brand.renewalUrl), 'renewal')
+            ? () => openExternalLink(Uri.parse(Brand.renewalUrl), 'renewal')
             : null,
-        onRefresh: state.refreshing ? null : _refreshStatus,
-        onContactSupport: _contactSupport(state),
+        onRefresh: onRefresh,
+        onContactSupport: () => openSupport(state.subscription),
       ),
     );
   }
+
+  List<Widget> _deviceLimitContent(HomeState state) => _stateContent(
+    DeviceLimitHero(account: widget.account),
+    DeviceLimitActions(
+      account: widget.account,
+      support: _SupportLink(onPressed: () => openSupport(state.subscription)),
+    ),
+  );
 
   List<Widget> _connectionContent(HomeState state, double toggleGap) => [
     SizedBox(height: toggleGap),
@@ -518,8 +564,8 @@ class _ExpiredActions extends StatelessWidget {
   /// Null while the subscription loads, which the button shows with a spinner.
   final VoidCallback? onRefresh;
 
-  /// Null when the panel sent no support link.
-  final VoidCallback? onContactSupport;
+  /// The panel's support, or the bot's when it sent no link.
+  final VoidCallback onContactSupport;
 
   @override
   Widget build(BuildContext context) {
@@ -552,7 +598,7 @@ class _ExpiredActions extends StatelessWidget {
             icon: refreshIcon,
             label: refreshLabel,
           ),
-        if (onContactSupport case final open?) _SupportLink(onPressed: open),
+        _SupportLink(onPressed: onContactSupport),
       ],
     );
   }

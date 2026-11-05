@@ -75,4 +75,23 @@ void main() {
       });
     }
   });
+
+  group('a pasted subscription', () {
+    test('URL becomes its link', () {
+      expect(
+        SubscriptionDeepLink.pasted(' https://sub.launch.tel/token '),
+        _link('https://sub.launch.tel/token'),
+      );
+    });
+
+    test('link goes to the queue as it is, which checks it', () {
+      final link = Uri.parse('launchvpn://sub/add?url=https://example.com/x');
+
+      expect(SubscriptionDeepLink.pasted(link.toString()), link);
+    });
+
+    test('from another provider is refused', () {
+      expect(SubscriptionDeepLink.pasted('https://example.com/token'), isNull);
+    });
+  });
 }

@@ -1,11 +1,16 @@
 import 'dart:async';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/app.dart';
 import 'package:onexray/brand/router.dart';
+import 'package:onexray/service/account/service.dart';
+import 'package:onexray/service/account/telegram_auth.dart';
 import 'package:onexray/service/shared/share/service.dart';
+
+import '../support/fake_account_api.dart';
 
 final _first = Uri.parse('launchvpn://sub/add?url=https://a.launch.tel');
 final _second = Uri.parse('launchvpn://sub/add?url=https://b.launch.tel');
@@ -34,10 +39,12 @@ void main() {
     share.startAppLinks();
   }
 
-  GoRouter router() => createBrandRouter(
+  GoRouter router({AccountService? account}) => createBrandRouter(
     home: const Text('home-body'),
     settings: const Text('settings-body'),
+    account: account,
     shareService: share,
+    watchSubscription: () => Stream.value(true),
     initializeServices: (_) async {
       await share.init();
       await ready?.future;
@@ -63,7 +70,7 @@ void main() {
     }
   }
 
-  testWidgets('opens on home with the two tabs from the mockups', (
+  testWidgets('opens on home with the three tabs from the mockups', (
     tester,
   ) async {
     prepare();
@@ -71,8 +78,9 @@ void main() {
 
     expect(find.text('home-body'), findsOneWidget);
     expect(find.text('Главная'), findsOneWidget);
+    expect(find.text('Аккаунт'), findsOneWidget);
     expect(find.text('Настройки'), findsOneWidget);
-    expect(find.byType(NavigationDestination), findsNWidgets(2));
+    expect(find.byType(NavigationDestination), findsNWidgets(3));
   });
 
   testWidgets('the settings tab opens and home keeps its place', (
@@ -146,6 +154,28 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('a Telegram return goes to the sign-in, not the subscription '
+      'flow', (tester) async {
+    prepare();
+    FlutterSecureStorage.setMockInitialValues({});
+    final account = accountServiceFor(FakeAccountApi());
+    await pumpApp(tester, router(account: account));
+    TelegramCode? code;
+    unawaited(account.telegram.openLogin().then((value) => code = value));
+    await tester.pumpAndSettle();
+
+    links.add(Uri.parse('launchvpn://auth?code=c1'));
+    await tester.pumpAndSettle();
+    expect(code?.code, 'c1');
+    expect(opened, isEmpty);
+
+    links.add(_first);
+    await tester.pumpAndSettle();
+    expect(opened, [_first]);
+    finishLink.complete();
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('a link waits while a dialog is open', (tester) async {
     prepare();
     await pumpApp(tester, router());
@@ -178,6 +208,7 @@ void main() {
     final config = createBrandRouter(
       home: const Text('home-body'),
       shareService: share,
+      watchSubscription: () => Stream.value(true),
       initializeServices: (_) async {
         if (++attempts == 1) throw StateError('no storage');
       },

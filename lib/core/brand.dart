@@ -19,6 +19,9 @@ abstract final class Brand {
   /// Host of the deep link that adds a subscription.
   static const subscriptionLinkHost = 'sub';
 
+  /// Host of the deep link the browser returns to after Telegram's sign-in.
+  static const authLinkHost = 'auth';
+
   /// Host of upstream's share links, read by upstream's paste and QR import.
   /// Android does not register it, and iOS rejects it after opening the app.
   static const appLinkHost = 'app';
@@ -29,6 +32,16 @@ abstract final class Brand {
   /// Where an APK build sends the person to renew. Store builds offer no
   /// payment.
   static const renewalUrl = 'https://app.$subscriptionDomain';
+
+  /// Support in Telegram, for a subscription whose panel names none.
+  static const supportUrl = 'https://t.me/launchbotsupport';
+
+  /// The account API. Local runs point it at another backend with
+  /// `--dart-define=LAUNCHVPN_API_URL=http://10.0.2.2:8080`.
+  static const apiUrl = String.fromEnvironment(
+    'LAUNCHVPN_API_URL',
+    defaultValue: 'https://app.$subscriptionDomain',
+  );
 
   /// Leading User-Agent product. Panels pick the Xray JSON template by it.
   static const subscriptionClient = 'v2rayN';
