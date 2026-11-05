@@ -3,7 +3,7 @@
 ## LaunchVPN entry point
 
 `lib/main.dart` runs `BrandApp`, not upstream's `GoRouteApp`. `createBrandRouter` registers only
-our tabs, Home and Settings, so upstream's Splash, Setup, servers, advanced pages and manual
+our tabs, Home, Account and Settings, so upstream's Splash, Setup, servers, advanced pages and manual
 import cannot be opened, and any other path leads Home. The rest of this document describes
 upstream pages kept for merging. They are not reachable in this build.
 
@@ -58,6 +58,14 @@ upstream pages kept for merging. They are not reachable in this build.
   unless the VPN consent is missing, which only a tap may ask for. Contact support works as on the
   error screen. An expiry within a day has a timer; a later one is checked when the subscription
   refreshes.
+- When the panel refuses this device because the subscription already has all its devices
+  (Remnawave answers the subscription request with `x-hwid-max-devices-reached: true`),
+  `SubscriptionService` remembers it until the panel serves the subscription again, and Home shows
+  Device limit in place of the toggle and the cards once the tunnel is off. Signed in, it counts
+  the account's devices against the limit, lists the other devices with a trash icon that opens
+  the same removal sheet as Account, and Refresh loads the subscription again, or hands the
+  account's subscription to the link queue when the device has none. From a link only, the screen
+  points to support. An ended subscription takes precedence.
 - If a command failed and the tunnel may still be up, the screen says so and a tap disconnects.
   Without a subscription the toggle is disabled.
 - No status or announcement moves the toggle. It sits as centered in the mockup, and higher only on
@@ -125,6 +133,22 @@ upstream pages kept for merging. They are not reachable in this build.
   preferences or logs. Startup reads them without a request. A bearer request answered 401 refreshes
   once, shared by every request waiting on it, and is retried once; only the backend refusing the
   refresh ends the session, while an outage keeps it.
+- Account, the middle tab, refreshes when it opens: the subscription on the device is loaded again
+  quietly, and when signed in the profile (`/api/me`), the devices (`/api/devices`) and the
+  account's subscription are read too; one the device lacks goes to the link queue, which covers a
+  failed load right after sign-in. It shows the days left, the expiry date and the traffic of the
+  period from the subscription headers, with a bar only for a plan with a traffic limit, or
+  Subscription ended as Home has it when the subscription expired or the account has none.
+  Signed in, an APK build adds Renew subscription, opening `Brand.renewalUrl`, and the tab lists
+  the devices against `maxDevices`, this device first and not removable. Another device opens a
+  sheet; Remove device calls `/api/devices/disconnect`, the list updates at once and a toast
+  says the place is free for 3 seconds. The account card has the email with Telegram linked or
+  Signs in with email, Support when the panel sent its link, and Sign out. From a link only, the
+  tab shows days and traffic, Sign in, which opens «Вход» over the tabs and closes on sign-in, and
+  Support. Linking Telegram, creating an account and deleting it are not offered yet.
+- Sign out asks in a sheet, then revokes this device's session (`/api/app/auth/logout`, best
+  effort), removes the subscription the account brought, with a tunnel through it, and clears the
+  tokens. A subscription added from a link stays, so only a device left without one shows «Вход».
 - `BrandShell` owns service startup and retry, the «Вход» gate, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published, but when the Android Tile or
   Widget lacks a permission or a saved configuration, it opens the App with the `startVpn` quick

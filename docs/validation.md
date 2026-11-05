@@ -136,6 +136,13 @@ and the subscription link handed to the link queue. On a device, sign in against
 (`--dart-define=LAUNCHVPN_API_URL=http://10.0.2.2:8080` on the Android emulator), connect, restart
 the app and check that the session stays.
 
+Account is covered by `test/brand/account/controller_test.dart`, against the same in-memory
+account API: the signed-in data, the link-only state, device removal and signing out with the
+account's subscription removed. `test/brand/account/page_test.dart` walks the device sheet, the
+Sign out sheet back to «Вход» and Renew in APK and store builds; the Device limit cases are in
+`test/brand/home/page_test.dart`. On a device, sign in against the local backend with a second
+device registered on the fake panel, remove it from Account, and sign out.
+
 The brand entry is covered by `test/brand/home/` and `test/brand/shell_test.dart`: toggle states,
 large text, tabs, link delivery and upstream routes leading Home. On a device, also check the
 toggle against a real panel subscription.
