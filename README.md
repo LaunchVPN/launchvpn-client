@@ -6,9 +6,9 @@ subscription.
 
 ## What the app does
 
-- **Signs you in.** Sign in with email and password or with Telegram, and the
-  subscription of your account comes with it. A subscription link from LaunchVPN
-  works without an account too.
+- **Signs you in.** Sign in with email and password, or on Android with
+  Telegram, and the subscription of your account comes with it. A subscription
+  link from LaunchVPN works without an account too.
 - **Connects in one tap.** Home shows the connection, the days left on the
   subscription and the location in use. The automatic location is the default;
   you can pick a country or a service instead.
@@ -40,11 +40,13 @@ git -C libXray checkout <LIBXRAY_REF>
 cd launchvpn-client
 ```
 
-From here the [development setup](./readme/FIRST_RUN.md) prepares the native
-core for Android or iOS and runs the App. It comes from OneXray, so read its
-`OneXray/` as this checkout. Packaging, CI and APK releases are in the
-[build guide](./build_scripts/README.md), and the App's behavior is described in
-the [App contracts](./docs/README.md).
+Install the tools listed in the [development setup](./readme/FIRST_RUN.md) and
+skip its clone commands, which the ones above replace. Then continue from its
+[native libraries step](./readme/FIRST_RUN.md#2-native-libraries-and-geodata)
+to prepare the core for Android or iOS and run the App. The guide comes from
+OneXray, so read its `OneXray/` as this checkout. Packaging, CI and APK releases
+are in the [build guide](./build_scripts/README.md), and the App's behavior is
+described in the [App contracts](./docs/README.md).
 
 ## Help
 
