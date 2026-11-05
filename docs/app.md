@@ -137,7 +137,7 @@ upstream pages kept for merging. They are not reachable in this build.
   changes nothing; any other error, or a refused exchange, shows «Не получилось войти через
   Telegram. Попробуйте ещё раз» under the button. A return no attempt waits for, a repeat or one
   after the App restarted, is ignored. The return's `mode` names what the attempt was for, so
-  linking Telegram can reuse the same piece.
+  a sign-in waits only for a return without `mode` and linking only for `mode=link`.
 - Create account (`/api/app/auth/signup`) mails a code and replaces the form with «Проверьте почту»
   on the same page; signing in with an unconfirmed email does the same with the attempt the backend
   returns. The attempt's `signupToken` stays in memory for this flow only. The code field takes
@@ -171,8 +171,23 @@ upstream pages kept for merging. They are not reachable in this build.
   says the place is free for 3 seconds. The account card has the email with Telegram linked or
   Signs in with email, Support when the panel sent its link, and Sign out. From a link only, the
   tab shows days and traffic, Sign in and Create account, which open «Вход» over the tabs in that
-  mode and close on sign-in, and Support. Linking Telegram and deleting the account are not offered
-  yet.
+  mode and close on sign-in, and Support. Deleting the account is not offered yet.
+- Signed in without Telegram, on Android and iOS, the account card has «Привязать Telegram» («Дни
+  из бота добавятся к подписке») under the email. A tap posts the PKCE challenge to
+  `/api/app/link/telegram/start` with the Bearer and opens the returned page in the external
+  browser. `already_linked`, from the start or the exchange, reloads the profile and says
+  «Telegram привязан». The browser returns to `launchvpn://auth?…&mode=link`, which iOS takes
+  through the registered `launchvpn` scheme. The session is refreshed first, because the trip may
+  outlast the access token and a refused exchange burns the code, then `/api/app/auth/exchange`
+  gets the code, the verifier and the Bearer, without the usual retry, while the row shows
+  progress. Its token pair replaces the session; the backend merged the accounts. The account's
+  subscription is read again: a changed URL removes the previous subscription and sends the new
+  one down the link queue, an unchanged one is refreshed for the added days. The profile and the
+  devices reload, the row goes and the email's subtitle says Telegram linked, and a 3-second toast
+  says «Telegram привязан, N дней добавлены», or only «Telegram привязан» with no days added.
+  `telegram_taken` opens the sheet «Этот Telegram уже занят», which explains signing in with that
+  Telegram account's email and closes with «Понятно». A cancel says nothing; anything else shows
+  «Не получилось привязать Telegram. Попробуйте ещё раз».
 - Sign out asks in a sheet, then revokes this device's session (`/api/app/auth/logout`, best
   effort), removes the subscription the account brought, with a tunnel through it, and clears the
   tokens. A subscription added from a link stays, so only a device left without one shows «Вход».
