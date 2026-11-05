@@ -750,12 +750,28 @@ class SubscriptionService {
       current.hwidEnabled == expected.hwidEnabled &&
       current.hwid == expected.hwid;
 
+  /// Whether the panel's last answer refused this device because the
+  /// subscription already has all its devices. A served subscription clears
+  /// it; a failed download says nothing about the limit and keeps it.
+  ValueListenable<bool> get deviceLimitReached => _deviceLimitReached;
+  final _deviceLimitReached = ValueNotifier(false);
+
   Future<SubscriptionLoadResult> _loadRows(
     SubscriptionInput input, {
     SubscriptionFormatConfirmation? confirmOrdinary,
-  }) => AppEventBus.instance.trackDownload(
-    () => _readSubscription(input, confirmOrdinary: confirmOrdinary),
-  );
+  }) async {
+    final result = await AppEventBus.instance.trackDownload(
+      () => _readSubscription(input, confirmOrdinary: confirmOrdinary),
+    );
+    switch (result.status) {
+      case SubscriptionUpdateResult.hwidLimitReached:
+        _deviceLimitReached.value = true;
+      case SubscriptionUpdateResult.success:
+        _deviceLimitReached.value = false;
+      default:
+    }
+    return result;
+  }
 
   Future<SubscriptionLoadResult> _readSubscription(
     SubscriptionInput input, {
