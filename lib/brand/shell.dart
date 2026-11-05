@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:onexray/brand/login/controller.dart';
 import 'package:onexray/brand/login/gate.dart';
 import 'package:onexray/brand/login/page.dart';
 import 'package:onexray/brand/permission/vpn_permission_page.dart';
@@ -25,8 +26,9 @@ import 'package:onexray/service/shared/share/service.dart';
 /// Starts the services, then hosts the tabs, or «Вход» while the device has
 /// neither a session nor a subscription. Incoming links and the iOS Widget's
 /// foreground actions are handled here because they need a ready UI:
-/// `launchvpn://auth` returns go to the Telegram sign-in, every other link to
-/// the subscription flow.
+/// `launchvpn://auth` returns go to the Telegram attempt waiting for them,
+/// every other link to the subscription flow. A sign-in the system closed
+/// the App during, which no «Вход» took back, opens one over the tabs.
 class BrandShell extends StatefulWidget {
   const BrandShell({
     super.key,
@@ -58,6 +60,7 @@ class _BrandShellState extends State<BrandShell> {
   late final _shareService = widget.shareService ?? ShareService();
   late final _account = widget.account ?? AccountService.instance;
   AccessGateController? _gate;
+  StreamSubscription<void>? _gateSubscription;
   StreamSubscription<void>? _linkSubscription;
   IncomingAppLink? _activeLink;
   bool _attached = false;
@@ -98,16 +101,21 @@ class _BrandShellState extends State<BrandShell> {
   }
 
   Future<void> _drain() async {
-    if (_activeLink != null || widget.modals.hasPopupRoute) return;
+    // Until the gate settles, nobody waits on «Вход» or the tabs.
+    if (_activeLink != null ||
+        widget.modals.hasPopupRoute ||
+        _gate?.state == AccessGateState.checking) {
+      return;
+    }
     final event = _shareService.claimNextAppLink();
     if (event == null) return;
     _activeLink = event;
     try {
       final uri = event.uri;
       if (TelegramBrowserAuth.isReturn(uri)) {
-        // Whoever started the sign-in shows its outcome; a stray return is
+        // Whoever started the attempt shows its outcome; a stray return is
         // dropped.
-        _account.telegram.handleReturn(uri);
+        if (_account.telegram.handleReturn(uri)) _showTelegramOutcome(uri);
       } else {
         await (widget.openLink ?? openSubscriptionLink)(context, uri);
       }
@@ -117,6 +125,24 @@ class _BrandShellState extends State<BrandShell> {
       _shareService.finishAppLink(event);
       if (identical(_activeLink, event)) _activeLink = null;
       if (mounted) _scheduleDrain();
+    }
+  }
+
+  void _showTelegramOutcome(Uri uri) {
+    final telegram = _account.telegram;
+    switch (TelegramBrowserAuth.purposeOf(uri)) {
+      case TelegramAuthPurpose.login
+          when !_account.signedIn.value &&
+              telegram.awaitsResume(TelegramAuthPurpose.login):
+        unawaited(
+          LoginPage.showOverTabs(
+            context,
+            account: _account,
+            openLink: _shareService.addAppLink,
+            mode: LoginMode.signIn,
+          ),
+        );
+      case _:
     }
   }
 
@@ -138,6 +164,7 @@ class _BrandShellState extends State<BrandShell> {
   void dispose() {
     widget.modals.removeListener(_scheduleDrain);
     unawaited(_linkSubscription?.cancel());
+    unawaited(_gateSubscription?.cancel());
     final active = _activeLink;
     if (active != null) _shareService.finishAppLink(active);
     ShortCutService().detach();
@@ -185,6 +212,7 @@ class _BrandShellState extends State<BrandShell> {
         signedIn: _account.signedIn,
         hasSubscription: widget.watchSubscription?.call(),
       );
+      _gateSubscription ??= gate.stream.listen((_) => _scheduleDrain());
       return BlocBuilder<AccessGateController, AccessGateState>(
         bloc: gate,
         builder: (context, state) => switch (state) {

@@ -38,6 +38,32 @@ class LoginPage extends StatefulWidget {
   final void Function(Uri) openLink;
   final LoginMode mode;
 
+  /// «Вход» over the tabs in [mode], closed by the sign-in it exists for.
+  static Future<void> showOverTabs(
+    BuildContext context, {
+    required AccountService account,
+    required void Function(Uri) openLink,
+    required LoginMode mode,
+  }) async {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final route = MaterialPageRoute<void>(
+      builder: (_) =>
+          LoginPage(account: account, openLink: openLink, mode: mode),
+    );
+    void close() {
+      if (account.signedIn.value && route.isActive) {
+        navigator.removeRoute(route);
+      }
+    }
+
+    account.signedIn.addListener(close);
+    try {
+      await navigator.push(route);
+    } finally {
+      account.signedIn.removeListener(close);
+    }
+  }
+
   @override
   State<LoginPage> createState() => _LoginPageState();
 }

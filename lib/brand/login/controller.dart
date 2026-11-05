@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/service.dart';
+import 'package:onexray/service/account/telegram_auth.dart';
 
 /// What the «Вход» form does: create an account, as the mockup opens, or
 /// sign in to one.
@@ -54,6 +57,10 @@ final class LoginController extends PageCubit<LoginState> {
       emit(
         const LoginState(mode: LoginMode.signIn, error: AccountError.signedOut),
       );
+    }
+    // A Telegram sign-in the system closed the App during.
+    if (_account.telegram.resume(TelegramAuthPurpose.login) case final code?) {
+      unawaited(_redeemTelegram(code));
     }
   }
 
@@ -109,8 +116,13 @@ final class LoginController extends PageCubit<LoginState> {
   Future<void> signInWithTelegram() async {
     if (state.busy) return;
     emit(LoginState(mode: state.mode));
+    await _redeemTelegram(_account.openTelegramLogin());
+  }
+
+  /// Signs in with the code [pending] brings back from Telegram.
+  Future<void> _redeemTelegram(Future<TelegramCode> pending) async {
     try {
-      final code = await _account.openTelegramLogin();
+      final code = await pending;
       emit(LoginState(mode: state.mode, redeemingTelegram: true));
       final link = await _account.exchangeTelegramLogin(code);
       if (link != null) _openLink(link);

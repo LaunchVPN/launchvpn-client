@@ -264,6 +264,54 @@ void main() {
       },
     );
 
+    group('after the system closed the App in the browser', () {
+      /// The App left for Telegram's sign-in and was closed meanwhile; this
+      /// launch restored what it saved.
+      /// In the test's zone: a restored attempt completes in the zone it was
+      /// restored in.
+      Future<void> restartedDuringSignIn(WidgetTester tester) async {
+        unawaited(accountServiceFor(api, browser: browser).openTelegramLogin());
+        await tester.pump();
+        account = accountServiceFor(api, browser: browser);
+        await account.restore();
+      }
+
+      for (final hasSubscription in [false, true]) {
+        testWidgets('the return signs in and adds the account subscription '
+            '(subscription from a link: $hasSubscription)', (tester) async {
+          api.exchangeWith(access: 'a1', refresh: 'r1');
+          api.subscription(_configLink);
+          await restartedDuringSignIn(tester);
+          await pumpApp(tester, hasSubscription: hasSubscription);
+
+          links.add(Uri.parse('launchvpn://auth?code=c1'));
+          await tester.pumpAndSettle();
+
+          expect(account.signedIn.value, isTrue);
+          expect(find.text('home-body'), findsOneWidget);
+          expect(find.text('Интернет\nбез границ'), findsNothing);
+          expect(opened, [
+            Uri.parse(
+              'launchvpn://sub/add?url=${Uri.encodeQueryComponent(_configLink)}',
+            ),
+          ]);
+        });
+      }
+
+      testWidgets('a failed return says so on «Вход»', (tester) async {
+        await restartedDuringSignIn(tester);
+        await pumpApp(tester, hasSubscription: false);
+
+        links.add(Uri.parse('launchvpn://auth?error=telegram_failed'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Не получилось войти через Telegram. Попробуйте ещё раз'),
+          findsOneWidget,
+        );
+      });
+    });
+
     testWidgets('a failed sign-in asks to try again', (tester) async {
       await pumpApp(tester, hasSubscription: false);
 

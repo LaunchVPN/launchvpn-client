@@ -63,29 +63,12 @@ class _AccountPageState extends State<AccountPage> {
     _visible = visible;
   }
 
-  /// «Вход» over the tabs in [mode], closed by the sign-in it exists for.
-  Future<void> _openLogin(LoginMode mode) async {
-    final navigator = Navigator.of(context, rootNavigator: true);
-    final route = MaterialPageRoute<void>(
-      builder: (_) => LoginPage(
-        account: widget.account,
-        openLink: widget.openLink,
-        mode: mode,
-      ),
-    );
-    void close() {
-      if (widget.account.signedIn.value && route.isActive) {
-        navigator.removeRoute(route);
-      }
-    }
-
-    widget.account.signedIn.addListener(close);
-    try {
-      await navigator.push(route);
-    } finally {
-      widget.account.signedIn.removeListener(close);
-    }
-  }
+  Future<void> _openLogin(LoginMode mode) => LoginPage.showOverTabs(
+    context,
+    account: widget.account,
+    openLink: widget.openLink,
+    mode: mode,
+  );
 
   Future<void> _logout() async {
     final l = AppLocalizations.of(context)!;
