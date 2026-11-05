@@ -143,10 +143,23 @@ class _BrandShellState extends State<BrandShell> {
             account: _account,
             openLink: _shareService.addAppLink,
             mode: LoginMode.signIn,
+            signedIn: _signedInChanges(),
           ),
         );
       case _:
     }
+  }
+
+  /// The session's [AccountService.signedIn] as a stream, from the listen on.
+  Stream<bool> _signedInChanges() {
+    final signedIn = _account.signedIn;
+    late final StreamController<bool> changes;
+    void tell() => changes.add(signedIn.value);
+    changes = StreamController<bool>(
+      onListen: () => signedIn.addListener(tell),
+      onCancel: () => signedIn.removeListener(tell),
+    );
+    return changes.stream;
   }
 
   Future<void> _handleQuickAction(ShortCutAction action) async {

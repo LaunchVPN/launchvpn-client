@@ -72,6 +72,7 @@ class _AccountPageState extends State<AccountPage> {
     account: widget.account,
     openLink: widget.openLink,
     mode: mode,
+    signedIn: _controller.stream.map((state) => state.signedIn),
   );
 
   Future<void> _logout() async {

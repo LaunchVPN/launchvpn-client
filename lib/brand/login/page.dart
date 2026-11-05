@@ -13,7 +13,6 @@ import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/shader_backdrop.dart';
 import 'package:onexray/brand/text_field.dart';
 import 'package:onexray/brand/theme.dart';
-import 'package:onexray/core/brand.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
@@ -39,29 +38,27 @@ class LoginPage extends StatefulWidget {
   final void Function(Uri) openLink;
   final LoginMode mode;
 
-  /// «Вход» over the tabs in [mode], closed by the sign-in it exists for.
+  /// «Вход» over the tabs in [mode], closed by the sign-in it exists for:
+  /// the first true from [signedIn].
   static Future<void> showOverTabs(
     BuildContext context, {
     required AccountService account,
     required void Function(Uri) openLink,
     required LoginMode mode,
+    required Stream<bool> signedIn,
   }) async {
     final navigator = Navigator.of(context, rootNavigator: true);
     final route = MaterialPageRoute<void>(
       builder: (_) =>
           LoginPage(account: account, openLink: openLink, mode: mode),
     );
-    void close() {
-      if (account.signedIn.value && route.isActive) {
-        navigator.removeRoute(route);
-      }
-    }
-
-    account.signedIn.addListener(close);
+    final closing = signedIn.where((value) => value).listen((_) {
+      if (route.isActive) navigator.removeRoute(route);
+    });
     try {
       await navigator.push(route);
     } finally {
-      account.signedIn.removeListener(close);
+      await closing.cancel();
     }
   }
 
@@ -103,10 +100,7 @@ class _LoginPageState extends State<LoginPage> {
       builder: (_) => const _SubscriptionLinkDialog(),
     );
     if (text == null || !mounted) return;
-    final pasted = Uri.tryParse(text.trim());
-    final link = pasted?.scheme == Brand.scheme
-        ? pasted
-        : SubscriptionDeepLink.fromUrl(text)?.uri;
+    final link = SubscriptionDeepLink.pasted(text);
     if (link == null) {
       ContextAlert.showToast(
         context,

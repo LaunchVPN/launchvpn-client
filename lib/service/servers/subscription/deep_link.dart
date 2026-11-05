@@ -40,6 +40,14 @@ final class SubscriptionDeepLink {
     return SubscriptionDeepLink._(url.toString());
   }
 
+  /// What a person pasted as their subscription, for the queue system links
+  /// take: a `launchvpn://` link as it is, which the queue checks, or the
+  /// link for a subscription URL [fromUrl] accepts. Null for anything else.
+  static Uri? pasted(String text) {
+    final uri = Uri.tryParse(text.trim());
+    return uri?.scheme == Brand.scheme ? uri : fromUrl(text)?.uri;
+  }
+
   /// The `launchvpn://sub/add` form, which [parse] reads back.
   Uri get uri => Uri(
     scheme: Brand.scheme,
