@@ -46,15 +46,22 @@ final class AccountData {
     bool trialAvailable = true,
   }) async {
     final claimTrial = trialAvailable && answer['trialGranted'] != true;
-    final link = await _session.start(answer, () {
-      _forcedSignOut = null;
-      _subscriptionMissing = false;
-      return _readQuietly(
-        () async =>
-            await _subscriptionLink() ??
-            (claimTrial ? await _claimTrial() : null),
-      );
-    });
+    final SubscriptionDeepLink? link;
+    try {
+      link = await _session.start(answer, () {
+        _forcedSignOut = null;
+        _subscriptionMissing = false;
+        return _readQuietly(
+          () async =>
+              await _subscriptionLink() ??
+              (claimTrial ? await _claimTrial() : null),
+        );
+      });
+    } on AccountException catch (error) {
+      // The failed sign-in tells it; the next «Вход» should not again.
+      if (error.error == AccountError.signedOut) _forcedSignOut = null;
+      rethrow;
+    }
     if (link != null) addSubscription(link);
   }
 

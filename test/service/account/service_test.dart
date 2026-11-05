@@ -132,6 +132,8 @@ void main() {
 
         expect(service.session.signedIn.value, isFalse);
         expect(added, isEmpty);
+        // «Вход» said it with the failure; the next one says nothing.
+        expect(service.data.takeForcedSignOut(), isNull);
       },
     );
 
