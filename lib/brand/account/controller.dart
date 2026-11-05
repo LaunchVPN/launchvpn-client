@@ -72,7 +72,12 @@ final class AccountController extends PageCubit<AccountState> {
   }) : _refreshSubscription =
            refreshSubscription ??
            SubscriptionService().refreshSubscriptionResult,
-       super(AccountState(signedIn: _account.signedIn.value)) {
+       super(
+         AccountState(
+           signedIn: _account.signedIn.value,
+           inactive: _account.subscriptionMissing,
+         ),
+       ) {
     _account.signedIn.addListener(_sessionChanged);
   }
 
@@ -91,7 +96,13 @@ final class AccountController extends PageCubit<AccountState> {
     final signedIn = _account.signedIn.value;
     if (signedIn == state.signedIn) return;
     // A new session loads its own data; an ended one keeps none.
-    emit(AccountState(signedIn: signedIn, subscription: state.subscription));
+    emit(
+      AccountState(
+        signedIn: signedIn,
+        subscription: state.subscription,
+        inactive: _account.subscriptionMissing,
+      ),
+    );
     if (signedIn) unawaited(refresh());
   }
 

@@ -159,61 +159,96 @@ class _HomePageState extends State<HomePage> {
                     ? bus.appUpdateInfo
                     : null,
                 builder: (context, update) =>
-                    BlocBuilder<HomeController, HomeState>(
-                      bloc: _controller,
-                      builder: (context, state) => CustomScrollView(
-                        slivers: [
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                BrandSpacing.page,
-                                8,
-                                BrandSpacing.page,
-                                20,
-                              ),
-                              child: Column(
-                                children: [
-                                  _Header(
-                                    // The expired screen's title says it
-                                    // instead; the device limit's mockup
-                                    // leaves it out.
-                                    daysLeft:
-                                        state.showsExpired ||
-                                            state.showsDeviceLimit
-                                        ? null
-                                        : state.daysLeft(DateTime.now()),
-                                  ),
-                                  if (update != null) ...[
-                                    const SizedBox(height: 20),
-                                    UpdateBanner(
-                                      update: update,
-                                      onUpdate: () => openExternalLink(
-                                        update.releaseUri,
-                                        'release',
-                                      ),
-                                    ),
-                                  ],
-                                  if (state.showsExpired)
-                                    ..._expiredContent(state)
-                                  else if (state.showsDeviceLimit)
-                                    ..._deviceLimitContent(state)
-                                  else if (state.failure case final failure?)
-                                    ..._failureContent(state, failure)
-                                  else
-                                    ..._connectionContent(
-                                      state,
-                                      _toggleGap(
-                                        constraints.maxHeight,
-                                        banner: update != null,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+                    BlocSelector<
+                      AccountController,
+                      AccountState,
+                      ({bool ended, bool refreshing})
+                    >(
+                      bloc: widget.account,
+                      // A signed-in account without a subscription, its trial
+                      // used, ended as well.
+                      selector: (account) => (
+                        ended: account.signedIn && account.inactive,
+                        refreshing: account.refreshing,
                       ),
+                      builder: (context, account) =>
+                          BlocBuilder<HomeController, HomeState>(
+                            bloc: _controller,
+                            builder: (context, state) {
+                              final accountEnded =
+                                  account.ended && state.subscription == null;
+                              final expired =
+                                  state.showsExpired || accountEnded;
+                              return CustomScrollView(
+                                slivers: [
+                                  SliverFillRemaining(
+                                    hasScrollBody: false,
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        BrandSpacing.page,
+                                        8,
+                                        BrandSpacing.page,
+                                        20,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          _Header(
+                                            // The expired screen's title says it
+                                            // instead; the device limit's mockup
+                                            // leaves it out.
+                                            daysLeft:
+                                                expired ||
+                                                    state.showsDeviceLimit
+                                                ? null
+                                                : state.daysLeft(
+                                                    DateTime.now(),
+                                                  ),
+                                          ),
+                                          if (update != null) ...[
+                                            const SizedBox(height: 20),
+                                            UpdateBanner(
+                                              update: update,
+                                              onUpdate: () => openExternalLink(
+                                                update.releaseUri,
+                                                'release',
+                                              ),
+                                            ),
+                                          ],
+                                          if (expired)
+                                            ..._expiredContent(
+                                              state,
+                                              // Only the account can bring one.
+                                              onRefresh: accountEnded
+                                                  ? (account.refreshing
+                                                        ? null
+                                                        : widget
+                                                              .account
+                                                              .refresh)
+                                                  : (state.refreshing
+                                                        ? null
+                                                        : _refreshStatus),
+                                            )
+                                          else if (state.showsDeviceLimit)
+                                            ..._deviceLimitContent(state)
+                                          else if (state.failure
+                                              case final failure?)
+                                            ..._failureContent(state, failure)
+                                          else
+                                            ..._connectionContent(
+                                              state,
+                                              _toggleGap(
+                                                constraints.maxHeight,
+                                                banner: update != null,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                     ),
               ),
         ),
@@ -246,7 +281,10 @@ class _HomePageState extends State<HomePage> {
         ),
       );
 
-  List<Widget> _expiredContent(HomeState state) {
+  List<Widget> _expiredContent(
+    HomeState state, {
+    required VoidCallback? onRefresh,
+  }) {
     final l = AppLocalizations.of(context)!;
     final renews = widget.distribution == AppDistribution.apk;
     return _stateContent(
@@ -259,7 +297,7 @@ class _HomePageState extends State<HomePage> {
         onRenew: renews
             ? () => openExternalLink(Uri.parse(Brand.renewalUrl), 'renewal')
             : null,
-        onRefresh: state.refreshing ? null : _refreshStatus,
+        onRefresh: onRefresh,
         onContactSupport: _contactSupport(state),
       ),
     );
