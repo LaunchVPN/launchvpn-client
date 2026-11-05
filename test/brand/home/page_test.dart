@@ -515,13 +515,13 @@ void main() {
 
   group('update banner', () {
     const release =
-        'https://github.com/LaunchVPN/launchvpn-client/releases/v26.11.2';
+        'https://github.com/LaunchVPN/launchvpn-client/releases/v1.0.1';
 
     Future<void> announceUpdate(WidgetTester tester) async {
       bus.updateAppUpdateInfo(
         AppUpdateInfo(
-          currentVersion: '26.11.0',
-          latestVersion: '26.11.2',
+          currentVersion: '1.0.0',
+          latestVersion: '1.0.1',
           releaseNotes: '',
           releaseUri: Uri.parse(release),
           updateUri: Uri.parse(release),
@@ -538,10 +538,10 @@ void main() {
         await pumpHome(tester, distribution: AppDistribution.apk);
 
         await announceUpdate(tester);
-        expect(find.text('Доступна версия 26.11.2'), findsOneWidget);
-        expect(find.text('Текущая версия: 26.11.0'), findsOneWidget);
+        expect(find.text('Доступна версия 1.0.1'), findsOneWidget);
+        expect(find.text('Текущая версия: 1.0.0'), findsOneWidget);
 
-        await tester.tap(find.text('Доступна версия 26.11.2'));
+        await tester.tap(find.text('Доступна версия 1.0.1'));
         await tester.pump();
         expect(launcher.opened, [release]);
       },
@@ -576,7 +576,7 @@ void main() {
       await announceUpdate(tester);
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Текущая версия: 26.11.0'), findsOneWidget);
+      expect(find.text('Текущая версия: 1.0.0'), findsOneWidget);
     });
   });
 
