@@ -63,12 +63,15 @@ final class AccountSession {
 
   /// Keeps the session from a token pair [answer] and runs [prepare] with it;
   /// only then [signedIn] turns true, so «Вход» gives way once it is done.
+  /// Throws [AccountError.signedOut] when the backend ended the session
+  /// meanwhile, even if [prepare] swallowed the refusal.
   Future<R> start<R>(
     Map<String, Object?> answer,
     Future<R> Function() prepare,
   ) async {
     await _keep(_tokenPair(answer));
     final prepared = await prepare();
+    if (_tokens == null) throw const AccountException(AccountError.signedOut);
     _signedIn.value = true;
     return prepared;
   }

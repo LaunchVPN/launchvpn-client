@@ -116,6 +116,25 @@ void main() {
       expect(restarted.session.signedIn.value, isFalse);
     });
 
+    test(
+      'a refused refresh while signing in leaves the device signed out',
+      () async {
+        api.loginWith(access: 'a1', refresh: 'r1');
+        api.subscription(_configLink);
+        api.rejectAccess('a1');
+        api.refuseRefresh();
+        final service = account();
+
+        await expectLater(
+          service.email.login(email: 'ivan@proton.me', password: 'pw'),
+          throwsA(_error(AccountError.signedOut)),
+        );
+
+        expect(service.session.signedIn.value, isFalse);
+        expect(added, isEmpty);
+      },
+    );
+
     for (final (name, fail) in [
       (
         'no connection',
