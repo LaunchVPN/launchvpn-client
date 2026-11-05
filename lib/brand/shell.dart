@@ -14,6 +14,7 @@ import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/main/modal_route_observer.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
 import 'package:onexray/service/account/service.dart';
+import 'package:onexray/service/account/telegram_auth.dart';
 import 'package:onexray/service/connect/connection_permissions.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/manager.dart';
@@ -23,7 +24,9 @@ import 'package:onexray/service/shared/share/service.dart';
 
 /// Starts the services, then hosts the tabs, or «Вход» while the device has
 /// neither a session nor a subscription. Incoming links and the iOS Widget's
-/// foreground actions are handled here because they need a ready UI.
+/// foreground actions are handled here because they need a ready UI:
+/// `launchvpn://auth` returns go to the Telegram sign-in, every other link to
+/// the subscription flow.
 class BrandShell extends StatefulWidget {
   const BrandShell({
     super.key,
@@ -100,7 +103,14 @@ class _BrandShellState extends State<BrandShell> {
     if (event == null) return;
     _activeLink = event;
     try {
-      await (widget.openLink ?? openSubscriptionLink)(context, event.uri);
+      final uri = event.uri;
+      if (TelegramBrowserAuth.isReturn(uri)) {
+        // Whoever started the sign-in shows its outcome; a stray return is
+        // dropped.
+        _account.telegram.handleReturn(uri);
+      } else {
+        await (widget.openLink ?? openSubscriptionLink)(context, uri);
+      }
     } catch (error) {
       ygLogger('open incoming link failed (${error.runtimeType})');
     } finally {

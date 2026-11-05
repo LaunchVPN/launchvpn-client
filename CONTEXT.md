@@ -63,7 +63,8 @@ upstream.
 
 **Deeplink**:
 `launchvpn://sub/add?url=<https-url>`: opens the app and makes that link's subscription
-the only one. Only subscriptions from our own domain are accepted.
+the only one. Only subscriptions from our own domain are accepted. The browser returns
+from the Telegram sign-in to `launchvpn://auth`, which is not a Deeplink.
 _Avoid_: intent, universal link
 
 **Flavor**:
