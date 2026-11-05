@@ -132,6 +132,78 @@ void main() {
     expect(restarted.signedIn.value, isFalse);
   });
 
+  group('account deletion', () {
+    late List<String> removed;
+
+    /// Signed in with tokens `a1`/`r1` and the account's subscription kept.
+    Future<AccountService> signedIn() async {
+      removed = [];
+      api.loginWith(access: 'a1', refresh: 'r1');
+      api.subscription(_configLink);
+      final service = accountServiceFor(
+        api,
+        removeSubscription: (url) async => removed.add(url),
+      );
+      await service.login(email: 'ivan@proton.me', password: 'pw');
+      api.requests.clear();
+      return service;
+    }
+
+    Future<void> expectSignedOut(AccountService service) async {
+      expect(service.signedIn.value, isFalse);
+      expect(removed, [_configLink]);
+      final restarted = account();
+      await restarted.restore();
+      expect(restarted.signedIn.value, isFalse);
+    }
+
+    test('deletes the account on the server, then forgets it here', () async {
+      final service = await signedIn();
+
+      await service.deleteAccount();
+
+      expect(api.bodies('/api/app/account/delete'), [<String, Object?>{}]);
+      expect(api.authorizations('/api/app/account/delete'), ['Bearer a1']);
+      await expectSignedOut(service);
+    });
+
+    test('an account the backend no longer knows counts as deleted', () async {
+      final service = await signedIn();
+      api.rejectAccess('a1');
+      api.refuseRefresh();
+
+      await service.deleteAccount();
+
+      await expectSignedOut(service);
+    });
+
+    for (final (name, fail, expected) in [
+      (
+        'the panel failing',
+        (FakeAccountApi api) =>
+            api.refuse('/api/app/account/delete', 502, 'panel_failed'),
+        AccountError.unexpected,
+      ),
+      (
+        'no connection',
+        (FakeAccountApi api) => api.unreachable('/api/app/account/delete'),
+        AccountError.network,
+      ),
+    ]) {
+      test('$name keeps the account and the session', () async {
+        final service = await signedIn();
+        fail(api);
+
+        await expectLater(service.deleteAccount(), throwsA(_error(expected)));
+
+        expect(service.signedIn.value, isTrue);
+        expect(removed, isEmpty);
+        await service.profile();
+        expect(api.authorizations('/api/me'), ['Bearer a1']);
+      });
+    }
+  });
+
   group('signup', () {
     const signup = PendingSignup(
       email: 'ivan@proton.me',

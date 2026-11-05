@@ -80,9 +80,9 @@ final class FakeAccountApi implements HttpClientAdapter {
       if (request.path == path) request.data,
   ];
 
-  /// No connection to the backend at all.
-  void unreachable() => _routes['/api/app/auth/login'] = (options) async =>
-      throw DioException.connectionError(
+  /// No connection to the backend for [path].
+  void unreachable([String path = '/api/app/auth/login']) =>
+      _routes[path] = (options) async => throw DioException.connectionError(
         requestOptions: options,
         reason: 'offline',
       );

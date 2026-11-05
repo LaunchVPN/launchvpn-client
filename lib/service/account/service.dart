@@ -356,6 +356,30 @@ final class AccountService {
     } on AccountException catch (error) {
       ygLogger('revoke account session failed (${error.error.name})');
     }
+    await _forget();
+  }
+
+  /// Deletes the account on the backend, then forgets it here as [logout]
+  /// does. A session the backend refuses even after a refresh counts as an
+  /// account already gone. Throws [AccountException] and stays signed in when
+  /// the deletion did not happen.
+  Future<void> deleteAccount() async {
+    try {
+      await _send(
+        () => _dio.post<Object?>(
+          '/api/app/account/delete',
+          data: const <String, Object?>{},
+          options: _bearer,
+        ),
+      );
+    } on AccountException catch (error) {
+      if (error.error != AccountError.signedOut) rethrow;
+    }
+    await _forget();
+  }
+
+  /// Removes the subscription the account brought and signs out here.
+  Future<void> _forget() async {
     try {
       if (await _store.readSubscriptionUrl() case final url?) {
         await _removeSubscription(url);
