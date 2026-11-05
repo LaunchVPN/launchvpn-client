@@ -159,6 +159,15 @@ final class FakeAccountApi implements HttpClientAdapter {
       _routes['/api/devices/disconnect'] = (_) async =>
           (502, {'ok': false, 'code': 'disconnect_failed'});
 
+  /// [path] answers as set up so far, but only once [until] completes.
+  void hold(String path, Future<void> until) {
+    final reply = _routes[path] ?? _ok;
+    _routes[path] = (options) async {
+      await until;
+      return reply(options);
+    };
+  }
+
   /// Every bearer route answers 401 to [access], as when it expired.
   void rejectAccess(String access) => _rejected.add(access);
 
@@ -186,8 +195,7 @@ final class FakeAccountApi implements HttpClientAdapter {
       body,
     ) = bearer is String && _rejected.contains(bearer.substring(7))
         ? (401, {'ok': false, 'code': 'invalid_token'})
-        : await (_routes[options.path] ??
-              (_) async => (200, <String, Object?>{'ok': true}))(options);
+        : await (_routes[options.path] ?? _ok)(options);
     return ResponseBody.fromString(
       jsonEncode(body),
       status,
@@ -199,6 +207,9 @@ final class FakeAccountApi implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+
+  static Future<(int, Map<String, Object?>)> _ok(RequestOptions _) async =>
+      (200, <String, Object?>{'ok': true});
 
   static (int, Map<String, Object?>) _pair(String access, String refresh) => (
     200,

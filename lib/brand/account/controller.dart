@@ -69,8 +69,8 @@ final class AccountState {
   AccountState copyWith({
     bool? signedIn,
     SubscriptionData? Function()? subscription,
-    AccountDetails? details,
-    AccountDevices? devices,
+    AccountDetails? Function()? details,
+    AccountDevices? Function()? devices,
     int? subscriptionMaxDevices,
     bool? inactive,
     bool? refreshing,
@@ -80,8 +80,8 @@ final class AccountState {
   }) => AccountState(
     signedIn: signedIn ?? this.signedIn,
     subscription: subscription == null ? this.subscription : subscription(),
-    details: details ?? this.details,
-    devices: devices ?? this.devices,
+    details: details == null ? this.details : details(),
+    devices: devices == null ? this.devices : devices(),
     subscriptionMaxDevices:
         subscriptionMaxDevices ?? this.subscriptionMaxDevices,
     inactive: inactive ?? this.inactive,
@@ -161,9 +161,14 @@ final class AccountController extends PageCubit<AccountState> {
   final ValueListenable<bool> _deviceLimit;
   StreamSubscription<SubscriptionData?>? _rows;
 
+  /// The session the tab's account data comes from. Signing in or out and a
+  /// Telegram merge start a new one; answers to an older one are dropped.
+  int _session = 0;
+
   void _sessionChanged() {
     final signedIn = _account.session.signedIn.value;
     if (signedIn == state.signedIn) return;
+    _session++;
     // A new session loads its own data; an ended one keeps none.
     emit(
       AccountState(
@@ -200,6 +205,7 @@ final class AccountController extends PageCubit<AccountState> {
       if (row != null) await _refreshQuietly(row);
       return;
     }
+    final session = _session;
     SubscriptionDeepLink? link;
     await Future.wait([
       _loadDetails(),
@@ -215,7 +221,7 @@ final class AccountController extends PageCubit<AccountState> {
     ]);
     // The stream keeps the row current, unlike [row] read before.
     if (link case final missing?
-        when state.subscription == null && _placeFree) {
+        when session == _session && state.subscription == null && _placeFree) {
       _account.data.addSubscription(missing);
     }
   }
@@ -229,18 +235,19 @@ final class AccountController extends PageCubit<AccountState> {
     return devices != null && (limit == null || devices.items.length < limit);
   }
 
-  Future<void> _loadDetails() => _load(
+  Future<bool> _loadDetails() => _load(
     _account.data.details,
-    (details) => state.copyWith(details: details),
+    (details) => state.copyWith(details: () => details),
   );
 
-  /// The account's devices alone, as «Лимит устройств» lists them.
-  Future<void> loadDevices() => state.signedIn
+  /// The account's devices alone, as «Лимит устройств» lists them. Whether
+  /// they loaded.
+  Future<bool> loadDevices() => state.signedIn
       ? _load(
           _account.data.devices,
-          (devices) => state.copyWith(devices: devices),
+          (devices) => state.copyWith(devices: () => devices),
         )
-      : Future.value();
+      : Future.value(false);
 
   /// Takes [device] off the subscription. False when the backend refused.
   Future<bool> removeDevice(AccountDevice device) async {
@@ -251,7 +258,7 @@ final class AccountController extends PageCubit<AccountState> {
       return false;
     }
     if (state.devices case final devices?) {
-      emit(state.copyWith(devices: devices.without(device.hwid)));
+      emit(state.copyWith(devices: () => devices.without(device.hwid)));
     }
     return true;
   }
@@ -306,15 +313,25 @@ final class AccountController extends PageCubit<AccountState> {
   }
 
   /// What linking changed: the subscription, which got the days, and the
-  /// account details, which now have Telegram.
+  /// account details, which now have Telegram. The merge may have handed the
+  /// session to another account, so what fails to load is no longer shown.
   Future<void> _reloadLinked(TelegramLink linked) async {
+    final session = ++_session;
     if (!linked.replacedSubscription) {
       if (state.subscription case final row?) await _refreshQuietly(row);
     }
-    await Future.wait([_loadDetails(), loadDevices()]);
-    if (!isClosed) {
-      emit(state.copyWith(inactive: _account.data.subscriptionMissing));
-    }
+    final [details, devices] = await Future.wait([
+      _loadDetails(),
+      loadDevices(),
+    ]);
+    if (isClosed || session != _session) return;
+    emit(
+      state.copyWith(
+        details: details ? null : () => null,
+        devices: devices ? null : () => null,
+        inactive: _account.data.subscriptionMissing,
+      ),
+    );
   }
 
   /// Signs out. The gate then shows «Вход» unless a subscription from a link
@@ -343,15 +360,20 @@ final class AccountController extends PageCubit<AccountState> {
   }
 
   /// Runs one request of [refresh]; a failure leaves the rest of the tab.
-  Future<void> _load<T>(
+  /// Whether its answer, still for the current session, was applied.
+  Future<bool> _load<T>(
     Future<T> Function() request,
     AccountState Function(T) apply,
   ) async {
+    final session = _session;
     try {
       final value = await request();
-      if (!isClosed && state.signedIn) emit(apply(value));
+      if (isClosed || session != _session) return false;
+      emit(apply(value));
+      return true;
     } on AccountException catch (error) {
       ygLogger('load account failed (${error.error.name})');
+      return false;
     }
   }
 

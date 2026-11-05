@@ -325,6 +325,71 @@ void main() {
     expect(controller.state.resumedLink, isNull);
   });
 
+  group('a session that ends while the tab loads', () {
+    test('a refresh outliving logout adds nothing', () async {
+      final service = await signedIn();
+      final devices = Completer<void>();
+      api.hold('/api/devices', devices.future);
+      final controller = controllerFor(service);
+
+      final refresh = controller.refresh();
+      await pumpEventQueue();
+      await controller.logout();
+      devices.complete();
+      await refresh;
+
+      expect(opened, isEmpty);
+      expect(controller.state.devices, isNull);
+    });
+
+    test('the previous account\'s answers do not reach the next one', () async {
+      final service = await signedIn();
+      api.me(email: 'ivan@proton.me', telegramLinked: false);
+      final first = Completer<void>();
+      api.hold('/api/me', first.future);
+      final controller = controllerFor(service);
+      final stale = controller.refresh();
+      await pumpEventQueue();
+      await controller.logout();
+
+      api.loginWith(access: 'a2', refresh: 'r2');
+      api.me(email: 'olga@proton.me', telegramLinked: false);
+      await service.email.login(email: 'olga@proton.me', password: 'pw');
+      await pumpEventQueue();
+      first.complete();
+      await stale;
+
+      expect(controller.state.details?.email, 'olga@proton.me');
+    });
+
+    test('linking Telegram shows no details the merged account did not '
+        'load', () async {
+      final service = await signedIn();
+      api.me(email: 'ivan@proton.me', telegramLinked: false);
+      api.devices([
+        {'hwid': 'device-hwid'},
+      ], max: 3);
+      final controller = controllerFor(service);
+      await controller.refresh();
+      api.linkStartWith('https://app.test/api/auth/telegram/start?ticket=t1');
+      api.refreshWith(access: 'a2', refresh: 'r2');
+      api.exchangeWith(access: 'a3', refresh: 'r3');
+      api.subscription('https://sub.launch.tel/telegram');
+      api.refuse('/api/me', 502, 'bad_gateway');
+      api.refuse('/api/devices', 502, 'bad_gateway');
+
+      final outcome = controller.linkTelegram();
+      await pumpEventQueue();
+      service.telegram.browser.handleReturn(
+        Uri.parse('launchvpn://auth?code=c1&mode=link'),
+      );
+
+      expect(await outcome, isA<TelegramLinked>());
+      expect(controller.state.details, isNull);
+      expect(controller.state.devices, isNull);
+    });
+  });
+
   test(
     'logout ends the session and removes the account subscription',
     () async {
