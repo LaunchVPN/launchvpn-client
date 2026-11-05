@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/brand/account/controller.dart';
@@ -40,11 +41,15 @@ void main() {
     browser: browser,
   );
 
-  AccountController controllerFor(AccountService account) {
+  AccountController controllerFor(
+    AccountService account, {
+    ValueListenable<bool>? deviceLimit,
+  }) {
     final controller = AccountController(
       account: account,
       openLink: opened.add,
       database: db,
+      deviceLimit: deviceLimit ?? ValueNotifier(false),
       refreshSubscription: (row) async {
         refreshed.add(row.url);
         return const SubscriptionRefreshResult(
@@ -188,6 +193,24 @@ void main() {
     await controller.refresh();
 
     expect(controller.state.deviceLimit, 3);
+  });
+
+  test('while the panel refuses this device for the limit, the tab adds the '
+      'subscription again only once a place is free', () async {
+    final service = await signedIn();
+    api.devices([
+      {'hwid': 'pixel-8'},
+      {'hwid': 'pixel-7'},
+    ], max: 2);
+    final controller = controllerFor(service, deviceLimit: ValueNotifier(true));
+
+    await controller.refresh();
+    await controller.refresh();
+    expect(opened, isEmpty);
+
+    await controller.removeDevice(controller.state.devices!.items.first);
+    await controller.refresh();
+    expect(opened, [_link]);
   });
 
   test('a removed device leaves the list at once', () async {

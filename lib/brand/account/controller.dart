@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:onexray/brand/home/controller.dart' show SubscriptionRefresh;
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/tools/logger.dart';
@@ -8,6 +9,7 @@ import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/service.dart';
+import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/servers/subscription/service.dart';
 import 'package:onexray/service/servers/subscription/user_info.dart';
 
@@ -124,9 +126,11 @@ final class AccountController extends PageCubit<AccountState> {
     required this._openLink,
     this._database,
     SubscriptionRefresh? refreshSubscription,
+    ValueListenable<bool>? deviceLimit,
   }) : _refreshSubscription =
            refreshSubscription ??
            SubscriptionService().refreshSubscriptionResult,
+       _deviceLimit = deviceLimit ?? SubscriptionService().deviceLimitReached,
        super(
          AccountState(
            signedIn: _account.signedIn.value,
@@ -142,6 +146,10 @@ final class AccountController extends PageCubit<AccountState> {
   final void Function(Uri) _openLink;
   final AppDatabase? _database;
   final SubscriptionRefresh _refreshSubscription;
+
+  /// The panel last refused this device: the subscription has all its
+  /// devices.
+  final ValueListenable<bool> _deviceLimit;
   StreamSubscription<SubscriptionData?>? _rows;
 
   // Opened on first use: Home builds this controller before it needs it.
@@ -189,13 +197,12 @@ final class AccountController extends PageCubit<AccountState> {
       if (row != null) await _refreshQuietly(row);
       return;
     }
+    SubscriptionDeepLink? link;
     await Future.wait([
       _loadProfile(),
       loadDevices(),
       _load(_account.accountSubscription, (subscription) {
-        final link = subscription.link;
-        // The stream keeps the row current, unlike [row] read before.
-        if (link != null && state.subscription == null) _openLink(link.uri);
+        link = subscription.link;
         return state.copyWith(
           inactive: link == null,
           subscriptionMaxDevices: subscription.maxDevices,
@@ -203,6 +210,20 @@ final class AccountController extends PageCubit<AccountState> {
       }),
       if (row != null) _refreshQuietly(row),
     ]);
+    // The stream keeps the row current, unlike [row] read before.
+    if (link case final missing?
+        when state.subscription == null && _placeFree) {
+      _openLink(missing.uri);
+    }
+  }
+
+  /// Whether the panel may take this device now. After it refused the
+  /// device over the limit, adding the subscription again would only repeat
+  /// the refusal until the list shows a free place.
+  bool get _placeFree {
+    if (!_deviceLimit.value) return true;
+    final (devices, limit) = (state.devices, state.deviceLimit);
+    return devices != null && (limit == null || devices.items.length < limit);
   }
 
   Future<void> _loadProfile() =>
