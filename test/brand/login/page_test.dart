@@ -291,6 +291,23 @@ void main() {
       },
     );
 
+    testWidgets('a return after signing in by email meanwhile switches no '
+        'account', (tester) async {
+      api.loginWith(access: 'a1', refresh: 'r1');
+      api.exchangeWith(access: 't1', refresh: 'tr1');
+      api.subscription(_configLink);
+      await pumpApp(tester, hasSubscription: false);
+      await tester.tap(find.text('Войти через Telegram'));
+      await tester.pumpAndSettle();
+
+      await signIn(tester);
+      links.add(Uri.parse('launchvpn://auth?code=c1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('home-body'), findsOneWidget);
+      expect(api.bodies('/api/app/auth/exchange'), isEmpty);
+    });
+
     group('after the system closed the App in the browser', () {
       /// The App left for Telegram's sign-in and was closed meanwhile; this
       /// launch restored what it saved.
