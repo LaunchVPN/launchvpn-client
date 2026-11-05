@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -126,10 +125,7 @@ class _ShaderBackdropState extends State<ShaderBackdrop> {
               painter: _DarkVeilPainter(
                 veil,
                 _time,
-                pixelRatio: math.min(
-                  MediaQuery.devicePixelRatioOf(context),
-                  _maxPixelRatio,
-                ),
+                devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
               ),
             ),
           ),
@@ -139,10 +135,12 @@ class _ShaderBackdropState extends State<ShaderBackdrop> {
   }
 }
 
-/// Draws the veil at [time] over the whole canvas. It renders off screen at
-/// [pixelRatio] image pixels per point and is scaled up from there.
+/// Draws the veil at [time] over the whole canvas. A screen denser than
+/// [_maxPixelRatio] gets it rendered off screen at that cap and scaled up;
+/// [Picture.toImageSync] rasterizes on the raster thread, where one pass at
+/// the cap costs far less than this fragment shader at full density.
 class _DarkVeilPainter extends CustomPainter {
-  _DarkVeilPainter(this.shader, this.time, {required this.pixelRatio})
+  _DarkVeilPainter(this.shader, this.time, {required this.devicePixelRatio})
     : super(repaint: time);
 
   /// [shader] in the brand's colors, set once.
@@ -161,17 +159,22 @@ class _DarkVeilPainter extends CustomPainter {
 
   final FragmentShader shader;
   final ValueListenable<double> time;
-  final double pixelRatio;
+  final double devicePixelRatio;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final width = (size.width * pixelRatio).ceil();
-    final height = (size.height * pixelRatio).ceil();
-    if (width == 0 || height == 0) return;
+    if (size.isEmpty) return;
+    shader.getUniformFloat('uTime').set(time.value);
+    // Within the cap, a pass off screen would only add a copy.
+    if (devicePixelRatio <= _maxPixelRatio) {
+      shader.getUniformVec2('uSize').set(size.width, size.height);
+      canvas.drawRect(Offset.zero & size, Paint()..shader = shader);
+      return;
+    }
+    final width = (size.width * _maxPixelRatio).ceil();
+    final height = (size.height * _maxPixelRatio).ceil();
     final rendered = Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble());
-    shader
-      ..getUniformVec2('uSize').set(rendered.width, rendered.height)
-      ..getUniformFloat('uTime').set(time.value);
+    shader.getUniformVec2('uSize').set(rendered.width, rendered.height);
     final recorder = PictureRecorder();
     Canvas(recorder).drawRect(rendered, Paint()..shader = shader);
     final picture = recorder.endRecording();
@@ -191,5 +194,5 @@ class _DarkVeilPainter extends CustomPainter {
   bool shouldRepaint(_DarkVeilPainter oldDelegate) =>
       oldDelegate.shader != shader ||
       oldDelegate.time != time ||
-      oldDelegate.pixelRatio != pixelRatio;
+      oldDelegate.devicePixelRatio != devicePixelRatio;
 }

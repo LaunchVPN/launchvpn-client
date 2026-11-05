@@ -93,32 +93,35 @@ void main() {
     expect(tester.binding.hasScheduledFrame, isTrue);
   });
 
-  for (final (ratio, rendered) in [
-    (3.0, const Size(1200, 900)),
-    (1.0, const Size(800, 600)),
-  ]) {
-    testWidgets('renders at most 1.5 pixels per point, scaled up to the '
-        'screen (device pixel ratio $ratio)', (tester) async {
-      await pumpBackdrop(
-        tester,
-        disableAnimations: true,
-        devicePixelRatio: ratio,
-      );
+  RenderObject veil(WidgetTester tester) => tester.renderObject(
+    find.descendant(
+      of: find.byType(ShaderBackdrop),
+      matching: find.byType(CustomPaint),
+    ),
+  );
 
-      expect(
-        tester.renderObject(
-          find.descendant(
-            of: find.byType(ShaderBackdrop),
-            matching: find.byType(CustomPaint),
-          ),
-        ),
-        paints..drawImageRect(
-          source: Offset.zero & rendered,
-          destination: const Rect.fromLTWH(0, 0, 800, 600),
-        ),
-      );
-    });
-  }
+  testWidgets('renders at most 1.5 pixels per point, scaled up to a denser '
+      'screen', (tester) async {
+    await pumpBackdrop(tester, disableAnimations: true, devicePixelRatio: 3);
+
+    expect(
+      veil(tester),
+      paints..drawImageRect(
+        source: const Rect.fromLTWH(0, 0, 1200, 900),
+        destination: const Rect.fromLTWH(0, 0, 800, 600),
+      ),
+    );
+  });
+
+  testWidgets('draws straight onto a screen within the cap', (tester) async {
+    await pumpBackdrop(tester, disableAnimations: true, devicePixelRatio: 1.5);
+
+    expect(
+      veil(tester),
+      paints..rect(rect: const Rect.fromLTWH(0, 0, 800, 600)),
+    );
+    expect(veil(tester), isNot(paints..drawImageRect()));
+  });
 
   testWidgets('stays plain when the shader fails to load', (tester) async {
     await pumpBackdrop(
