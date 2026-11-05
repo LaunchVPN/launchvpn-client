@@ -97,7 +97,11 @@ void main() {
     addTearDown(router.dispose);
     tester.platformDispatcher
       ..localeTestValue = const Locale('ru')
-      ..localesTestValue = const [Locale('ru')];
+      ..localesTestValue = const [Locale('ru')]
+      // A still backdrop on «Вход», so leaving the account can settle.
+      ..accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+        disableAnimations: true,
+      );
     addTearDown(tester.platformDispatcher.clearAllTestValues);
     await tester.pumpWidget(BrandApp(routerConfig: router));
     await tester.pumpAndSettle();

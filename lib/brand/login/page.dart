@@ -9,6 +9,7 @@ import 'package:onexray/brand/login/code_view.dart';
 import 'package:onexray/brand/login/controller.dart';
 import 'package:onexray/brand/login/footer_link.dart';
 import 'package:onexray/brand/mark.dart';
+import 'package:onexray/brand/shader_backdrop.dart';
 import 'package:onexray/brand/text_field.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/core/brand.dart';
@@ -94,56 +95,58 @@ class _LoginPageState extends State<LoginPage> {
     final l = AppLocalizations.of(context)!;
     return AnnotatedRegion(
       value: BrandTheme.statusBar,
-      child: BlocBuilder<LoginController, LoginState>(
-        bloc: _login,
-        builder: (context, state) {
-          final signup = state.signup;
-          return PopScope(
-            // Back from the code returns to the form, as «Изменить» does.
-            canPop: signup == null,
-            onPopInvokedWithResult: (didPop, _) {
-              if (!didPop) _login.changeEmail();
-            },
-            child: Scaffold(
-              backgroundColor: BrandColors.bg,
-              body: SafeArea(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(
-                    BrandSpacing.page,
-                    48,
-                    BrandSpacing.page,
-                    BrandSpacing.page,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: _MarkTile(),
-                      ),
-                      const SizedBox(height: 36),
-                      Text(
-                        signup == null ? l.loginTitle : l.codeTitle,
-                        style: BrandText.heroTitle,
-                      ),
-                      const SizedBox(height: 12),
-                      if (signup == null)
-                        _form(l, state)
-                      else
-                        EmailCodeView(
-                          key: ValueKey(signup),
-                          signup: signup,
-                          account: widget.account,
-                          openLink: widget.openLink,
-                          onChangeEmail: _login.changeEmail,
+      child: ShaderBackdrop(
+        child: BlocBuilder<LoginController, LoginState>(
+          bloc: _login,
+          builder: (context, state) {
+            final signup = state.signup;
+            return PopScope(
+              // Back from the code returns to the form, as «Изменить» does.
+              canPop: signup == null,
+              onPopInvokedWithResult: (didPop, _) {
+                if (!didPop) _login.changeEmail();
+              },
+              child: Scaffold(
+                backgroundColor: Colors.transparent,
+                body: SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      BrandSpacing.page,
+                      48,
+                      BrandSpacing.page,
+                      BrandSpacing.page,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: _MarkTile(),
                         ),
-                    ],
+                        const SizedBox(height: 36),
+                        Text(
+                          signup == null ? l.loginTitle : l.codeTitle,
+                          style: BrandText.heroTitle,
+                        ),
+                        const SizedBox(height: 12),
+                        if (signup == null)
+                          _form(l, state)
+                        else
+                          EmailCodeView(
+                            key: ValueKey(signup),
+                            signup: signup,
+                            account: widget.account,
+                            openLink: widget.openLink,
+                            onChangeEmail: _login.changeEmail,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

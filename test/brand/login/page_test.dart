@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/app.dart';
 import 'package:onexray/brand/router.dart';
+import 'package:onexray/brand/shader_backdrop.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/shared/share/service.dart';
 
@@ -28,8 +29,8 @@ void main() {
     opened = [];
   });
 
-  /// The app on a Russian phone with a Pixel's screen, with [hasSubscription]
-  /// as the first word of the subscription table.
+  /// The app on a Russian phone with a Pixel's screen and reduced motion,
+  /// with [hasSubscription] as the first word of the subscription table.
   Future<void> pumpApp(
     WidgetTester tester, {
     required bool hasSubscription,
@@ -61,7 +62,11 @@ void main() {
     addTearDown(router.dispose);
     tester.platformDispatcher
       ..localeTestValue = const Locale('ru')
-      ..localesTestValue = const [Locale('ru')];
+      ..localesTestValue = const [Locale('ru')]
+      // A still backdrop, so the screens can settle.
+      ..accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+        disableAnimations: true,
+      );
     addTearDown(tester.platformDispatcher.clearAllTestValues);
     subscriptions.add(hasSubscription);
     await tester.pumpWidget(BrandApp(routerConfig: router));
@@ -111,6 +116,7 @@ void main() {
       expect(find.text('Уже есть аккаунт?'), findsOneWidget);
       expect(find.text('У меня есть ссылка подписки'), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(ShaderBackdrop), findsOneWidget);
 
       await tester.tap(find.widgetWithText(TextButton, 'Войти'));
       await tester.pumpAndSettle();
@@ -300,6 +306,7 @@ void main() {
       await createAccount(tester);
 
       expect(find.text('Проверьте\nпочту'), findsOneWidget);
+      expect(find.byType(ShaderBackdrop), findsOneWidget);
       expect(
         find.text(
           'Отправили код на ivan@proton.me. Введите его, и 3 дня бесплатно '
