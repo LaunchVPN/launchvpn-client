@@ -144,6 +144,8 @@ final class AccountController extends PageCubit<AccountState> {
          ),
        ) {
     _account.session.signedIn.addListener(_sessionChanged);
+    // A restored session: Home tells an ended account before the tab opens.
+    if (state.signedIn) unawaited(_loadSubscription());
     if (_account.telegram.browser.resume(TelegramAuthPurpose.link)
         case final code?) {
       unawaited(_resumeLink(code));
@@ -206,24 +208,32 @@ final class AccountController extends PageCubit<AccountState> {
       return;
     }
     final session = _session;
-    SubscriptionDeepLink? link;
+    final subscription = _loadSubscription();
     await Future.wait([
       _loadDetails(),
       loadDevices(),
-      _load(_account.data.subscription, (subscription) {
-        link = subscription.link;
-        return state.copyWith(
-          inactive: link == null,
-          subscriptionMaxDevices: subscription.maxDevices,
-        );
-      }),
+      subscription,
       if (row != null) _refreshQuietly(row),
     ]);
     // The stream keeps the row current, unlike [row] read before.
-    if (link case final missing?
+    if (await subscription case final missing?
         when session == _session && state.subscription == null && _placeFree) {
       _account.data.addSubscription(missing);
     }
+  }
+
+  /// Reads whether the account's subscription is active, and the devices it
+  /// allows. Its link; null when there is none or the read failed.
+  Future<SubscriptionDeepLink?> _loadSubscription() async {
+    SubscriptionDeepLink? link;
+    await _load(_account.data.subscription, (subscription) {
+      link = subscription.link;
+      return state.copyWith(
+        inactive: link == null,
+        subscriptionMaxDevices: subscription.maxDevices,
+      );
+    });
+    return link;
   }
 
   /// Whether the panel may take this device now. After it refused the

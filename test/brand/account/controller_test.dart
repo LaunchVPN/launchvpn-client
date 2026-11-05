@@ -160,6 +160,18 @@ void main() {
     expect(opened, isEmpty);
   });
 
+  test('a session restored without an active subscription shows as ended '
+      'before the tab opens', () async {
+    await signedIn(configLink: null);
+    final restarted = account();
+    await restarted.restore();
+
+    final controller = controllerFor(restarted);
+    await pumpEventQueue();
+
+    expect(controller.state.inactive, isTrue);
+  });
+
   test('from a link only, days and traffic come from the device', () async {
     await addRow('https://sub.launch.tel/from-bot');
     final controller = controllerFor(account());
@@ -266,8 +278,12 @@ void main() {
     const telegramLink = 'https://sub.launch.tel/telegram';
     api.linkStartWith('https://app.test/api/auth/telegram/start?ticket=t1');
     api.refreshWith(access: 'a2', refresh: 'r2');
-    api.exchangeWith(access: 'a3', refresh: 'r3', addedDays: 30);
-    api.subscription(telegramLink);
+    api.exchangeWith(
+      access: 'a3',
+      refresh: 'r3',
+      addedDays: 30,
+      bringing: telegramLink,
+    );
     api.me(email: 'ivan@proton.me', telegramLinked: true);
     final controller = controllerFor(service);
 
@@ -298,8 +314,12 @@ void main() {
     const telegramLink = 'https://sub.launch.tel/telegram';
     api.linkStartWith('https://app.test/api/auth/telegram/start?ticket=t1');
     api.refreshWith(access: 'a2', refresh: 'r2');
-    api.exchangeWith(access: 'a3', refresh: 'r3', addedDays: 30);
-    api.subscription(telegramLink);
+    api.exchangeWith(
+      access: 'a3',
+      refresh: 'r3',
+      addedDays: 30,
+      bringing: telegramLink,
+    );
     api.me(email: 'ivan@proton.me', telegramLinked: true);
     unawaited(service.telegram.openLink());
     await pumpEventQueue();

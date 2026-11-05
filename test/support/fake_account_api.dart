@@ -74,12 +74,15 @@ final class FakeAccountApi implements HttpClientAdapter {
   };
 
   /// The code from a Telegram return signs in with this token pair. A link
-  /// code also says how many days Telegram's side added.
+  /// code also says how many days Telegram's side added, and the merged
+  /// account's subscription becomes [bringing] when given.
   void exchangeWith({
     required String access,
     required String refresh,
     int? addedDays,
+    String? bringing,
   }) => _routes['/api/app/auth/exchange'] = (_) async {
+    if (bringing != null) subscription(bringing);
     final (status, pair) = _pair(access, refresh);
     return (status, {...pair, 'addedDays': ?addedDays});
   };

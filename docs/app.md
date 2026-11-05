@@ -189,7 +189,8 @@ upstream pages kept for merging. They are not reachable in this build.
 - Account, the middle tab, refreshes when it opens: the subscription on the device is loaded again
   quietly, and when signed in the account details (`/api/me`), the devices (`/api/devices`) and the
   account's subscription are read too; one the device lacks goes to the link queue, which covers a
-  failed load right after sign-in. It shows the days left, the expiry date and the traffic of the
+  failed load right after sign-in. A session restored at launch reads the account's subscription
+  right away, so Home can tell an ended account before the tab opens. It shows the days left, the expiry date and the traffic of the
   period from the subscription headers, with a bar only for a plan with a traffic limit, or
   Subscription ended as Home has it when the subscription expired or the account has none.
   With a subscription or a session, an APK build adds Renew subscription, opening
