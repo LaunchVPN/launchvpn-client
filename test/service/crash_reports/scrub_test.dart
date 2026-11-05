@@ -66,10 +66,10 @@ void main() {
     expect(sent, contains('Failed host lookup'));
   });
 
-  test('keeps file names and times that look like addresses', () {
-    expect(
-      scrubText('lib/brand/app.dart failed at 12:30:45, see app.db'),
-      'lib/brand/app.dart failed at 12:30:45, see app.db',
-    );
+  test('keeps file names, times and Dart names that look like addresses', () {
+    const text =
+        'lib/brand/app.dart failed at 12:30:45 in AppLifecycleState.resumed, '
+        'see app.db';
+    expect(scrubText(text), text);
   });
 }

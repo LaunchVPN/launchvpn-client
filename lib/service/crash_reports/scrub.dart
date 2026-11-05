@@ -75,18 +75,19 @@ final List<_Pattern> _patterns = [
     ),
     '<ip>',
   ),
-  // Letters of any script, for names such as `vpn.сервер.рф`.
+  // Lowercase letters of any script, for names such as `vpn.сервер.рф`.
+  // Hosts reach errors lowercase, while Dart names such as
+  // `AppLifecycleState.resumed` have capitals and stay.
   (
     match: RegExp(
       r'(?<![\p{L}\p{N}-])'
-      r'(?:[\p{L}\p{N}](?:[\p{L}\p{N}-]*[\p{L}\p{N}])?\.)+(\p{L}{2,24})'
+      r'(?:[\p{Ll}\p{N}](?:[\p{Ll}\p{N}-]*[\p{Ll}\p{N}])?\.)+(\p{Ll}{2,24})'
       r'(?![\p{L}\p{N}-])',
       unicode: true,
     ),
     // File names look like hosts and help find the bug.
-    replace: (match) => _fileExtensions.contains(match[1]!.toLowerCase())
-        ? match[0]!
-        : '<host>',
+    replace: (match) =>
+        _fileExtensions.contains(match[1]) ? match[0]! : '<host>',
   ),
 ];
 
