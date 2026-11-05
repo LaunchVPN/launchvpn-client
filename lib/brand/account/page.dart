@@ -150,7 +150,6 @@ class _AccountPageState extends State<AccountPage> {
             bloc: _controller,
             builder: (context, state) {
               final devices = state.devices;
-              final details = _details(l, state);
               return ListView(
                 padding: const EdgeInsets.fromLTRB(
                   BrandSpacing.page,
@@ -200,10 +199,8 @@ class _AccountPageState extends State<AccountPage> {
                       devices: devices.items,
                     ),
                   ],
-                  if (details.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    SettingsCard(children: details),
-                  ],
+                  const SizedBox(height: 16),
+                  SettingsCard(children: _details(l, state)),
                 ],
               );
             },
@@ -262,11 +259,11 @@ class _AccountPageState extends State<AccountPage> {
     ];
   }
 
-  /// The account, «Привязать Telegram», support, «Выйти» and «Удалить
-  /// аккаунт», each when there is one.
+  /// Support for everyone, the panel's or the bot's; signed in, also the
+  /// account, «Привязать Telegram», «Выйти» and «Удалить аккаунт».
   List<Widget> _details(AppLocalizations l, AccountState state) {
     final profile = state.profile;
-    final support = state.subscription?.supportUrl;
+    final support = state.subscription?.supportUrl ?? Brand.supportUrl;
     return [
       if (profile?.email case final email?)
         SettingsRow(
@@ -291,13 +288,12 @@ class _AccountPageState extends State<AccountPage> {
                   color: BrandColors.muted,
                 ),
         ),
-      if (support != null)
-        SettingsLinkRow(
-          icon: LucideIcons.messageCircle,
-          title: l.accountSupport,
-          value: null,
-          onTap: () => openExternalLink(Uri.parse(support), 'support'),
-        ),
+      SettingsLinkRow(
+        icon: LucideIcons.messageCircle,
+        title: l.accountSupport,
+        value: null,
+        onTap: () => openExternalLink(Uri.parse(support), 'support'),
+      ),
       if (state.signedIn)
         SettingsRow(
           key: const ValueKey('account-logout'),

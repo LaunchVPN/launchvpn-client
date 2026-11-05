@@ -33,6 +33,9 @@ abstract final class Brand {
   /// payment.
   static const renewalUrl = 'https://app.$subscriptionDomain';
 
+  /// Support in Telegram, for a subscription whose panel names none.
+  static const supportUrl = 'https://t.me/launchbotsupport';
+
   /// The account API. Local runs point it at another backend with
   /// `--dart-define=LAUNCHVPN_API_URL=http://10.0.2.2:8080`.
   static const apiUrl = String.fromEnvironment(

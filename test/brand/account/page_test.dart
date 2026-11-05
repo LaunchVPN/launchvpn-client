@@ -15,6 +15,7 @@ import 'package:onexray/service/servers/subscription/model.dart';
 import 'package:onexray/service/shared/share/service.dart';
 
 import '../../support/fake_account_api.dart';
+import '../../support/fake_url_launcher.dart';
 
 void main() {
   late FakeAccountApi api;
@@ -103,6 +104,11 @@ void main() {
         disableAnimations: true,
       );
     addTearDown(tester.platformDispatcher.clearAllTestValues);
+    // A Pixel's screen, so the whole card fits above the tab bar.
+    tester.view
+      ..physicalSize = const Size(1080, 2400)
+      ..devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(BrandApp(routerConfig: router));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Аккаунт'));
@@ -117,6 +123,20 @@ void main() {
     expect(find.text('Вход по email'), findsOneWidget);
     expect(find.text('Продлить подписку'), findsNothing);
   });
+
+  for (final signedIn in [true, false]) {
+    testWidgets('without a support link from the panel, «Поддержка» opens the '
+        'bot\'s support (signed in: $signedIn)', (tester) async {
+      final launcher = useFakeUrlLauncher();
+      await pumpAccount(tester, signedIn: signedIn);
+
+      await tester.ensureVisible(find.text('Поддержка'));
+      await tester.tap(find.text('Поддержка'));
+      await settle(tester);
+
+      expect(launcher.opened, ['https://t.me/launchbotsupport']);
+    });
+  }
 
   testWidgets('the APK build renews on the site', (tester) async {
     await pumpAccount(tester, distribution: AppDistribution.apk);
