@@ -143,7 +143,7 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         const Align(
                           alignment: AlignmentDirectional.centerStart,
-                          child: _MarkTile(),
+                          child: LaunchMarkTile(),
                         ),
                         const SizedBox(height: 36),
                         Text(
@@ -308,24 +308,6 @@ class _OrDivider extends StatelessWidget {
       ),
       const Expanded(child: Divider(color: BrandColors.line)),
     ],
-  );
-}
-
-/// The app icon from the mockup: the mark on an accent tile.
-class _MarkTile extends StatelessWidget {
-  const _MarkTile();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 64,
-    height: 64,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: BrandColors.accentSoft,
-      border: Border.all(color: BrandColors.accent),
-      borderRadius: BorderRadius.circular(BrandRadii.card),
-    ),
-    child: const LaunchMark.tile(color: BrandColors.accent),
   );
 }
 
