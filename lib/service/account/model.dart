@@ -36,6 +36,15 @@ final class PendingSignup {
       };
 }
 
+/// Why the device signed out without the person asking, for «Вход» to say.
+enum ForcedSignOut {
+  /// The backend refused the refresh: the session was revoked or expired.
+  sessionEnded,
+
+  /// «Удалить аккаунт» found the session gone, so nothing was deleted.
+  deletionUnfinished,
+}
+
 /// Telegram linked to the signed-in account, which may now be another one:
 /// the merge keeps the Telegram side's.
 final class TelegramLink {

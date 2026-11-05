@@ -150,6 +150,28 @@ void main() {
 
       expect(find.text('home-body'), findsOneWidget);
     });
+
+    testWidgets('a session the backend ended opens «Вход» to sign in again', (
+      tester,
+    ) async {
+      api.loginWith(access: 'a1', refresh: 'r1');
+      api.subscription(null);
+      await tester.runAsync(
+        () => account.email.login(email: 'ivan@proton.me', password: 'pw'),
+      );
+      await pumpApp(tester, hasSubscription: false);
+      api.rejectAccess('a1');
+      api.refuseRefresh();
+
+      await tester.runAsync(
+        () => account.data.subscription().then((_) {}, onError: (_) {}),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Сессия завершена. Войдите снова'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Войти'), findsOneWidget);
+      expect(find.text('home-body'), findsNothing);
+    });
   });
 
   group('login', () {

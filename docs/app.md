@@ -183,7 +183,9 @@ upstream pages kept for merging. They are not reachable in this build.
   platform's secure store (Keychain on iOS, Keystore-encrypted storage on Android), never in
   preferences or logs. Startup reads them without a request. A bearer request answered 401 refreshes
   once, shared by every request waiting on it, and is retried once; only the backend refusing the
-  refresh ends the session, while an outage keeps it.
+  refresh (`invalid_token`, as after a reused refresh token revoked it) ends the session, while an
+  outage or a server error keeps it. The device then cleans up as Sign out does, without the
+  logout request, and «Вход» opens in sign-in mode with «Сессия завершена. Войдите снова».
 - Account, the middle tab, refreshes when it opens: the subscription on the device is loaded again
   quietly, and when signed in the account details (`/api/me`), the devices (`/api/devices`) and the
   account's subscription are read too; one the device lacks goes to the link queue, which covers a

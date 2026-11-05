@@ -1054,6 +1054,7 @@
   "loginErrorEmailNotVerified": "Почта не подтверждена. Попробуйте войти ещё раз",
   "loginErrorAccountBlocked": "Аккаунт заблокирован. Напишите в поддержку",
   "loginErrorAppNotAvailable": "Вход в приложении пока недоступен",
+  "loginErrorSessionEnded": "Сессия завершена. Войдите снова",
   "loginErrorSignInToDelete": "Войдите снова, чтобы удалить аккаунт",
   "loginErrorRateLimited": "Слишком много попыток. Подождите немного",
   "loginErrorNetwork": "Нет связи с сервером. Попробуйте ещё раз",

@@ -17,6 +17,7 @@ import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/account/failure.dart';
+import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/shared/share/service.dart';
@@ -204,9 +205,9 @@ class _LoginPageState extends State<LoginPage> {
             ],
             onSubmitted: (_) => _submit(),
           ),
-          if (state.error case final error?) ...[
+          if (_formMessage(l, state) case final message?) ...[
             const SizedBox(height: 12),
-            ErrorText(_errorMessage(l, error)),
+            ErrorText(message),
           ],
           const SizedBox(height: 12),
           ListenableBuilder(
@@ -261,6 +262,16 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+/// What shows under the fields: why the last attempt failed, or why the
+/// device signed out on its own.
+String? _formMessage(AppLocalizations l, LoginState state) => switch (state) {
+  LoginState(error: final error?) => _errorMessage(l, error),
+  LoginState(signedOut: ForcedSignOut.sessionEnded) => l.loginErrorSessionEnded,
+  LoginState(signedOut: ForcedSignOut.deletionUnfinished) =>
+    l.loginErrorSignInToDelete,
+  LoginState() => null,
+};
+
 String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
   AccountError.invalidCredentials => l.loginErrorInvalidCredentials,
   AccountError.emailNotVerified => l.loginErrorEmailNotVerified,
@@ -271,7 +282,7 @@ String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
   AccountError.telegramFailed => l.loginErrorTelegram,
   AccountError.accountBlocked => l.loginErrorAccountBlocked,
   AccountError.appNotAvailable => l.loginErrorAppNotAvailable,
-  AccountError.signedOut => l.loginErrorSignInToDelete,
+  AccountError.signedOut => l.loginErrorSessionEnded,
   AccountError.invalidCode ||
   AccountError.codeExpired ||
   AccountError.trialUsed ||

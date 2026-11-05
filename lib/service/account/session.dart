@@ -21,10 +21,14 @@ enum AccountAuth {
 }
 
 /// This device's session with the account API and the requests that carry
-/// it. A refused refresh signs out; an outage keeps the session for the next
-/// attempt. Tokens and response bodies are never logged.
+/// it. A refused refresh runs [onRevoked] and signs out; an outage keeps the
+/// session for the next attempt. Tokens and response bodies are never logged.
 final class AccountSession {
-  AccountSession({required this._dio, required this._store}) {
+  AccountSession({
+    required this._dio,
+    required this._store,
+    required this._onRevoked,
+  }) {
     _dio.interceptors.add(
       InterceptorsWrapper(onRequest: _authorize, onError: _refreshOnRefusal),
     );
@@ -32,6 +36,9 @@ final class AccountSession {
 
   final Dio _dio;
   final AccountSessionStore _store;
+
+  /// Cleans up after the backend ended the session, before it ends here.
+  final Future<void> Function() _onRevoked;
   final _signedIn = ValueNotifier(false);
   AccountTokens? _tokens;
   Future<AccountTokens?>? _refreshing;
@@ -199,6 +206,7 @@ final class AccountSession {
       // Only the backend's refusal ends the session; an outage keeps it for
       // the next attempt.
       if (error.error != AccountError.signedOut) rethrow;
+      await _onRevoked();
       await end();
       return null;
     }

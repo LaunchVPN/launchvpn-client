@@ -17,6 +17,7 @@ final class LoginState {
     this.submitting = false,
     this.redeemingTelegram = false,
     this.error,
+    this.signedOut,
     this.telegramError,
     this.signup,
   });
@@ -30,9 +31,11 @@ final class LoginState {
   bool get busy => submitting || redeemingTelegram;
 
   /// Why the last attempt failed, shown under the fields until the next one.
-  /// [AccountError.signedOut] when «Удалить аккаунт» found the session gone
-  /// and the form opens to sign in again for it.
   final AccountError? error;
+
+  /// Why the device signed out on its own, shown under the fields of the
+  /// sign-in form it opens to until the next attempt.
+  final ForcedSignOut? signedOut;
 
   /// Why the last Telegram sign-in failed, shown under its button:
   /// [AccountError.telegramFailed] unless the backend named the reason.
@@ -49,10 +52,8 @@ final class LoginState {
 final class LoginController extends PageCubit<LoginState> {
   LoginController({required this._account, LoginMode mode = LoginMode.create})
     : super(LoginState(mode: mode)) {
-    if (_account.data.takeUnfinishedDeletion()) {
-      emit(
-        const LoginState(mode: LoginMode.signIn, error: AccountError.signedOut),
-      );
+    if (_account.data.takeForcedSignOut() case final reason?) {
+      emit(LoginState(mode: LoginMode.signIn, signedOut: reason));
     }
     // A Telegram sign-in the system closed the App during.
     if (_account.telegram.browser.resume(TelegramAuthPurpose.login)

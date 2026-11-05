@@ -27,11 +27,16 @@ final class AccountService {
     TelegramBrowserAuth? browser,
   }) {
     final keep = store ?? AccountSessionStore();
-    final session = AccountSession(dio: dio, store: keep);
+    late final AccountData data;
+    final session = AccountSession(
+      dio: dio,
+      store: keep,
+      onRevoked: () => data.revoked(),
+    );
     final read = readDevice ?? AppHostApi().deviceIdentity;
     Future<DeviceClaim> device() => DeviceClaim.read(read);
     final languageCode = language ?? (() => BrandLanguage.current.languageCode);
-    final data = AccountData(
+    data = AccountData(
       session: session,
       store: keep,
       device: device,

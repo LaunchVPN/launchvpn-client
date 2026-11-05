@@ -78,28 +78,66 @@ void main() {
     },
   );
 
-  test('a refused refresh signs out on this device', () async {
-    await signIn(api, account);
-    api.rejectAccess('a1');
-    api.refuseRefresh();
-    final service = account();
-    await service.restore();
+  group('the backend ending the session', () {
+    late List<String> removed;
 
-    await expectLater(
-      service.data.subscription(),
-      throwsA(
-        isA<AccountException>().having(
-          (e) => e.error,
-          'error',
-          AccountError.signedOut,
-        ),
+    /// Signed in with tokens `a1`/`r1` and the account's subscription kept,
+    /// then the access token expires.
+    Future<AccountService> expired() async {
+      removed = [];
+      api.loginWith(access: 'a1', refresh: 'r1');
+      api.subscription(_configLink);
+      final service = accountServiceFor(
+        api,
+        addSubscription: added.add,
+        removeSubscription: (url) async => removed.add(url),
+      );
+      await service.email.login(email: 'ivan@proton.me', password: 'pw');
+      api.rejectAccess('a1');
+      return service;
+    }
+
+    test('a refused refresh signs out as «Выйти» does and says the session '
+        'ended', () async {
+      final service = await expired();
+      api.refuseRefresh();
+
+      await expectLater(
+        service.data.subscription(),
+        throwsA(_error(AccountError.signedOut)),
+      );
+
+      expect(service.session.signedIn.value, isFalse);
+      expect(removed, [_configLink]);
+      expect(service.data.takeForcedSignOut(), ForcedSignOut.sessionEnded);
+      expect(service.data.takeForcedSignOut(), isNull);
+      final restarted = account();
+      await restarted.restore();
+      expect(restarted.session.signedIn.value, isFalse);
+    });
+
+    for (final (name, fail) in [
+      (
+        'no connection',
+        (FakeAccountApi api) => api.unreachable('/api/app/auth/refresh'),
       ),
-    );
+      (
+        'a server error',
+        (FakeAccountApi api) =>
+            api.refuse('/api/app/auth/refresh', 502, 'bad_gateway'),
+      ),
+    ]) {
+      test('$name on refresh keeps the session', () async {
+        final service = await expired();
+        fail(api);
 
-    expect(service.session.signedIn.value, isFalse);
-    final restarted = account();
-    await restarted.restore();
-    expect(restarted.session.signedIn.value, isFalse);
+        await expectLater(service.data.subscription(), throwsA(anything));
+
+        expect(service.session.signedIn.value, isTrue);
+        expect(removed, isEmpty);
+        expect(service.data.takeForcedSignOut(), isNull);
+      });
+    }
   });
 
   test('requests rejected together share one refresh', () async {
@@ -182,8 +220,11 @@ void main() {
       );
 
       await expectSignedOut(service);
-      expect(service.data.takeUnfinishedDeletion(), isTrue);
-      expect(service.data.takeUnfinishedDeletion(), isFalse);
+      expect(
+        service.data.takeForcedSignOut(),
+        ForcedSignOut.deletionUnfinished,
+      );
+      expect(service.data.takeForcedSignOut(), isNull);
     });
 
     test(
@@ -193,10 +234,11 @@ void main() {
         api.rejectAccess('a1');
         api.refuseRefresh();
         await expectLater(service.data.deleteAccount(), throwsA(anything));
+        api.loginWith(access: 'a2', refresh: 'r2');
 
         await service.email.login(email: 'ivan@proton.me', password: 'pw');
 
-        expect(service.data.takeUnfinishedDeletion(), isFalse);
+        expect(service.data.takeForcedSignOut(), isNull);
       },
     );
 

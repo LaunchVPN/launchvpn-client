@@ -130,9 +130,10 @@ Deep link parsing and replacement are covered by `test/service/servers/subscript
 `test/service/servers/subscription/deep_link_service_test.dart` and `test/brand/subscription_link_flow_test.dart`.
 
 Sign-in is covered by `test/service/account/service_test.dart`, which answers the account API
-from memory: stored tokens, one shared refresh and retry after a 401, and signing out when the
-refresh is refused. `test/brand/login/page_test.dart` covers the «Вход» gate, each sign-in error
-and the subscription link handed to the link queue. On a device, sign in against a local backend
+from memory: stored tokens, one shared refresh and retry after a 401, signing out and removing
+the account's subscription when the refresh is refused, and keeping the session through an
+outage. `test/brand/login/page_test.dart` covers the «Вход» gate, each sign-in error, the
+session-ended message and the subscription link handed to the link queue. On a device, sign in against a local backend
 (`--dart-define=LAUNCHVPN_API_URL=http://10.0.2.2:8080` on the Android emulator), connect, restart
 the app and check that the session stays.
 

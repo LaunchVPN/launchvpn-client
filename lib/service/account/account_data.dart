@@ -27,7 +27,8 @@ final class AccountData {
   final void Function(Uri link) _addSubscription;
   final Future<void> Function(String url) _removeSubscription;
   bool _subscriptionMissing = false;
-  bool _unfinishedDeletion = false;
+  bool _deleting = false;
+  ForcedSignOut? _forcedSignOut;
 
   /// The account had no active subscription when this session last read it,
   /// the trial included. False until read, signed out, and after a restart.
@@ -43,7 +44,7 @@ final class AccountData {
   Future<void> signIn(Map<String, Object?> answer) async {
     final trialStarted = answer['trialGranted'] == true;
     final link = await _session.start(answer, () {
-      _unfinishedDeletion = false;
+      _forcedSignOut = null;
       _subscriptionMissing = false;
       return _readQuietly(
         () async =>
@@ -133,8 +134,9 @@ final class AccountData {
   /// does. Throws [AccountException] and stays signed in when the deletion
   /// did not happen. A session the backend refuses even after a refresh
   /// deletes nothing: it signs out here, throws [AccountError.signedOut] and
-  /// leaves [takeUnfinishedDeletion] for «Вход».
+  /// leaves [ForcedSignOut.deletionUnfinished] for «Вход».
   Future<void> deleteAccount() async {
+    _deleting = true;
     try {
       await _session.post(
         '/api/app/account/delete',
@@ -144,19 +146,32 @@ final class AccountData {
     } on AccountException catch (error) {
       if (error.error != AccountError.signedOut) rethrow;
       // Before signing out: «Вход» may open as soon as the session ends.
-      _unfinishedDeletion = true;
+      _forcedSignOut = ForcedSignOut.deletionUnfinished;
       await _forget();
       rethrow;
+    } finally {
+      _deleting = false;
     }
     await _forget();
   }
 
-  /// Whether a deletion found the session gone since the last sign-in, so
-  /// the person signs in again to delete the account. Reading clears it.
-  bool takeUnfinishedDeletion() {
-    final unfinished = _unfinishedDeletion;
-    _unfinishedDeletion = false;
-    return unfinished;
+  /// The backend ended the session on its own: removes the subscription the
+  /// account brought, as [logout] does, and leaves the reason for «Вход».
+  /// The session itself calls this, then signs out.
+  Future<void> revoked() async {
+    // Before signing out: «Вход» may open as soon as the session ends.
+    _forcedSignOut = _deleting
+        ? ForcedSignOut.deletionUnfinished
+        : ForcedSignOut.sessionEnded;
+    await _removeAccountSubscription();
+  }
+
+  /// Why the device signed out on its own since the last sign-in, for «Вход»
+  /// to say. Reading clears it.
+  ForcedSignOut? takeForcedSignOut() {
+    final reason = _forcedSignOut;
+    _forcedSignOut = null;
+    return reason;
   }
 
   Future<SubscriptionDeepLink?> _subscriptionLink() async =>
@@ -192,6 +207,11 @@ final class AccountData {
 
   /// Removes the subscription the account brought and signs out here.
   Future<void> _forget() async {
+    await _removeAccountSubscription();
+    await _session.end();
+  }
+
+  Future<void> _removeAccountSubscription() async {
     try {
       if (await _store.readSubscriptionUrl() case final url?) {
         await _removeSubscription(url);
@@ -200,6 +220,5 @@ final class AccountData {
     } catch (error) {
       ygLogger('remove account subscription failed (${error.runtimeType})');
     }
-    await _session.end();
   }
 }
