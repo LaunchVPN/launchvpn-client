@@ -18,6 +18,9 @@
 | Android | SAF 单文档 URI，`saf_stream` 内容读写；Pigeon 只选择/创建、检查持久读写授权和释放旧目标授权；展示提供商实际文件名 |
 | Windows EXE / ZIP / MSIX | 用户选择的 OneDrive 同步目录，普通文件读取与替换；不接 OAuth/Graph、不要求包身份 |
 
+LaunchVPN routes no backup page, and its iOS build has no iCloud entitlement, so
+the iCloud target above is upstream behavior only.
+
 Apple 文件目标复用 `BackupTarget`、`BackupSettings` 与 `BackupStorage`，由原生选择器取得 bookmark，
 在本机保存并于每次访问时解析、开启和释放授权；协调读写在工作队列执行，不在主线程等待文件提供商。
 每次文件选择创建独立的候选标识，确认前保留原 bookmark；取消释放候选，确认后释放旧目标。

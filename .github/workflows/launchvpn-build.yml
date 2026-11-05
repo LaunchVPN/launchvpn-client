@@ -14,7 +14,7 @@
 # Main also signs the iOS app and uploads it to TestFlight once these are set;
 # without them it builds unsigned. The team is the variable APPLE_TEAM_ID.
 #   APPLE_DISTRIBUTION_P12_BASE64  base64 of the Apple Distribution .p12
-#   KEYCHAIN_PASSWORD              password of the .p12
+#   KEYCHAIN_PASSWORD              password of the .p12 and the runner keychain
 #   FASTLANE_ASC_KEY_ID            App Store Connect API key ID
 #   FASTLANE_ASC_ISSUER_ID         App Store Connect issuer ID
 #   FASTLANE_ASC_KEY_BASE64        base64 of the API key (.p8)
@@ -326,24 +326,26 @@ jobs:
         with:
           app-path: launchvpn-client
 
-      # Outputs the Runner.app the checks below read.
+      # Main uploads once every Apple value is set. Sets APP, the Runner.app
+      # the checks below read.
       - name: Choose signing
         id: signing
         env:
-          P12_B64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
-          ASC_KEY_B64: ${{ secrets.FASTLANE_ASC_KEY_BASE64 }}
-          TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          APPLE_VALUES: >-
+            ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 != '' && secrets.KEYCHAIN_PASSWORD != ''
+            && secrets.FASTLANE_ASC_KEY_ID != '' && secrets.FASTLANE_ASC_ISSUER_ID != ''
+            && secrets.FASTLANE_ASC_KEY_BASE64 != '' && vars.APPLE_TEAM_ID != '' }}
         run: |
           app=build/ios/iphoneos/Runner.app
           if [ "$GITHUB_REF" = refs/heads/main ]; then
-            if [ -n "$P12_B64" ] && [ -n "$ASC_KEY_B64" ] && [ -n "$TEAM_ID" ]; then
+            if [ "$APPLE_VALUES" = true ]; then
               echo "upload=true" >> "$GITHUB_OUTPUT"
               app=build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
             else
               echo "::warning::Apple signing is not set up, building without signing and TestFlight"
             fi
           fi
-          echo "app=$app" >> "$GITHUB_OUTPUT"
+          echo "APP=$app" >> "$GITHUB_ENV"
 
       - name: Build without signing
         if: steps.signing.outputs.upload != 'true'
@@ -366,9 +368,10 @@ jobs:
           keychain: signing_temp
 
       # The deploy lane fetches the three App Store profiles, archives, exports
-      # the IPA and uploads it. agvtool gives the app and both extensions the
-      # run number, since TestFlight takes each build number once. The team
-      # comes from a variable, so the organization account later changes only it.
+      # the IPA and uploads it, so the checks below run after the upload; the
+      # pull request ran them on the same code. agvtool gives the app and both
+      # extensions the run number, since TestFlight takes each build number
+      # once. The team comes from a variable, as the project leaves it empty.
       - name: Sign and upload to TestFlight
         if: steps.signing.outputs.upload == 'true'
         env:
@@ -381,16 +384,12 @@ jobs:
           fastlane deploy
 
       - name: Check the app embeds the tunnel and the Widget
-        env:
-          APP: ${{ steps.signing.outputs.app }}
         run: |
           test -d "$APP/PlugIns/tunnel.appex"
           test -d "$APP/PlugIns/widgetExtension.appex"
 
       # An upstream merge can bring its artwork back into the build.
       - name: Check the app has no upstream artwork
-        env:
-          APP: ${{ steps.signing.outputs.app }}
         run: |
           assets=$APP/Frameworks/App.framework/flutter_assets/assets
           test -d "$assets/dat"
@@ -402,8 +401,6 @@ jobs:
 
       # An upstream merge can bring back its QR scanner and photo picker.
       - name: Check the app asks for no camera or photos
-        env:
-          APP: ${{ steps.signing.outputs.app }}
         run: |
           info=$(plutil -p "$APP/Info.plist")
           grep -q CFBundleIdentifier <<< "$info"
