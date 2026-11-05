@@ -165,6 +165,31 @@ void main() {
     expect(api.requests, isEmpty);
   });
 
+  test('the device limit is the one the panel sets for this user', () async {
+    final service = await signedIn();
+    api.subscription(_configLink, maxDevices: 5);
+    api.devices([
+      {'hwid': 'device-hwid'},
+    ], max: 3);
+    final controller = controllerFor(service);
+
+    await controller.refresh();
+
+    expect(controller.state.deviceLimit, 5);
+  });
+
+  test('without a limit for this user, the backend\'s own applies', () async {
+    final service = await signedIn();
+    api.devices([
+      {'hwid': 'device-hwid'},
+    ], max: 3);
+    final controller = controllerFor(service);
+
+    await controller.refresh();
+
+    expect(controller.state.deviceLimit, 3);
+  });
+
   test('a removed device leaves the list at once', () async {
     final service = await signedIn();
     api.devices([

@@ -17,6 +17,7 @@ final class AccountState {
     this.subscription,
     this.profile,
     this.devices,
+    this.subscriptionMaxDevices,
     this.inactive = false,
     this.refreshing = false,
     this.linkingTelegram = false,
@@ -33,6 +34,13 @@ final class AccountState {
 
   /// Null until loaded, and from a link only.
   final AccountDevices? devices;
+
+  /// The devices the panel allows this user, when the subscription says.
+  final int? subscriptionMaxDevices;
+
+  /// How many devices the subscription allows: the user's own limit, else
+  /// the one the device list names. Null when neither sets one.
+  int? get deviceLimit => subscriptionMaxDevices ?? devices?.max;
 
   /// The account has no active subscription.
   final bool inactive;
@@ -57,6 +65,7 @@ final class AccountState {
     SubscriptionData? Function()? subscription,
     AccountProfile? profile,
     AccountDevices? devices,
+    int? subscriptionMaxDevices,
     bool? inactive,
     bool? refreshing,
     bool? linkingTelegram,
@@ -66,6 +75,8 @@ final class AccountState {
     subscription: subscription == null ? this.subscription : subscription(),
     profile: profile ?? this.profile,
     devices: devices ?? this.devices,
+    subscriptionMaxDevices:
+        subscriptionMaxDevices ?? this.subscriptionMaxDevices,
     inactive: inactive ?? this.inactive,
     refreshing: refreshing ?? this.refreshing,
     linkingTelegram: linkingTelegram ?? this.linkingTelegram,
@@ -181,10 +192,14 @@ final class AccountController extends PageCubit<AccountState> {
     await Future.wait([
       _loadProfile(),
       loadDevices(),
-      _load(_account.accountSubscription, (link) {
+      _load(_account.accountSubscription, (subscription) {
+        final link = subscription.link;
         // The stream keeps the row current, unlike [row] read before.
-        if (link != null && state.subscription == null) _openLink(link);
-        return state.copyWith(inactive: link == null);
+        if (link != null && state.subscription == null) _openLink(link.uri);
+        return state.copyWith(
+          inactive: link == null,
+          subscriptionMaxDevices: subscription.maxDevices,
+        );
       }),
       if (row != null) _refreshQuietly(row),
     ]);

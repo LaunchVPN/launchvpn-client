@@ -1,3 +1,5 @@
+import 'package:onexray/service/servers/subscription/deep_link.dart';
+
 /// A signup waiting for the code from the email. Its [token] proves this
 /// attempt to the backend; it lives in memory only, for this one flow.
 final class PendingSignup {
@@ -36,6 +38,18 @@ final class TelegramLink {
   /// changed, the previous one already removed from the device. Null when it
   /// stayed, and when the account has none.
   final Uri? subscription;
+}
+
+/// What `GET /api/subscription` says about the account's subscription.
+final class AccountSubscription {
+  const AccountSubscription({this.link, this.maxDevices});
+
+  /// The subscription to add, marked as the account's; null while the
+  /// account has no active one.
+  final SubscriptionDeepLink? link;
+
+  /// The devices the panel allows this user. Null when it does not say.
+  final int? maxDevices;
 }
 
 /// What `GET /api/me` says about the signed-in account.

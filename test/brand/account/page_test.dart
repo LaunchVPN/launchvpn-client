@@ -46,7 +46,7 @@ void main() {
     bool telegramOnly = false,
   }) async {
     api.loginWith(access: 'a1', refresh: 'r1');
-    api.subscription('https://sub.launch.tel/abc');
+    api.subscription('https://sub.launch.tel/abc', maxDevices: 5);
     api.me(
       email: telegramOnly ? null : 'ivan@proton.me',
       telegramLinked: telegramOnly,
@@ -173,7 +173,7 @@ void main() {
 
   testWidgets('another device is removed from its sheet', (tester) async {
     await pumpAccount(tester);
-    expect(find.text('УСТРОЙСТВА · 2 ИЗ 3'), findsOneWidget);
+    expect(find.text('УСТРОЙСТВА · 2 ИЗ 5'), findsOneWidget);
     expect(find.text('Android · это устройство'), findsOneWidget);
 
     // This device has no sheet.
@@ -191,7 +191,7 @@ void main() {
     await settle(tester);
 
     expect(find.text('Pixel 8 удалён, место освободилось'), findsOneWidget);
-    expect(find.text('УСТРОЙСТВА · 1 ИЗ 3'), findsOneWidget);
+    expect(find.text('УСТРОЙСТВА · 1 ИЗ 5'), findsOneWidget);
     expect(find.text('Pixel 8'), findsNothing);
   });
 

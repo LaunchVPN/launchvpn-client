@@ -111,13 +111,18 @@ final class FakeAccountApi implements HttpClientAdapter {
       _routes['/api/app/auth/refresh'] = (_) async =>
           (401, {'ok': false, 'code': 'invalid_token'});
 
-  /// The account's subscription, or none when [configLink] is null.
-  void subscription(String? configLink) =>
+  /// The account's subscription, or none when [configLink] is null, with the
+  /// devices the panel allows this user.
+  void subscription(String? configLink, {int? maxDevices}) =>
       _routes['/api/subscription'] = (_) async => (
         200,
         configLink == null
             ? {'active': false}
-            : {'active': true, 'configLink': configLink},
+            : {
+                'active': true,
+                'configLink': configLink,
+                'maxDevices': ?maxDevices,
+              },
       );
 
   /// The account as `/api/me` describes it; no [email] for one that has only

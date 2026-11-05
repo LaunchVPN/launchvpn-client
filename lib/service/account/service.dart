@@ -257,7 +257,7 @@ final class AccountService {
     await _keep(_tokenPair(answer));
     SubscriptionDeepLink? current;
     try {
-      current = await _subscription();
+      current = (await accountSubscription()).link;
     } on AccountException catch (error) {
       ygLogger('read account subscription failed (${error.error.name})');
     }
@@ -286,7 +286,7 @@ final class AccountService {
     _unfinishedDeletion = false;
     Uri? link;
     try {
-      link = await accountSubscription() ?? await _claimTrial();
+      link = await _subscriptionLink() ?? await _claimTrial();
     } on AccountException catch (error) {
       ygLogger('read account subscription failed (${error.error.name})');
     }
@@ -308,26 +308,32 @@ final class AccountService {
       ygLogger('claim trial failed (${error.error.name})');
       return null;
     }
-    return accountSubscription();
+    return _subscriptionLink();
   }
 
-  /// The account's subscription as a `launchvpn://sub/add` link, marked as
-  /// the account's, or null when it has none.
-  Future<Uri?> accountSubscription() async => (await _subscription())?.uri;
-
-  Future<SubscriptionDeepLink?> _subscription() async {
+  /// The account's subscription, its link marked as the account's.
+  Future<AccountSubscription> accountSubscription() async {
     final data = await _send(
       () => _dio.get<Object?>('/api/subscription', options: _bearer),
     );
+    final maxDevices = switch (data['maxDevices']) {
+      final int max when max > 0 => max,
+      _ => null,
+    };
     final configLink = data['configLink'];
     _subscriptionMissing =
         data['active'] != true || configLink is! String || configLink.isEmpty;
-    if (configLink is! String || _subscriptionMissing) return null;
+    if (configLink is! String || _subscriptionMissing) {
+      return AccountSubscription(maxDevices: maxDevices);
+    }
     final link = SubscriptionDeepLink.fromUrl(configLink);
     if (link == null) throw const AccountException(AccountError.unexpected);
     await _store.saveSubscriptionUrl(link.url);
-    return link;
+    return AccountSubscription(link: link, maxDevices: maxDevices);
   }
+
+  Future<Uri?> _subscriptionLink() async =>
+      (await accountSubscription()).link?.uri;
 
   /// What the backend knows about the account.
   Future<AccountProfile> profile() async => AccountProfile.fromJson(

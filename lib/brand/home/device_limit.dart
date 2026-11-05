@@ -26,11 +26,11 @@ class DeviceLimitHero extends StatelessWidget {
       builder: (context, state) => StateHero.warning(
         icon: LucideIcons.smartphone,
         title: l.homeDeviceLimitTitle,
-        body: switch ((state.signedIn, state.devices)) {
-          (false, _) => l.homeDeviceLimitBodyLinkOnly,
-          (true, AccountDevices(:final items, max: final max?)) =>
+        body: switch ((state.signedIn, state.devices, state.deviceLimit)) {
+          (false, _, _) => l.homeDeviceLimitBodyLinkOnly,
+          (true, AccountDevices(:final items), final max?) =>
             l.homeDeviceLimitBody(items.length, max),
-          (true, _) => l.homeDeviceLimitBodyAccount,
+          (true, _, _) => l.homeDeviceLimitBodyAccount,
         },
       ),
     );

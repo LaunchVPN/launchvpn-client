@@ -63,7 +63,7 @@ void main() {
       final service = account();
       await service.restore();
 
-      expect(await service.accountSubscription(), isNotNull);
+      expect((await service.accountSubscription()).link, isNotNull);
 
       expect(api.refreshBodies, [
         {'refreshToken': 'r1'},

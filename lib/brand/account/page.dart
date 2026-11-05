@@ -204,7 +204,7 @@ class _AccountPageState extends State<AccountPage> {
                   ],
                   if (devices != null && devices.items.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                    SettingsSectionLabel(switch (devices.max) {
+                    SettingsSectionLabel(switch (state.deviceLimit) {
                       final max? => l.accountDevices(devices.items.length, max),
                       null => l.accountDevicesUnlimited(devices.items.length),
                     }),
