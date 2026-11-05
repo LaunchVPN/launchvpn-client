@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LaunchVPN Privacy Policy</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="alternate" hreflang="ru" href="ru/">
+</head>
+<body>
+<main>
+  <h1>LaunchVPN Privacy Policy</h1>
+  <p class="meta">Effective November 5, 2026 · <a href="ru/" hreflang="ru">Русский</a></p>
+
+  <p>This policy describes what data the LaunchVPN app for Android and iOS
+  sends, to whom and why, how long it is kept, and how to turn it off or delete
+  it. The app and the servers belong to the LaunchVPN service. Questions about
+  your data go to <a href="https://t.me/launchbotsupport">support in
+  Telegram</a>.</p>
+
+  <h2>In short</h2>
+  <ul>
+    <li>The app has no analytics, no ads and no advertising identifier.</li>
+    <li>The app does not record or send anywhere which sites you open or which
+    addresses you look up.</li>
+    <li>To count the devices on a subscription, the app sends our panel a
+    device identifier and the device model.</li>
+    <li>Crash reports leave without links, addresses or email. You can turn
+    them off.</li>
+    <li>You can delete your account right in the app.</li>
+  </ul>
+
+  <h2>Subscription and devices</h2>
+  <p>When the app loads or updates a subscription, it sends our server
+  panel:</p>
+  <ul>
+    <li>a device identifier (HWID). On Android it is the identifier the system
+    gives the app, and it changes after a factory reset. On iOS it is a random
+    identifier the app creates on first launch and keeps in the Keychain, so it
+    survives a reinstall;</li>
+    <li>the operating system, its version and the device model;</li>
+    <li>the app version.</li>
+  </ul>
+  <p>The panel uses the identifier to count how many devices use the
+  subscription and to turn away those over the limit. The model and the system
+  let you recognize the device in the Devices list. A device is kept until you
+  remove it from that list in the app, in the account Cabinet or in the
+  bot.</p>
+  <p>Like any server, the panel sees the IP address a request comes from.</p>
+
+  <h2>Connection</h2>
+  <p>While the VPN is on, your traffic goes through our servers. A server sees
+  your IP address to set up the connection, and where the traffic goes to pass
+  it on. The panel counts the traffic volume of a subscription to apply its
+  limits.</p>
+  <p>Before connecting, the app checks that the servers answer: through each
+  of them it requests a service page from Google or Cloudflare. These requests
+  carry no personal data.</p>
+
+  <h2>Account</h2>
+  <p>An account is optional: a subscription link works without one. If you
+  sign in, our server keeps:</p>
+  <ul>
+    <li>your email and password. The password is stored only as a hash; we do
+    not know the password itself;</li>
+    <li>if you signed in with Telegram or linked it: your Telegram ID, first
+    name, last name and username from Telegram;</li>
+    <li>the language for emails with codes;</li>
+    <li>the identifier and platform (Android or iOS) of the devices you signed
+    in from;</li>
+    <li>your subscription, its end date and the payments made in the account
+    Cabinet or in the bot.</li>
+  </ul>
+  <p>On sign-in and sign-up the server looks at the IP address to limit the
+  number of attempts. The address is not stored. The app keeps its sign-in
+  keys in the system's secure storage: the Keychain on iOS and the Keystore on
+  Android.</p>
+  <p>Account data is kept until you delete the account.</p>
+
+  <h2>Deleting your account</h2>
+  <p>Open Account and tap Delete account. The subscription and the days left
+  on it are lost, including those received in the bot if Telegram is linked.
+  Deletion cannot be undone.</p>
+  <ul>
+    <li>If there were no payments, we delete everything: the account, the user
+    in the panel and the devices.</li>
+    <li>If there were payments, we delete access: the user in the panel,
+    email sign-in and sign-in keys. The record of payments stays, together with
+    the Telegram ID if one was linked. It is needed to account for the
+    payments.</li>
+  </ul>
+
+  <h2>Crash reports</h2>
+  <p>If the app crashes or runs into an error, it sends a report to
+  <a href="https://sentry.io/privacy/">Sentry</a>, a crash reporting service.
+  Reports are kept on Sentry's servers in Germany for 90 days.</p>
+  <p>A report holds the error type, the place in the code where it happened,
+  the app version, the device model, the system version and a random
+  installation identifier that shows how many devices hit the same crash.</p>
+  <p>Before sending, the app removes from the report links, including the
+  subscription link, email addresses, IP addresses, server and site names,
+  device identifiers and the device name. Sentry does not store the IP address
+  a report comes from.</p>
+  <p>Sending is on by default, and the app says so on first launch. You can
+  turn it off in Settings with the Crash reports switch. While it is off, the
+  app sends nothing.</p>
+
+  <h2>What stays on the device</h2>
+  <ul>
+    <li>Subscriptions and settings are stored only on the device.</li>
+    <li>In Apps mode on Android, the app reads the list of installed apps so
+    you can choose which go through the VPN. The list never leaves the
+    device.</li>
+    <li>Renewal reminders are local notifications. The app is not connected to
+    any push notification service.</li>
+    <li>The app does not ask for location, contacts, camera or photos.</li>
+  </ul>
+
+  <h2>Other requests</h2>
+  <ul>
+    <li>The Android version downloaded from GitHub asks GitHub for the latest
+    version number at launch, to offer an update. Versions from the App Store
+    and Google Play leave updates to the store.</li>
+    <li>Signing in with Telegram opens Telegram's page in the browser. What it
+    collects is described in <a href="https://telegram.org/privacy">Telegram's
+    privacy policy</a>.</li>
+    <li>The account Cabinet, payment and support open in the browser or in
+    Telegram, outside the app.</li>
+  </ul>
+
+  <h2>Your rights</h2>
+  <p>You can ask for a copy of your data, its correction or its deletion by
+  writing to <a href="https://t.me/launchbotsupport">support</a>. You can also
+  delete the account yourself as described above.</p>
+
+  <h2>Changes</h2>
+  <p>A new version of the policy appears on this page with a new date at the
+  top. The history of changes is open in the
+  <a href="https://github.com/LaunchVPN/launchvpn-client/commits/main/privacy">app
+  repository</a>.</p>
+</main>
+</body>
+</html>
