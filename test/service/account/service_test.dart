@@ -706,6 +706,33 @@ void main() {
         hasLength(2),
       );
     });
+
+    test('an attempt replaced before its page is ready opens and keeps '
+        'nothing', () async {
+      final auth = TelegramBrowserAuth(
+        openBrowser: browser.open,
+        random: _CountingRandom(),
+      );
+      final firstPage = Completer<Uri>();
+      final first = expectLater(
+        auth.authorize(TelegramAuthPurpose.link, (_) => firstPage.future),
+        throwsA(_error(AccountError.cancelled)),
+      );
+      final second = auth.authorize(
+        TelegramAuthPurpose.login,
+        (_) => Uri.parse('https://api.test/second'),
+      );
+      await pumpEventQueue();
+
+      firstPage.complete(Uri.parse('https://api.test/first'));
+      await first;
+
+      expect(browser.opened, [Uri.parse('https://api.test/second')]);
+      final restarted = TelegramBrowserAuth(openBrowser: browser.open);
+      await restarted.restore();
+      expect(restarted.resume(TelegramAuthPurpose.login), isNotNull);
+      second.ignore();
+    });
   });
 
   group('Telegram link', () {

@@ -87,10 +87,19 @@ final class TelegramBrowserAuth {
     _pending?.fail(AccountError.cancelled);
     _pending = attempt;
     _restored = null;
+    // A newer attempt that started meanwhile owns the store and the browser.
+    void ensureCurrent() {
+      if (!identical(_pending, attempt)) {
+        throw const AccountException(AccountError.cancelled);
+      }
+    }
+
     try {
       final url = await start(_challenge(attempt.verifier));
+      ensureCurrent();
       // Saved before the browser opens: the App may not see it close.
       await _save(attempt);
+      ensureCurrent();
       if (!await _open(url)) {
         throw const AccountException(AccountError.unexpected);
       }
@@ -110,8 +119,6 @@ final class TelegramBrowserAuth {
     final saved = await _read();
     if (saved == null || _pending != null) return;
     if (_now().difference(saved.startedAt) > _lifetime) return _forget();
-    // Nobody may take it back, as when the person stays signed out.
-    saved.result.future.ignore();
     _pending = _restored = saved;
   }
 
@@ -219,7 +226,11 @@ final class TelegramBrowserAuth {
 }
 
 final class _Attempt {
-  _Attempt(this.purpose, this.verifier, this.startedAt);
+  /// [result] may fail with nobody waiting: a restored attempt nobody takes
+  /// back, or one a newer attempt replaced before it was handed out.
+  _Attempt(this.purpose, this.verifier, this.startedAt) {
+    result.future.ignore();
+  }
 
   final TelegramAuthPurpose purpose;
   final String verifier;
