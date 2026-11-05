@@ -20,6 +20,7 @@ final class AccountState {
     this.inactive = false,
     this.refreshing = false,
     this.linkingTelegram = false,
+    this.deletingAccount = false,
   });
 
   final bool signedIn;
@@ -42,6 +43,9 @@ final class AccountState {
   /// Back from Telegram, the App is linking it with the code it brought.
   final bool linkingTelegram;
 
+  /// [AccountController.deleteAccount] is running.
+  final bool deletingAccount;
+
   /// Days and traffic as the panel last reported them.
   SubscriptionUserInfo? get usage => switch (subscription) {
     final row? => SubscriptionUserInfo.fromSubscription(row),
@@ -56,6 +60,7 @@ final class AccountState {
     bool? inactive,
     bool? refreshing,
     bool? linkingTelegram,
+    bool? deletingAccount,
   }) => AccountState(
     signedIn: signedIn ?? this.signedIn,
     subscription: subscription == null ? this.subscription : subscription(),
@@ -64,6 +69,7 @@ final class AccountState {
     inactive: inactive ?? this.inactive,
     refreshing: refreshing ?? this.refreshing,
     linkingTelegram: linkingTelegram ?? this.linkingTelegram,
+    deletingAccount: deletingAccount ?? this.deletingAccount,
   );
 }
 
@@ -242,6 +248,22 @@ final class AccountController extends PageCubit<AccountState> {
   /// Signs out. The gate then shows «Вход» unless a subscription from a link
   /// remains.
   Future<void> logout() => _account.logout();
+
+  /// «Удалить аккаунт». Once deleted the gate shows «Вход» as after
+  /// [logout]. False when the account stays because the backend could not
+  /// delete it.
+  Future<bool> deleteAccount() async {
+    emit(state.copyWith(deletingAccount: true));
+    try {
+      await _account.deleteAccount();
+      return true;
+    } on AccountException catch (error) {
+      ygLogger('delete account failed (${error.error.name})');
+      return false;
+    } finally {
+      if (!isClosed) emit(state.copyWith(deletingAccount: false));
+    }
+  }
 
   /// Runs one request of [refresh]; a failure leaves the rest of the tab.
   Future<void> _load<T>(

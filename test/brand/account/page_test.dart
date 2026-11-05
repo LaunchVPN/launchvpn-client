@@ -35,10 +35,12 @@ void main() {
   });
 
   /// Signed in on a Russian phone, on «Аккаунт», with this device and a
-  /// Pixel 8 on the subscription.
+  /// Pixel 8 on the subscription. Not [signedIn], a subscription from a link
+  /// keeps the tabs.
   Future<void> pumpAccount(
     WidgetTester tester, {
     AppDistribution distribution = AppDistribution.store,
+    bool signedIn = true,
   }) async {
     api.loginWith(access: 'a1', refresh: 'r1');
     api.subscription('https://sub.launch.tel/abc');
@@ -52,9 +54,11 @@ void main() {
         'osVersion': '16',
       },
     ], max: 3);
-    await tester.runAsync(
-      () => account.login(email: 'ivan@proton.me', password: 'pw'),
-    );
+    if (signedIn) {
+      await tester.runAsync(
+        () => account.login(email: 'ivan@proton.me', password: 'pw'),
+      );
+    }
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     final controller = AccountController(
@@ -85,7 +89,7 @@ void main() {
         distribution: distribution,
       ),
       account: account,
-      watchSubscription: () => Stream.value(false),
+      watchSubscription: () => Stream.value(!signedIn),
       shareService: share,
       initializeServices: (_) => share.init(),
       openLink: (_, _) async {},
@@ -212,6 +216,63 @@ void main() {
     expect(find.text('Интернет\nбез границ'), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
     expect(removed, ['https://sub.launch.tel/abc']);
+  });
+
+  group('«Удалить аккаунт»', () {
+    /// Taps the last row and confirms in its sheet.
+    Future<void> deleteAndConfirm(WidgetTester tester) async {
+      final row = find.byKey(const ValueKey('account-delete'));
+      await tester.ensureVisible(row);
+      await tester.tap(row);
+      await settle(tester);
+      expect(find.text('Удалить аккаунт?'), findsOneWidget);
+      expect(
+        find.text(
+          'Подписка и оставшиеся дни пропадут, в том числе полученные в '
+          'боте. Отменить удаление нельзя.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Удалить аккаунт'));
+      await settle(tester);
+    }
+
+    testWidgets('confirmed, deletes the account and leads to «Вход»', (
+      tester,
+    ) async {
+      await pumpAccount(tester);
+
+      await deleteAndConfirm(tester);
+
+      expect(api.bodies('/api/app/account/delete'), hasLength(1));
+      expect(find.text('Интернет\nбез границ'), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(removed, ['https://sub.launch.tel/abc']);
+    });
+
+    testWidgets('the backend failing keeps the person signed in and says so', (
+      tester,
+    ) async {
+      await pumpAccount(tester);
+      api.refuse('/api/app/account/delete', 502, 'panel_failed');
+
+      await deleteAndConfirm(tester);
+
+      expect(
+        find.text('Не получилось удалить аккаунт. Попробуйте ещё раз'),
+        findsOneWidget,
+      );
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byKey(const ValueKey('account-delete')), findsOneWidget);
+      expect(removed, isEmpty);
+    });
+
+    testWidgets('is not offered without an account', (tester) async {
+      await pumpAccount(tester, signedIn: false);
+
+      expect(find.text('Войти'), findsOneWidget);
+      expect(find.byKey(const ValueKey('account-delete')), findsNothing);
+    });
   });
 }
 

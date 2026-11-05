@@ -22,8 +22,9 @@ import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/service.dart';
 
-/// «Аккаунт»: days and traffic for everyone; the devices, the account and
-/// «Выйти» once signed in, «Войти» and «Создать аккаунт» otherwise.
+/// «Аккаунт»: days and traffic for everyone; the devices, the account,
+/// «Выйти» and «Удалить аккаунт» once signed in, «Войти» and «Создать
+/// аккаунт» otherwise.
 class AccountPage extends StatefulWidget {
   const AccountPage({
     super.key,
@@ -94,6 +95,19 @@ class _AccountPageState extends State<AccountPage> {
       action: l.accountLogout,
     );
     if (confirmed) await _controller.logout();
+  }
+
+  /// Deletes the account once confirmed; one that stays says so.
+  Future<void> _deleteAccount() async {
+    final l = AppLocalizations.of(context)!;
+    final confirmed = await ConfirmSheet.show(
+      context,
+      title: l.accountDeleteTitle,
+      body: l.accountDeleteBody,
+      action: l.accountDelete,
+    );
+    if (!confirmed || await _controller.deleteAccount() || !mounted) return;
+    ContextAlert.showToast(context, l.accountDeleteFailed);
   }
 
   /// Tells how «Привязать Telegram» ended; turning Telegram down says nothing.
@@ -248,8 +262,8 @@ class _AccountPageState extends State<AccountPage> {
     ];
   }
 
-  /// The account, «Привязать Telegram», support and «Выйти», each when there
-  /// is one.
+  /// The account, «Привязать Telegram», support, «Выйти» and «Удалить
+  /// аккаунт», each when there is one.
   List<Widget> _details(AppLocalizations l, AccountState state) {
     final profile = state.profile;
     final support = state.subscription?.supportUrl;
@@ -291,6 +305,16 @@ class _AccountPageState extends State<AccountPage> {
           title: l.accountLogout,
           color: BrandColors.danger,
           onTap: _logout,
+        ),
+      if (state.signedIn)
+        SettingsRow(
+          key: const ValueKey('account-delete'),
+          title: l.accountDelete,
+          color: BrandColors.danger,
+          onTap: state.deletingAccount ? null : _deleteAccount,
+          trailing: state.deletingAccount
+              ? const ButtonProgressIndicator(size: 20)
+              : null,
         ),
     ];
   }
