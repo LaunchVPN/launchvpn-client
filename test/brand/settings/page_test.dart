@@ -30,6 +30,7 @@ import 'package:onexray/core/constants/preferences.dart';
 import 'package:onexray/service/shared/event_bus/enum.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/share/service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // ignore: depend_on_referenced_packages
@@ -39,6 +40,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 
 import '../../support/fake_crash_reporter.dart';
 import '../../support/fake_notifications.dart';
+import '../../support/fake_url_launcher.dart';
 
 final class _Store extends InMemorySharedPreferencesAsync {
   _Store() : super.empty();
@@ -92,6 +94,13 @@ void main() {
 
   setUp(() async {
     store.failReads = false;
+    PackageInfo.setMockInitialValues(
+      appName: 'LaunchVPN',
+      packageName: 'com.launchvpn.app',
+      version: '1.0.0',
+      buildNumber: '42',
+      buildSignature: '',
+    );
     await SharedPreferencesAsync().clear();
     // As on every launch after the first, whose toast would cover the tabs.
     await PreferencesKey().saveCrashReportsNoticeShown();
@@ -852,6 +861,96 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       await pumpRouter(tester);
       expect(find.text('Not connected'), findsOneWidget);
+    });
+  });
+
+  group('about', () {
+    Future<void> openAbout(WidgetTester tester) async {
+      await openTab(tester, 2);
+      await tester.scrollUntilVisible(find.text('О приложении'), 100);
+      await tester.tap(find.text('О приложении'));
+      await settle(tester);
+    }
+
+    testWidgets('the row under More shows the version', (tester) async {
+      await pumpApp(tester);
+      await openTab(tester, 2);
+      await tester.scrollUntilVisible(find.text('О приложении'), 100);
+
+      expect(find.text('ЕЩЁ'), findsOneWidget);
+      expect(find.text('Версия 1.0.0'), findsOneWidget);
+    });
+
+    testWidgets('shows the build, the license and OneXray', (tester) async {
+      await pumpApp(tester);
+      await openAbout(tester);
+
+      expect(find.text('Версия 1.0.0 (42)'), findsOneWidget);
+      expect(find.text('GPL-3.0'), findsOneWidget);
+      expect(find.text('Основано на OneXray'), findsOneWidget);
+      expect(find.text('@launchbotsupport'), findsOneWidget);
+    });
+
+    testWidgets('every row opens its link in the browser', (tester) async {
+      final launcher = useFakeUrlLauncher();
+      await pumpApp(tester);
+      await openAbout(tester);
+
+      for (final title in [
+        'Лицензия',
+        'Основано на OneXray',
+        'Конфиденциальность',
+        'Поддержка',
+      ]) {
+        await tester.tap(find.text(title));
+        await settle(tester);
+      }
+
+      expect(launcher.opened, [
+        'https://www.gnu.org/licenses/gpl-3.0.html',
+        'https://github.com/YuanDevTeam/OneXray',
+        'https://privacy.launch.tel/ru/',
+        'https://t.me/launchbotsupport',
+      ]);
+    });
+
+    testWidgets('in English the policy opens in English', (tester) async {
+      final launcher = useFakeUrlLauncher();
+      await pumpApp(tester, system: const Locale('en'));
+      await openTab(tester, 2);
+      await tester.scrollUntilVisible(find.text('About'), 100);
+      await tester.tap(find.text('About'));
+      await settle(tester);
+
+      await tester.tap(find.text('Privacy'));
+      await settle(tester);
+
+      expect(launcher.opened, ['https://privacy.launch.tel/']);
+    });
+
+    testWidgets('support is the panel\'s when it sent a link', (tester) async {
+      final launcher = useFakeUrlLauncher();
+      await pumpApp(tester);
+      await tester.runAsync(() async {
+        final row = (await db.subscriptionDao.allRows).single;
+        await db.subscriptionDao.updateRow(
+          row.copyWith(supportUrl: const Value('https://t.me/panel_help')),
+        );
+      });
+      await openAbout(tester);
+
+      expect(find.text('@panel_help'), findsOneWidget);
+      await tester.tap(find.text('Поддержка'));
+      await settle(tester);
+      expect(launcher.opened, ['https://t.me/panel_help']);
+    });
+
+    testWidgets('fits with the largest system font', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 3;
+      await pumpApp(tester);
+      await openAbout(tester);
+
+      expect(tester.takeException(), isNull);
     });
   });
 }
