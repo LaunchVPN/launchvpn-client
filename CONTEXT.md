@@ -46,9 +46,15 @@ _Avoid_: device id, subscription UUID
 **Brand**:
 Everything that distinguishes the LaunchVPN build from upstream: name, package
 identifiers, icons, site colors and fonts, deeplink scheme, subscription User-Agent.
-Collected in a single brand config, `lib/core/brand.dart`. The API address stays out of
-this public repo.
+Collected in a single brand config, `lib/core/brand.dart`, together with the account
+API address, which is the site's own domain.
 _Avoid_: flavor, theme, white-label
+
+**Account**:
+A person's login on the site, by email and password. Signing in on a device opens a
+session there and brings the account's subscription. Without an account a
+subscription can still come from a deeplink.
+_Avoid_: profile, user, cabinet
 
 **Upstream**:
 The OneXray repository. We regularly merge `lib/service`, `lib/core`, the native

@@ -7,8 +7,10 @@ our tabs, Home and Settings, so upstream's Splash, Setup, servers, advanced page
 import cannot be opened, and any other path leads Home. The rest of this document describes
 upstream pages kept for merging. They are not reachable in this build.
 
-- The app opens directly on Home. Upstream's privacy and first-run flags are not read, so there
-  is no Setup, and launch shows no system prompts. `ConnectionPermissions` asks on the first
+- Without an account session and without a subscription the app opens on «Вход» in place of the
+  tabs; with either it opens on Home. Signing out, or the backend refusing the session's refresh,
+  brings «Вход» back only if no subscription is left. Upstream's privacy and first-run flags are
+  not read, so there is no Setup, and launch shows no system prompts. `ConnectionPermissions` asks on the first
   connection from Home or the Android Tile: the VPN consent first, then, once it is granted,
   notifications on Android 13 and later and on iOS. A refused VPN consent is asked again on the
   next connection; notifications are asked only alongside it or by Renewal reminders. Without
@@ -109,7 +111,21 @@ upstream pages kept for merging. They are not reachable in this build.
 - Language, under App, opens a screen above the tabs with «Как в системе», «Русский» and
   «English». A tap applies at once on every screen, including the open one, and is saved. Pending
   reminders are set again in the new language.
-- `BrandShell` owns service startup and retry, incoming deep links and the iOS Widget's
+- «Вход» signs in by email and password through `AccountService`, which calls the account API at
+  `Brand.apiUrl`; `--dart-define=LAUNCHVPN_API_URL` points a local run at another backend. The
+  login button waits for both fields. A refusal shows its text under the fields: wrong email or
+  password, email not confirmed, too many attempts, no connection, and one general text for the
+  rest. After sign-in the account's subscription becomes a `launchvpn://sub/add` link in the same
+  queue system links take, so it is added, confirmed and reported the same way, and its URL is
+  kept as the account's. An account without an active subscription opens Home without one. I have
+  a subscription link asks for a link and sends it down the same queue; an unsuitable one gets the
+  deep link's invalid-link toast. Creating an account and Telegram sign-in are not offered yet.
+- The session is an access token for an hour and a refresh token for 90 days, both in the
+  platform's secure store (Keychain on iOS, Keystore-encrypted storage on Android), never in
+  preferences or logs. Startup reads them without a request. A bearer request answered 401 refreshes
+  once, shared by every request waiting on it, and is retried once; only the backend refusing the
+  refresh ends the session, while an outage keeps it.
+- `BrandShell` owns service startup and retry, the «Вход» gate, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published, but when the Android Tile or
   Widget lacks a permission or a saved configuration, it opens the App with the `startVpn` quick
   action, which `BrandShell` handles like a connect from Home. Reopening the App from Recents
