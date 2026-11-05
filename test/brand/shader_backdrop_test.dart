@@ -16,11 +16,15 @@ void main() {
     WidgetTester tester, {
     bool disableAnimations = false,
     bool tickers = true,
+    double devicePixelRatio = 1,
     Future<FragmentProgram> Function()? loadProgram,
   }) async {
     await tester.pumpWidget(
       MediaQuery(
-        data: MediaQueryData(disableAnimations: disableAnimations),
+        data: MediaQueryData(
+          disableAnimations: disableAnimations,
+          devicePixelRatio: devicePixelRatio,
+        ),
         child: TickerMode(
           enabled: tickers,
           child: ShaderBackdrop(
@@ -88,6 +92,33 @@ void main() {
     await tester.pump(const Duration(milliseconds: 16));
     expect(tester.binding.hasScheduledFrame, isTrue);
   });
+
+  for (final (ratio, rendered) in [
+    (3.0, const Size(1200, 900)),
+    (1.0, const Size(800, 600)),
+  ]) {
+    testWidgets('renders at most 1.5 pixels per point, scaled up to the '
+        'screen (device pixel ratio $ratio)', (tester) async {
+      await pumpBackdrop(
+        tester,
+        disableAnimations: true,
+        devicePixelRatio: ratio,
+      );
+
+      expect(
+        tester.renderObject(
+          find.descendant(
+            of: find.byType(ShaderBackdrop),
+            matching: find.byType(CustomPaint),
+          ),
+        ),
+        paints..drawImageRect(
+          source: Offset.zero & rendered,
+          destination: const Rect.fromLTWH(0, 0, 800, 600),
+        ),
+      );
+    });
+  }
 
   testWidgets('stays plain when the shader fails to load', (tester) async {
     await pumpBackdrop(
