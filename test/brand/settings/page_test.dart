@@ -664,6 +664,30 @@ void main() {
       expect(await stored(tester), isFalse);
     });
 
+    testWidgets('is disabled while a command runs', (tester) async {
+      await pumpApp(tester);
+      final applying = Completer<void>();
+      final choice = controller.selectPreset(
+        ConnectionPreset.allVpn,
+        (_) => applying.future,
+      );
+      await openTab(tester, 2);
+
+      Tristate enabled() => tester
+          .getSemantics(find.bySemanticsLabel(RegExp('^$title')))
+          .flagsCollection
+          .isEnabled;
+      expect(enabled(), Tristate.isFalse);
+      await tester.tap(find.text(title));
+      await tester.pump();
+      expect(toggled(tester), Tristate.isFalse);
+
+      applying.complete();
+      await choice;
+      await settle(tester);
+      expect(enabled(), Tristate.isTrue);
+    });
+
     testWidgets('while connected it waits for the next connection', (
       tester,
     ) async {
