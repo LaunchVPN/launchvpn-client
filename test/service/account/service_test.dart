@@ -837,6 +837,24 @@ void main() {
       expect(removed, isEmpty);
     });
 
+    test('a merge whose subscription read failed is finished by the next '
+        'read', () async {
+      final service = await signedIn();
+      api.refuse('/api/subscription', 502, 'bad_gateway');
+
+      final linked = await service.telegram.exchangeLink(
+        await linkAndReturn(service, 'launchvpn://auth?code=c1&mode=link'),
+      );
+      expect(linked.replacedSubscription, isFalse);
+      expect(removed, isEmpty);
+
+      api.subscription(telegramLink);
+      await service.data.subscription();
+
+      expect(removed, [_configLink]);
+      expect(await service.data.savedSubscriptionUrl(), telegramLink);
+    });
+
     test('a Telegram with its own email account is refused and nothing '
         'changes', () async {
       final service = await signedIn();

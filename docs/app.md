@@ -213,7 +213,9 @@ upstream pages kept for merging. They are not reachable in this build.
   gets the code, the verifier and the Bearer, without the usual retry, while the row shows
   progress. Its token pair replaces the session; the backend merged the accounts. The account's
   subscription is read again: a changed URL removes the previous subscription and sends the new
-  one down the link queue, an unchanged one is refreshed for the added days. The account details and the
+  one down the link queue, an unchanged one is refreshed for the added days. A failed read leaves
+  the swap to the tab's next refresh, which removes the subscription the account brought once its
+  URL changed. The account details and the
   devices reload, the row goes and the email's subtitle says Telegram linked, and a 3-second toast
   says «Telegram привязан, N дней добавлены», or only «Telegram привязан» with no days added.
   `telegram_taken` opens the sheet «Этот Telegram уже занят», which explains signing in with that

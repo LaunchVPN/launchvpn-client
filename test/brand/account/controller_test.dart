@@ -325,6 +325,36 @@ void main() {
     expect(controller.state.resumedLink, isNull);
   });
 
+  test('an account subscription that changed replaces the device\'s '
+      'one', () async {
+    api.loginWith(access: 'a1', refresh: 'r1');
+    api.subscription(_configLink);
+    final service = accountServiceFor(
+      api,
+      addSubscription: opened.add,
+      removeSubscription: (url) async {
+        removed.add(url);
+        final row = await SubscriptionLinkService(database: db).current();
+        await db.subscriptionDao.deleteRow(row!.id);
+      },
+    );
+    await service.email.login(email: 'ivan@proton.me', password: 'pw');
+    await addRow(_configLink);
+    opened.clear();
+    const telegramLink = 'https://sub.launch.tel/telegram';
+    api.subscription(telegramLink);
+    final controller = controllerFor(service);
+
+    await controller.refresh();
+
+    expect(removed, [_configLink]);
+    expect(opened, [
+      Uri.parse(
+        'launchvpn://sub/add?url=${Uri.encodeQueryComponent(telegramLink)}',
+      ),
+    ]);
+  });
+
   group('a session that ends while the tab loads', () {
     test('a refresh outliving logout adds nothing', () async {
       final service = await signedIn();

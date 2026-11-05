@@ -58,7 +58,9 @@ final class AccountData {
     if (link != null) addSubscription(link);
   }
 
-  /// The account's subscription, its link marked as the account's.
+  /// The account's subscription, its link marked as the account's. A link
+  /// other than the one the account brought, as after a merge, removes that
+  /// one from the device.
   Future<AccountSubscription> subscription() async {
     final data = await _session.get('/api/subscription');
     final maxDevices = switch (data['maxDevices']) {
@@ -73,6 +75,10 @@ final class AccountData {
     }
     final link = SubscriptionDeepLink.fromUrl(configLink);
     if (link == null) throw const AccountException(AccountError.unexpected);
+    if (await _store.readSubscriptionUrl() case final brought?
+        when brought != link.url) {
+      await _removeQuietly(brought);
+    }
     await _store.saveSubscriptionUrl(link.url);
     return AccountSubscription(link: link, maxDevices: maxDevices);
   }
@@ -86,17 +92,11 @@ final class AccountData {
 
   /// After a merge handed the session to another account: reads its
   /// subscription, and a changed one replaces [previous], the
-  /// [savedSubscriptionUrl] from before, on the device. Whether it changed.
+  /// [savedSubscriptionUrl] from before, on the device. Whether it changed;
+  /// a failed read leaves the replacement to the next [subscription].
   Future<bool> replaceAfterMerge(String? previous) async {
     final current = await _readQuietly(_subscriptionLink);
     final changed = current != null && current.url != previous;
-    if (changed && previous != null) {
-      try {
-        await _removeSubscription(previous);
-      } catch (error) {
-        ygLogger('remove account subscription failed (${error.runtimeType})');
-      }
-    }
     if (changed) addSubscription(current);
     return changed;
   }
@@ -212,6 +212,14 @@ final class AccountData {
   Future<void> _forget() async {
     await _removeAccountSubscription();
     await _session.end();
+  }
+
+  Future<void> _removeQuietly(String url) async {
+    try {
+      await _removeSubscription(url);
+    } catch (error) {
+      ygLogger('remove account subscription failed (${error.runtimeType})');
+    }
   }
 
   Future<void> _removeAccountSubscription() async {
