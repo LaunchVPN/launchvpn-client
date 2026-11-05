@@ -169,9 +169,9 @@ upstream pages kept for merging. They are not reachable in this build.
   the devices against `maxDevices`, this device first and not removable. Another device opens a
   sheet; Remove device calls `/api/devices/disconnect`, the list updates at once and a toast
   says the place is free for 3 seconds. The account card has the email with Telegram linked or
-  Signs in with email, Support when the panel sent its link, and Sign out. From a link only, the
-  tab shows days and traffic, Sign in and Create account, which open «Вход» over the tabs in that
-  mode and close on sign-in, and Support. Deleting the account is not offered yet.
+  Signs in with email, Support when the panel sent its link, Sign out and, last, Delete account.
+  From a link only, the tab shows days and traffic, Sign in and Create account, which open «Вход»
+  over the tabs in that mode and close on sign-in, and Support.
 - Signed in without Telegram, on Android and iOS, the account card has «Привязать Telegram» («Дни
   из бота добавятся к подписке») under the email. A tap posts the PKCE challenge to
   `/api/app/link/telegram/start` with the Bearer and opens the returned page in the external
@@ -191,6 +191,12 @@ upstream pages kept for merging. They are not reachable in this build.
 - Sign out asks in a sheet, then revokes this device's session (`/api/app/auth/logout`, best
   effort), removes the subscription the account brought, with a tunnel through it, and clears the
   tokens. A subscription added from a link stays, so only a device left without one shows «Вход».
+- «Удалить аккаунт», a red row with no icon, asks in the sheet «Удалить аккаунт?», which warns that
+  the subscription and its days go, those from the bot included. Confirmed, the row shows progress
+  while `/api/app/account/delete` runs with the Bearer. Success cleans up as Sign out does, without
+  the logout request. A 401 the refresh cannot cure means the account is already gone and cleans
+  up the same way. A network failure or `panel_failed` keeps the session and shows «Не получилось
+  удалить аккаунт. Попробуйте ещё раз».
 - `BrandShell` owns service startup and retry, the «Вход» gate, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published, but when the Android Tile or
   Widget lacks a permission or a saved configuration, it opens the App with the `startVpn` quick
