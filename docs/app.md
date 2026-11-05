@@ -130,7 +130,7 @@ upstream pages kept for merging. They are not reachable in this build.
   errors and the native crashes and ANRs of the App's own process; the tunnel runs in another
   process (Android's `:native`, the iOS extension), where Sentry does not start. A report holds the
   error, its stack trace, the App version and the device model and system. Before a Dart report
-  leaves, `scrubEvent` replaces links, email addresses, UUIDs such as the HWID, IP addresses and
+  leaves, `scrubEvent` replaces links, email addresses, UUIDs and the HWID, IP addresses and
   host names, which covers subscription links, servers and DNS queries, and drops the device name
   and every user field but Sentry's random installation id. Sessions, tracing, screenshots, printed
   logs, request and native breadcrumbs are off; native crash reports skip `scrubEvent` and carry only what
@@ -138,6 +138,8 @@ upstream pages kept for merging. They are not reachable in this build.
   closes Sentry at once; turning it on starts it again. The first launch shows a toast for eight
   seconds over «Вход» or the tabs that says reports go without links, addresses or email and can
   be turned off in Settings; it is not shown again.
+- The [privacy policy](../privacy/index.html) lists what the App sends and to whom. A change to
+  that, such as a new header, report field or third-party request, updates both of its pages.
 - Language, under App, opens a screen above the tabs with «Как в системе», «Русский» and
   «English». A tap applies at once on every screen, including the open one, and is saved. Pending
   reminders are set again in the new language.
