@@ -143,6 +143,30 @@ Sign out sheet back to «Вход» and Renew in APK and store builds; the Devic
 `test/brand/home/page_test.dart`. On a device, sign in against the local backend with a second
 device registered on the fake panel, remove it from Account, and sign out.
 
+Signup and the code are covered by the signup group of `test/service/account/service_test.dart`
+(the trial promise, when the trial is claimed) and by `test/brand/login/code_controller_test.dart`
+and `test/brand/login/page_test.dart` (countdown, errors, both code-screen texts). On a device,
+create an account against the local backend, enter the mailed code, and check that
+the trial subscription connects.
+
+Telegram sign-in and linking are covered by the Telegram groups of
+`test/service/account/service_test.dart`, with a fake browser and the mocked secure store:
+challenge and verifier, error returns, ignored returns and an attempt restored after a restart or
+forgotten after ten minutes. `test/brand/login/page_test.dart` and
+`test/brand/account/page_test.dart` walk the returns through the shell, the restored ones
+included. On the Android emulator, sign in with Telegram and link it; for the restart case, start
+either, run `adb shell am kill com.launchvpn.app` while the browser is open, then finish in the
+browser and check the App completes it.
+
+Account deletion is covered by the deletion group of `test/service/account/service_test.dart`
+and by `test/brand/account/`: deleted, refused by the backend, and a session already gone, which
+leads to «Вход» with the request to sign in again. On a device, delete a test account against the
+local backend and check that its login is refused afterwards.
+
+The animated backdrop is covered by `test/brand/shader_backdrop_test.dart`: motion, reduced
+motion, hidden screens, the plain fallback and the render resolution capped at 1.5 pixels per
+point. On a low-end Android device or emulator, check that «Вход» animates smoothly.
+
 The brand entry is covered by `test/brand/home/` and `test/brand/shell_test.dart`: toggle states,
 large text, tabs, link delivery and upstream routes leading Home. On a device, also check the
 toggle against a real panel subscription.

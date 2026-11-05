@@ -63,8 +63,10 @@ upstream pages kept for merging. They are not reachable in this build.
   `SubscriptionService` remembers it until the panel serves the subscription again, and Home shows
   Device limit in place of the toggle and the cards once the tunnel is off. Signed in, it counts
   the account's devices against the limit, lists the other devices with a trash icon that opens
-  the same removal sheet as Account, and Refresh loads the subscription again, or hands the
-  account's subscription to the link queue when the device has none. From a link only, the screen
+  the same removal sheet as Account, and Refresh loads the subscription again. When the device has
+  none, the account's subscription goes to the link queue only once the list shows a free place,
+  so neither Refresh nor opening Account repeats the add dialog and the limit toast while the
+  limit stands. From a link only, the screen
   says a device can be removed in the bot or in the cabinet at app.launch.tel, and offers support.
   An ended subscription takes precedence.
 - If a command failed and the tunnel may still be up, the screen says so and a tap disconnects.
@@ -125,37 +127,51 @@ upstream pages kept for merging. They are not reachable in this build.
   with the 3-day trial in its subtitle and Create account, and its footer switches to sign-in mode
   (Sign in, «Нет аккаунта? Создать») and back. The button waits for both fields. A refusal shows its
   text under the fields: wrong email or password, email already registered, invalid email or a
-  password under 8 characters, too many attempts, no connection, and one general text for the rest.
+  password under 8 characters, a blocked account (write to support), sign-in in the App not open
+  yet, an unconfirmed email without a code attempt (try signing in again), too many attempts, no
+  connection, and one general text for the rest.
 - «Вход» and «Проверьте почту» sit on the animated backdrop of app.launch.tel: `ShaderBackdrop`
   draws the site's DarkVeil from `shaders/dark_veil.frag` at the site's speed, with the CSS filter,
-  glows and tint of its `.shader-backdrop`, in `BrandBackdrop` colors. Under the system's reduced
+  glows and tint of its `.shader-backdrop`, in `BrandBackdrop` colors. Like the site, it renders
+  off screen at no more than 1.5 pixels per point and is scaled up. Under the system's reduced
   motion it holds the first frame. It stops while another screen covers it or the App is hidden,
   and resumes from the same frame. If the shader fails to load, the page keeps its plain
   background.
 - On Android, «Вход» also offers «Войти через Telegram» below the form, after «или»; iOS does not
-  (App Store guideline 4.8 would require Sign in with Apple). A tap makes a PKCE verifier, kept in
-  memory for this attempt only, and opens `<api>/api/auth/telegram/start?mode=app_login` with the
-  App's language and the verifier's S256 challenge in the external browser. The form stays usable
+  (App Store guideline 4.8 would require Sign in with Apple). A tap makes a PKCE verifier for this
+  attempt, kept in memory and, for ten minutes, in the secure store, and opens
+  `<api>/api/auth/telegram/start?mode=app_login` with the App's language and the verifier's S256
+  challenge in the external browser. The form stays usable
   meanwhile, since the person may come back without finishing, and a second tap replaces the
   attempt. The browser returns to `launchvpn://auth`, which Android registers next to `sub`; the
   shell hands it to `TelegramBrowserAuth` instead of the subscription flow. `?code=` is exchanged
   with the verifier at `/api/app/auth/exchange` while the button shows progress. `?error=cancelled`
-  changes nothing; any other error, or a refused exchange, shows «Не получилось войти через
-  Telegram. Попробуйте ещё раз» under the button. A return no attempt waits for, a repeat or one
-  after the App restarted, is ignored. The return's `mode` names what the attempt was for, so
-  a sign-in waits only for a return without `mode` and linking only for `mode=link`.
+  changes nothing; a blocked account or a closed App sign-in shows the form's text for it under the
+  button, and any other error, or a refused exchange, «Не получилось войти через Telegram.
+  Попробуйте ещё раз». A return no attempt waits for, such as a repeat, is ignored. The return's
+  `mode` names what the attempt was for, so a sign-in waits only for a return without `mode` and
+  linking only for `mode=link`. If the system closed the App while the browser was open, startup
+  restores an attempt younger than ten minutes: the «Вход» the gate shows takes it back and signs
+  in with the return; a person on the tabs with a subscription from a link gets «Вход» over them
+  for it. Returns wait until the gate shows «Вход» or the tabs.
 - Create account (`/api/app/auth/signup`) mails a code and replaces the form with «Проверьте почту»
   on the same page; signing in with an unconfirmed email does the same with the attempt the backend
-  returns. The attempt's `signupToken` stays in memory for this flow only. The code field takes
+  returns. The attempt's `signupToken` stays in memory for this flow only. The screen promises the
+  3 free days only when the backend says the code starts them, or does not say; otherwise it asks
+  to enter the code to confirm the email. The code field takes
   digits only, so a pasted code keeps its digits, and offers one-time-code autofill. Confirm calls
-  `/api/app/auth/verify-code`; a wrong code shows the attempts left under the field, and an expired
-  or burned one asks for a new code. Resend counts down from the backend's `resendIn`, or its
+  `/api/app/auth/verify-code`; a wrong code shows the attempts left under the field, an expired
+  or burned one asks for a new code, and a blocked account or a closed App sign-in shows the
+  form's text for it. Resend counts down from the backend's `resendIn`, or its
   `retryAfter` when it refuses an early resend; an attempt the backend no longer knows asks to start
   over. «Не та почта? Изменить», or Back, returns to the form with the email kept.
 - A sign-in, by password, code or Telegram, stores the session, then the account's subscription becomes a
   `launchvpn://sub/add` link in the same queue system links take, so it is added, confirmed and
   reported the same way, and its URL is kept as the account's. An account without an active
-  subscription claims the trial once (`/api/app/trial`) and adds the subscription it brings. When
+  subscription claims the trial (`/api/app/trial`) and adds the subscription it brings, unless the
+  code from the email already started it. A password or Telegram sign-in cannot tell an account
+  that never had a subscription from an ended one, so it claims and the backend refuses one whose
+  trial was used. When
   the trial was used, Home and Account show Subscription ended, whose refresh reads the account's
   subscription again. I have a subscription link asks for a link and sends it down the same
   queue; an unsuitable one gets the deep link's invalid-link toast.
@@ -172,12 +188,15 @@ upstream pages kept for merging. They are not reachable in this build.
   Subscription ended as Home has it when the subscription expired or the account has none.
   With a subscription or a session, an APK build adds Renew subscription, opening
   `Brand.renewalUrl`. Signed in, the tab lists
-  the devices against `maxDevices`, this device first and not removable. Another device opens a
+  the devices against the panel's limit for this user from `/api/subscription`, or the one
+  `/api/devices` names, this device first and not removable. Another device opens a
   sheet; Remove device calls `/api/devices/disconnect`, the list updates at once and a toast
   says the place is free for 3 seconds. The account card has the email with Telegram linked or
-  Signs in with email, Support when the panel sent its link, Sign out and, last, Delete account.
-  From a link only, the tab shows days and traffic, Sign in and Create account, which open «Вход»
-  over the tabs in that mode and close on sign-in, and Support.
+  Signs in with email, or «Telegram» with «Вход через Telegram» for an account without an email,
+  then Support, Sign out and, last, Delete account. Support opens the panel's link, or
+  `Brand.supportUrl` (the bot's support in Telegram) when the panel sent none, in every state of
+  the tab. From a link only, the tab shows days and traffic, Sign in and Create account, which open
+  «Вход» over the tabs in that mode and close on sign-in, and Support.
 - Signed in without Telegram, on Android and iOS, the account card has «Привязать Telegram» («Дни
   из бота добавятся к подписке») under the email. A tap posts the PKCE challenge to
   `/api/app/link/telegram/start` with the Bearer and opens the returned page in the external
@@ -193,16 +212,19 @@ upstream pages kept for merging. They are not reachable in this build.
   says «Telegram привязан, N дней добавлены», or only «Telegram привязан» with no days added.
   `telegram_taken` opens the sheet «Этот Telegram уже занят», which explains signing in with that
   Telegram account's email and closes with «Понятно». A cancel says nothing; anything else shows
-  «Не получилось привязать Telegram. Попробуйте ещё раз».
-- Sign out asks in a sheet, then revokes this device's session (`/api/app/auth/logout`, best
+  «Не получилось привязать Telegram. Попробуйте ещё раз». A link the system closed the App during
+  is restored as a sign-in is: Account takes it back and finishes it the same way, the return
+  opens the Account tab, and the outcome shows there once.
+- Sign out asks in a sheet («Войдите снова, чтобы подключиться»), then revokes this device's session (`/api/app/auth/logout`, best
   effort), removes the subscription the account brought, with a tunnel through it, and clears the
   tokens. A subscription added from a link stays, so only a device left without one shows «Вход».
 - «Удалить аккаунт», a red row with no icon, asks in the sheet «Удалить аккаунт?», which warns that
   the subscription and its days go, those from the bot included. Confirmed, the row shows progress
   while `/api/app/account/delete` runs with the Bearer. Success cleans up as Sign out does, without
-  the logout request. A 401 the refresh cannot cure means the account is already gone and cleans
-  up the same way. A network failure or `panel_failed` keeps the session and shows «Не получилось
-  удалить аккаунт. Попробуйте ещё раз».
+  the logout request. A 401 the refresh cannot cure deletes nothing: the device cleans up the
+  same way, and «Вход» opens in sign-in mode with «Войдите снова, чтобы удалить аккаунт», over the
+  tabs when a subscription from a link keeps them. A network failure or `panel_failed` keeps the
+  session and shows «Не получилось удалить аккаунт. Попробуйте ещё раз».
 - `BrandShell` owns service startup and retry, the «Вход» gate, incoming deep links and the iOS Widget's
   foreground actions. Launcher quick actions are not published, but when the Android Tile or
   Widget lacks a permission or a saved configuration, it opens the App with the `startVpn` quick
