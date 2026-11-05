@@ -10,6 +10,7 @@ import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/session_store.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
+import 'package:onexray/service/settings/language/brand_language.dart';
 
 /// The person's LaunchVPN account on this device: its session and the
 /// requests that carry it.
@@ -23,7 +24,9 @@ final class AccountService {
     AccountSessionStore? store,
     Future<DeviceIdentity?> Function()? readDevice,
     Future<void> Function(String url)? removeSubscription,
+    String Function()? language,
   }) : _store = store ?? AccountSessionStore(),
+       _language = language ?? (() => BrandLanguage.current.languageCode),
        _readDevice = readDevice ?? AppHostApi().deviceIdentity,
        _removeSubscription =
            removeSubscription ??
@@ -45,11 +48,22 @@ final class AccountService {
   final AccountSessionStore _store;
   final Future<DeviceIdentity?> Function() _readDevice;
   final Future<void> Function(String url) _removeSubscription;
+
+  /// The App's language, `ru` or `en`, for the emails the backend sends.
+  final String Function() _language;
   final _signedIn = ValueNotifier(false);
   AccountTokens? _tokens;
   Future<AccountTokens?>? _refreshing;
+  bool _subscriptionMissing = false;
 
   ValueListenable<bool> get signedIn => _signedIn;
+
+  /// The account had no active subscription when this session last read it,
+  /// the trial included. False until read, and after a restart.
+  bool get subscriptionMissing => _subscriptionMissing;
+
+  /// The wait before another code when the backend names none.
+  static const _resendGap = Duration(seconds: 60);
 
   /// Picks up the session saved by an earlier launch, without a request.
   Future<void> restore() async {
@@ -64,10 +78,12 @@ final class AccountService {
 
   /// Signs in by email and returns the account's subscription as a
   /// `launchvpn://sub/add` link, or null when it has none or could not be
-  /// read. Throws [AccountException] when the sign-in itself fails.
+  /// read. Throws [AccountException] when the sign-in itself fails; for an
+  /// unconfirmed email it carries the [PendingSignup] the backend mailed a
+  /// code for.
   Future<Uri?> login({required String email, required String password}) async {
     final device = await _device();
-    final tokens = _tokenPair(
+    return _signIn(
       await _send(
         () => _dio.post<Object?>(
           '/api/app/auth/login',
@@ -79,17 +95,97 @@ final class AccountService {
             if (device.model.isNotEmpty) 'deviceModel': device.model,
           },
         ),
+        email: email,
       ),
     );
-    await _keep(tokens);
+  }
+
+  /// Creates the account, or a new attempt for an unconfirmed one, and has a
+  /// code mailed. Nothing is signed in until [verifyCode].
+  Future<PendingSignup> signup({
+    required String email,
+    required String password,
+  }) async {
+    final device = await _device();
+    final data = await _send(
+      () => _dio.post<Object?>(
+        '/api/app/auth/signup',
+        data: {
+          'email': email,
+          'password': password,
+          'hwid': device.hwid,
+          'platform': device.os.toLowerCase(),
+          'language': _language(),
+        },
+      ),
+    );
+    final token = data['signupToken'];
+    if (token is! String || token.isEmpty) {
+      throw const AccountException(AccountError.unexpected);
+    }
+    return PendingSignup(email: email, token: token, resendIn: _wait(data));
+  }
+
+  /// Confirms [signup] with the mailed [code], signs in and returns the
+  /// account's subscription as [login] does.
+  Future<Uri?> verifyCode(PendingSignup signup, String code) async {
+    final device = await _device();
+    return _signIn(
+      await _send(
+        () => _dio.post<Object?>(
+          '/api/app/auth/verify-code',
+          data: {
+            'email': signup.email,
+            'code': code,
+            'signupToken': signup.token,
+            'hwid': device.hwid,
+            'platform': device.os.toLowerCase(),
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Mails a new code for [signup] and returns the wait before the next.
+  Future<Duration> resendCode(PendingSignup signup) async => _wait(
+    await _send(
+      () => _dio.post<Object?>(
+        '/api/app/auth/resend-code',
+        data: {'signupToken': signup.token, 'language': _language()},
+      ),
+    ),
+  );
+
+  /// Keeps the session from a token pair answer, then reads the account's
+  /// subscription. An account without one claims the trial, once; one that
+  /// had its trial stays without.
+  Future<Uri?> _signIn(Map<String, Object?> answer) async {
+    await _keep(_tokenPair(answer));
     Uri? link;
     try {
-      link = await accountSubscription();
+      link = await accountSubscription() ?? await _claimTrial();
     } on AccountException catch (error) {
       ygLogger('read account subscription failed (${error.error.name})');
     }
     _signedIn.value = true;
     return link;
+  }
+
+  Future<Uri?> _claimTrial() async {
+    final device = await _device();
+    try {
+      await _send(
+        () => _dio.post<Object?>(
+          '/api/app/trial',
+          data: {'hwid': device.hwid},
+          options: _bearer,
+        ),
+      );
+    } on AccountException catch (error) {
+      ygLogger('claim trial failed (${error.error.name})');
+      return null;
+    }
+    return accountSubscription();
   }
 
   /// The account's subscription as a `launchvpn://sub/add` link, marked as
@@ -99,9 +195,9 @@ final class AccountService {
       () => _dio.get<Object?>('/api/subscription', options: _bearer),
     );
     final configLink = data['configLink'];
-    if (data['active'] != true || configLink is! String || configLink.isEmpty) {
-      return null;
-    }
+    _subscriptionMissing =
+        data['active'] != true || configLink is! String || configLink.isEmpty;
+    if (configLink is! String || _subscriptionMissing) return null;
     final link = SubscriptionDeepLink.fromUrl(configLink);
     if (link == null) throw const AccountException(AccountError.unexpected);
     await _store.saveSubscriptionUrl(link.url);
@@ -172,6 +268,7 @@ final class AccountService {
 
   Future<void> _signOut() async {
     _tokens = null;
+    _subscriptionMissing = false;
     try {
       await _store.clearTokens();
     } catch (error) {
@@ -223,21 +320,30 @@ final class AccountService {
     return AccountTokens(access: access, refresh: refresh);
   }
 
+  /// How long the backend asks to wait before another code.
+  static Duration _wait(Map<Object?, Object?> data) =>
+      switch (data['resendIn'] ?? data['retryAfter']) {
+        final int seconds when seconds >= 0 => Duration(seconds: seconds),
+        _ => _resendGap,
+      };
+
   /// The JSON object of a successful answer, or the [AccountException] the
-  /// failure stands for.
+  /// failure stands for. A sign-in names its [email] so an unconfirmed one
+  /// can continue to the code.
   static Future<Map<String, Object?>> _send(
-    Future<Response<Object?>> Function() request,
-  ) async {
+    Future<Response<Object?>> Function() request, {
+    String? email,
+  }) async {
     try {
       final data = (await request()).data;
       if (data is Map<String, Object?>) return data;
       throw const AccountException(AccountError.unexpected);
     } on DioException catch (error) {
-      throw _failure(error);
+      throw _failure(error, email: email);
     }
   }
 
-  static AccountException _failure(DioException error) {
+  static AccountException _failure(DioException error, {String? email}) {
     final cause = error.error;
     if (cause is AccountException) return cause;
     final response = error.response;
@@ -247,8 +353,18 @@ final class AccountService {
           : const AccountException(AccountError.network);
     }
     final data = response.data;
+    if (data is! Map) return const AccountException(AccountError.unexpected);
+    final token = data['signupToken'];
     return AccountException(
-      AccountError.fromCode(data is Map ? data['code'] : null),
+      AccountError.fromCode(data['code']),
+      attemptsLeft: switch (data['attemptsLeft']) {
+        final int left => left,
+        _ => null,
+      },
+      retryAfter: data.containsKey('retryAfter') ? _wait(data) : null,
+      signup: email != null && token is String && token.isNotEmpty
+          ? PendingSignup(email: email, token: token, resendIn: _resendGap)
+          : null,
     );
   }
 }

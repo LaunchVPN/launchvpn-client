@@ -21,8 +21,46 @@ final class FakeAccountApi implements HttpClientAdapter {
 
   /// The backend's `{"ok": false, "code": …}` answer to a login.
   void refuseLogin(int status, String code) =>
-      _routes['/api/app/auth/login'] = (_) async =>
-          (status, {'ok': false, 'code': code});
+      refuse('/api/app/auth/login', status, code);
+
+  /// The backend's `{"ok": false, "code": …}` answer to [path], with the
+  /// [extra] fields some refusals carry.
+  void refuse(
+    String path,
+    int status,
+    String code, [
+    Map<String, Object?> extra = const {},
+  ]) =>
+      _routes[path] = (_) async =>
+          (status, {'ok': false, 'code': code, ...extra});
+
+  /// Signup mails a code and hands back the token of this attempt.
+  void signupWith({required String token, int resendIn = 60}) =>
+      _routes['/api/app/auth/signup'] = (_) async =>
+          (200, {'ok': true, 'resendIn': resendIn, 'signupToken': token});
+
+  /// The right code: the email is confirmed and the device signed in.
+  void verifyWith({required String access, required String refresh}) =>
+      _routes['/api/app/auth/verify-code'] = (_) async {
+        final (status, pair) = _pair(access, refresh);
+        return (status, {...pair, 'trialGranted': true});
+      };
+
+  void resendWith({int resendIn = 60}) =>
+      _routes['/api/app/auth/resend-code'] = (_) async =>
+          (200, {'ok': true, 'resendIn': resendIn});
+
+  /// The trial starts and the account's subscription becomes [configLink].
+  void trialGrants(String configLink) => _routes['/api/app/trial'] = (_) async {
+    subscription(configLink);
+    return (200, <String, Object?>{'ok': true, 'endDate': '2026-11-08'});
+  };
+
+  /// Bodies sent to [path], in order.
+  List<Object?> bodies(String path) => [
+    for (final request in requests)
+      if (request.path == path) request.data,
+  ];
 
   /// No connection to the backend at all.
   void unreachable() => _routes['/api/app/auth/login'] = (options) async =>
@@ -84,10 +122,7 @@ final class FakeAccountApi implements HttpClientAdapter {
   /// Every bearer route answers 401 to [access], as when it expired.
   void rejectAccess(String access) => _rejected.add(access);
 
-  List<Object?> get refreshBodies => [
-    for (final request in requests)
-      if (request.path == '/api/app/auth/refresh') request.data,
-  ];
+  List<Object?> get refreshBodies => bodies('/api/app/auth/refresh');
 
   List<Object?> authorizations(String path) => [
     for (final request in requests)
@@ -144,6 +179,7 @@ AccountService accountServiceFor(
 }) => AccountService(
   dio: Dio(BaseOptions(baseUrl: 'https://api.test'))..httpClientAdapter = api,
   removeSubscription: removeSubscription ?? (_) async {},
+  language: () => 'ru',
   readDevice: () async => DeviceIdentity(
     hwid: 'device-hwid',
     os: 'Android',

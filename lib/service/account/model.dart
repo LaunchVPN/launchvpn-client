@@ -1,3 +1,19 @@
+/// A signup waiting for the code from the email. Its [token] proves this
+/// attempt to the backend; it lives in memory only, for this one flow.
+final class PendingSignup {
+  const PendingSignup({
+    required this.email,
+    required this.token,
+    required this.resendIn,
+  });
+
+  final String email;
+  final String token;
+
+  /// How long until another code may be sent.
+  final Duration resendIn;
+}
+
 /// What `GET /api/me` says about the signed-in account.
 final class AccountProfile {
   const AccountProfile({required this.email, required this.telegramLinked});
