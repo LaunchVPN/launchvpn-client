@@ -1,0 +1,36 @@
+# Publishes the privacy policy in privacy/ to GitHub Pages, served at
+# https://privacy.launch.tel. The pages are plain HTML, so nothing is built.
+name: Privacy Policy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - privacy/**
+      - .github/workflows/privacy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: privacy
+      - id: deployment
+        uses: actions/deploy-pages@v5

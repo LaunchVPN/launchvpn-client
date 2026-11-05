@@ -95,6 +95,11 @@ stay disabled. `main` requires its `validate`, `android` and `ios` jobs.
 | `ios` | An unsigned build that proves the app and extensions compile. It produces no IPA and no TestFlight upload. |
 | `release` | Release tags only: a draft GitHub release with the APK and the pull requests merged since the latest release. |
 
+[Privacy Policy](../.github/workflows/privacy.yml) publishes `privacy/` to GitHub
+Pages when it changes on `main`. The repository's Pages source is GitHub Actions,
+and its custom domain `privacy.launch.tel` has a DNS `CNAME` record pointing to
+`launchvpn.github.io`.
+
 [build_core.py](build_core.py) runs only the native core and Geodata step, because
 `main.py` also deploys to the stores. CI passes the run number as the build number
 without the configured base: nothing with this package ID has shipped yet.
