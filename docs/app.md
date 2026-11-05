@@ -65,7 +65,8 @@ upstream pages kept for merging. They are not reachable in this build.
   the account's devices against the limit, lists the other devices with a trash icon that opens
   the same removal sheet as Account, and Refresh loads the subscription again, or hands the
   account's subscription to the link queue when the device has none. From a link only, the screen
-  points to support. An ended subscription takes precedence.
+  says a device can be removed in the bot or in the cabinet at app.launch.tel, and offers support.
+  An ended subscription takes precedence.
 - If a command failed and the tunnel may still be up, the screen says so and a tap disconnects.
   Without a subscription the toggle is disabled.
 - No status or announcement moves the toggle. It sits as centered in the mockup, and higher only on
@@ -119,15 +120,28 @@ upstream pages kept for merging. They are not reachable in this build.
 - Language, under App, opens a screen above the tabs with «Как в системе», «Русский» and
   «English». A tap applies at once on every screen, including the open one, and is saved. Pending
   reminders are set again in the new language.
-- «Вход» signs in by email and password through `AccountService`, which calls the account API at
-  `Brand.apiUrl`; `--dart-define=LAUNCHVPN_API_URL` points a local run at another backend. The
-  login button waits for both fields. A refusal shows its text under the fields: wrong email or
-  password, email not confirmed, too many attempts, no connection, and one general text for the
-  rest. After sign-in the account's subscription becomes a `launchvpn://sub/add` link in the same
-  queue system links take, so it is added, confirmed and reported the same way, and its URL is
-  kept as the account's. An account without an active subscription opens Home without one. I have
-  a subscription link asks for a link and sends it down the same queue; an unsuitable one gets the
-  deep link's invalid-link toast. Creating an account and Telegram sign-in are not offered yet.
+- «Вход» talks to the account API at `Brand.apiUrl` through `AccountService`;
+  `--dart-define=LAUNCHVPN_API_URL` points a local run at another backend. It opens in create mode,
+  with the 3-day trial in its subtitle and Create account, and its footer switches to sign-in mode
+  (Sign in, «Нет аккаунта? Создать») and back. The button waits for both fields. A refusal shows its
+  text under the fields: wrong email or password, email already registered, invalid email or a
+  password under 8 characters, too many attempts, no connection, and one general text for the rest.
+  Telegram sign-in is not offered yet.
+- Create account (`/api/app/auth/signup`) mails a code and replaces the form with «Проверьте почту»
+  on the same page; signing in with an unconfirmed email does the same with the attempt the backend
+  returns. The attempt's `signupToken` stays in memory for this flow only. The code field takes
+  digits only, so a pasted code keeps its digits, and offers one-time-code autofill. Confirm calls
+  `/api/app/auth/verify-code`; a wrong code shows the attempts left under the field, and an expired
+  or burned one asks for a new code. Resend counts down from the backend's `resendIn`, or its
+  `retryAfter` when it refuses an early resend; an attempt the backend no longer knows asks to start
+  over. «Не та почта? Изменить», or Back, returns to the form with the email kept.
+- A sign-in, by password or by code, stores the session, then the account's subscription becomes a
+  `launchvpn://sub/add` link in the same queue system links take, so it is added, confirmed and
+  reported the same way, and its URL is kept as the account's. An account without an active
+  subscription claims the trial once (`/api/app/trial`) and adds the subscription it brings. When
+  the trial was used, Home and Account show Subscription ended, whose refresh reads the account's
+  subscription again. I have a subscription link asks for a link and sends it down the same
+  queue; an unsuitable one gets the deep link's invalid-link toast.
 - The session is an access token for an hour and a refresh token for 90 days, both in the
   platform's secure store (Keychain on iOS, Keystore-encrypted storage on Android), never in
   preferences or logs. Startup reads them without a request. A bearer request answered 401 refreshes
@@ -139,13 +153,15 @@ upstream pages kept for merging. They are not reachable in this build.
   failed load right after sign-in. It shows the days left, the expiry date and the traffic of the
   period from the subscription headers, with a bar only for a plan with a traffic limit, or
   Subscription ended as Home has it when the subscription expired or the account has none.
-  Signed in, an APK build adds Renew subscription, opening `Brand.renewalUrl`, and the tab lists
+  With a subscription or a session, an APK build adds Renew subscription, opening
+  `Brand.renewalUrl`. Signed in, the tab lists
   the devices against `maxDevices`, this device first and not removable. Another device opens a
   sheet; Remove device calls `/api/devices/disconnect`, the list updates at once and a toast
   says the place is free for 3 seconds. The account card has the email with Telegram linked or
   Signs in with email, Support when the panel sent its link, and Sign out. From a link only, the
-  tab shows days and traffic, Sign in, which opens «Вход» over the tabs and closes on sign-in, and
-  Support. Linking Telegram, creating an account and deleting it are not offered yet.
+  tab shows days and traffic, Sign in and Create account, which open «Вход» over the tabs in that
+  mode and close on sign-in, and Support. Linking Telegram and deleting the account are not offered
+  yet.
 - Sign out asks in a sheet, then revokes this device's session (`/api/app/auth/logout`, best
   effort), removes the subscription the account brought, with a tunnel through it, and clears the
   tokens. A subscription added from a link stays, so only a device left without one shows «Вход».
