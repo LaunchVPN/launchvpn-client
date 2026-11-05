@@ -3321,7 +3321,7 @@
     "placeholders": {"count": {"type": "int"}, "max": {"type": "int"}}
   },
   "homeDeviceLimitBodyAccount": "Every device place on the subscription is taken. Remove one to connect this phone.",
-  "homeDeviceLimitBodySupport": "Every device place on the subscription is taken. Write to support to free one.",
+  "homeDeviceLimitBodyLinkOnly": "Every device place on the subscription is taken. Remove one in the bot or in your account at app.launch.tel to connect this phone.",
   "homeDeviceLimitRefresh": "Refresh",
   "loginCreateSubtitle": "Create an account and get 3 days free. No card needed.",
   "loginCreate": "Create account",
