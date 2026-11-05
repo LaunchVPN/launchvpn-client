@@ -141,9 +141,9 @@ class _BrandShellState extends State<BrandShell> {
           LoginPage.showOverTabs(
             context,
             account: _account,
-            openLink: _shareService.addAppLink,
             mode: LoginMode.signIn,
             signedIn: _signedInChanges(),
+            links: _shareService,
           ),
         );
       case _:
@@ -235,7 +235,7 @@ class _BrandShellState extends State<BrandShell> {
           AccessGateState.checking => _loading,
           AccessGateState.login => LoginPage(
             account: _account,
-            openLink: _shareService.addAppLink,
+            links: _shareService,
           ),
           AccessGateState.tabs => _tabs(l),
         },

@@ -23,8 +23,7 @@ void main() {
 
   /// The code step for a signup mailed 42 seconds' wait ago.
   EmailCodeController codeStep() => EmailCodeController(
-    account: accountServiceFor(api),
-    openLink: opened.add,
+    account: accountServiceFor(api, addSubscription: opened.add),
     signup: const PendingSignup(
       email: 'ivan@proton.me',
       token: 'st1',

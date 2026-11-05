@@ -43,16 +43,12 @@ final class LoginState {
   final PendingSignup? signup;
 }
 
-/// The «Вход» form. Signing in, by email or Telegram, hands the account's
-/// subscription to [_openLink], the queue system links also take, so it is
-/// added the same way. Creating an account, or signing in with an unconfirmed
-/// email, leads to the code from the email.
+/// The «Вход» form. Signing in, by email or Telegram, adds the account's
+/// subscription the way a system link does. Creating an account, or signing
+/// in with an unconfirmed email, leads to the code from the email.
 final class LoginController extends PageCubit<LoginState> {
-  LoginController({
-    required this._account,
-    required this._openLink,
-    LoginMode mode = LoginMode.create,
-  }) : super(LoginState(mode: mode)) {
+  LoginController({required this._account, LoginMode mode = LoginMode.create})
+    : super(LoginState(mode: mode)) {
     if (_account.takeUnfinishedDeletion()) {
       emit(
         const LoginState(mode: LoginMode.signIn, error: AccountError.signedOut),
@@ -65,7 +61,6 @@ final class LoginController extends PageCubit<LoginState> {
   }
 
   final AccountService _account;
-  final void Function(Uri) _openLink;
 
   void switchMode() {
     if (state.busy) return;
@@ -91,11 +86,7 @@ final class LoginController extends PageCubit<LoginState> {
           );
           emit(LoginState(mode: mode, signup: signup));
         case LoginMode.signIn:
-          final link = await _account.login(
-            email: email.trim(),
-            password: password,
-          );
-          if (link != null) _openLink(link);
+          await _account.login(email: email.trim(), password: password);
           emit(LoginState(mode: mode));
       }
     } on AccountException catch (error) {
@@ -124,8 +115,7 @@ final class LoginController extends PageCubit<LoginState> {
     try {
       final code = await pending;
       emit(LoginState(mode: state.mode, redeemingTelegram: true));
-      final link = await _account.exchangeTelegramLogin(code);
-      if (link != null) _openLink(link);
+      await _account.exchangeTelegramLogin(code);
       emit(LoginState(mode: state.mode));
     } on AccountException catch (error) {
       if (error.error == AccountError.cancelled) return;

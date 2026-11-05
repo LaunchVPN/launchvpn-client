@@ -60,20 +60,16 @@ final class EmailCodeState {
       );
 }
 
-/// «Проверьте почту»: confirms [_signup] with the mailed code and counts down
-/// to the next resend. The account's subscription goes to [_openLink], as
-/// after a sign-in.
+/// «Проверьте почту»: confirms [_signup] with the mailed code, which adds the
+/// account's subscription as a sign-in does, and counts down to the next
+/// resend.
 final class EmailCodeController extends PageCubit<EmailCodeState> {
-  EmailCodeController({
-    required this._account,
-    required this._openLink,
-    required this._signup,
-  }) : super(EmailCodeState(resendIn: _signup.resendIn)) {
+  EmailCodeController({required this._account, required this._signup})
+    : super(EmailCodeState(resendIn: _signup.resendIn)) {
     _countFrom(_signup.resendIn);
   }
 
   final AccountService _account;
-  final void Function(Uri) _openLink;
   final PendingSignup _signup;
   Timer? _countdown;
 
@@ -83,8 +79,7 @@ final class EmailCodeController extends PageCubit<EmailCodeState> {
     if (state.verifying) return;
     emit(EmailCodeState(resendIn: state.resendIn, verifying: true));
     try {
-      final link = await _account.verifyCode(_signup, code.trim());
-      if (link != null) _openLink(link);
+      await _account.verifyCode(_signup, code.trim());
       emit(state.settled());
     } on AccountException catch (error) {
       emit(

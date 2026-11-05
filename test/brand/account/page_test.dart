@@ -83,7 +83,6 @@ void main() {
     }
     final controller = AccountController(
       account: account,
-      openLink: (_) {},
       subscriptions: SubscriptionLinkService(database: db),
       refreshSubscription: (_) async => const SubscriptionRefreshResult(
         status: SubscriptionUpdateResult.success,
@@ -105,7 +104,6 @@ void main() {
       accountTab: AccountPage(
         controller: controller,
         account: account,
-        openLink: (_) {},
         distribution: distribution,
       ),
       account: account,

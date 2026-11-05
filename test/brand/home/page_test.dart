@@ -140,7 +140,6 @@ void main() {
     addTearDown(controller.close);
     final accountController = AccountController(
       account: account ?? accountServiceFor(FakeAccountApi()),
-      openLink: (_) {},
       subscriptions: SubscriptionLinkService(database: db),
       refreshSubscription: (row) => refresh(row),
     );

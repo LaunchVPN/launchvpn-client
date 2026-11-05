@@ -41,6 +41,7 @@ void main() {
   AccountService account() => accountServiceFor(
     api,
     removeSubscription: (url) async => removed.add(url),
+    addSubscription: opened.add,
     browser: browser,
   );
 
@@ -50,7 +51,6 @@ void main() {
   }) {
     final controller = AccountController(
       account: account,
-      openLink: opened.add,
       subscriptions: SubscriptionLinkService(database: db),
       deviceLimit: deviceLimit ?? ValueNotifier(false),
       refreshSubscription: (row) async {
@@ -70,6 +70,7 @@ void main() {
     final service = account();
     await service.login(email: 'ivan@proton.me', password: 'pw');
     api.requests.clear();
+    opened.clear();
     return service;
   }
 

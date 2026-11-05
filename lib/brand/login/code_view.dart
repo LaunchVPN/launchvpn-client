@@ -21,13 +21,11 @@ class EmailCodeView extends StatefulWidget {
     super.key,
     required this.signup,
     required this.account,
-    required this.openLink,
     required this.onChangeEmail,
   });
 
   final PendingSignup signup;
   final AccountService account;
-  final void Function(Uri) openLink;
 
   /// «Не та почта? Изменить».
   final VoidCallback onChangeEmail;
@@ -39,7 +37,6 @@ class EmailCodeView extends StatefulWidget {
 class _EmailCodeViewState extends State<EmailCodeView> {
   late final _controller = EmailCodeController(
     account: widget.account,
-    openLink: widget.openLink,
     signup: widget.signup,
   );
   final _code = TextEditingController();

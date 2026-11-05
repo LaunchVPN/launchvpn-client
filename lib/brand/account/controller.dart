@@ -129,7 +129,6 @@ final class TelegramLinkFailed extends TelegramLinkOutcome {
 final class AccountController extends PageCubit<AccountState> {
   AccountController({
     required this._account,
-    required this._openLink,
     SubscriptionLinkService? subscriptions,
     SubscriptionRefresh? refreshSubscription,
     ValueListenable<bool>? deviceLimit,
@@ -151,9 +150,6 @@ final class AccountController extends PageCubit<AccountState> {
   }
 
   final AccountService _account;
-
-  /// The queue incoming links go through, which adds a subscription.
-  final void Function(Uri) _openLink;
 
   /// The subscription on this device.
   final SubscriptionLinkService _subscriptions;
@@ -219,7 +215,7 @@ final class AccountController extends PageCubit<AccountState> {
     // The stream keeps the row current, unlike [row] read before.
     if (link case final missing?
         when state.subscription == null && _placeFree) {
-      _openLink(missing.uri);
+      _account.addSubscription(missing);
     }
   }
 
@@ -306,10 +302,8 @@ final class AccountController extends PageCubit<AccountState> {
   /// What linking changed: the subscription, which got the days, and the
   /// account details, which now have Telegram.
   Future<void> _reloadLinked(TelegramLink linked) async {
-    if (linked.subscription case final link?) {
-      _openLink(link);
-    } else if (state.subscription case final row?) {
-      await _refreshQuietly(row);
+    if (!linked.replacedSubscription) {
+      if (state.subscription case final row?) await _refreshQuietly(row);
     }
     await Future.wait([_loadDetails(), loadDevices()]);
     if (!isClosed) {

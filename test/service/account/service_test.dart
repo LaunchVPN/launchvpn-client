@@ -14,13 +14,16 @@ const _configLink = 'https://sub.launch.tel/abc';
 
 void main() {
   late FakeAccountApi api;
+  late List<Uri> added;
 
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
     api = FakeAccountApi();
+    added = [];
   });
 
-  AccountService account() => accountServiceFor(api);
+  AccountService account() =>
+      accountServiceFor(api, addSubscription: added.add);
 
   test(
     'login keeps the session and hands over the subscription link',
@@ -29,15 +32,14 @@ void main() {
       api.subscription(_configLink);
       final service = account();
 
-      final link = await service.login(email: 'ivan@proton.me', password: 'pw');
+      await service.login(email: 'ivan@proton.me', password: 'pw');
 
       expect(service.signedIn.value, isTrue);
-      expect(
-        link,
+      expect(added, [
         Uri.parse(
           'launchvpn://sub/add?url=${Uri.encodeQueryComponent(_configLink)}',
         ),
-      );
+      ]);
       expect(api.requests.first.data, {
         'email': 'ivan@proton.me',
         'password': 'pw',
@@ -142,6 +144,7 @@ void main() {
       api.subscription(_configLink);
       final service = accountServiceFor(
         api,
+        addSubscription: added.add,
         removeSubscription: (url) async => removed.add(url),
       );
       await service.login(email: 'ivan@proton.me', password: 'pw');
@@ -302,9 +305,9 @@ void main() {
         api.subscription(_configLink);
         final service = account();
 
-        final link = await service.verifyCode(signup, '123456');
+        await service.verifyCode(signup, '123456');
 
-        expect(link, _subscriptionLink);
+        expect(added, [_subscriptionLink]);
         expect(service.signedIn.value, isTrue);
         expect(api.bodies(verifyPath), [
           {
@@ -394,8 +397,12 @@ void main() {
 
     setUp(() => browser = FakeBrowser());
 
-    AccountService telegramAccount() =>
-        accountServiceFor(api, browser: browser, random: _CountingRandom());
+    AccountService telegramAccount() => accountServiceFor(
+      api,
+      addSubscription: added.add,
+      browser: browser,
+      random: _CountingRandom(),
+    );
 
     test('opens the browser with an S256 challenge and redeems the code with '
         'its verifier', () async {
@@ -416,9 +423,9 @@ void main() {
         service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1')),
         isTrue,
       );
-      final link = await service.exchangeTelegramLogin(await attempt);
+      await service.exchangeTelegramLogin(await attempt);
 
-      expect(link, _subscriptionLink);
+      expect(added, [_subscriptionLink]);
       expect(service.signedIn.value, isTrue);
       expect(api.bodies('/api/app/auth/exchange'), [
         {
@@ -502,7 +509,12 @@ void main() {
 
       AccountService restartedAfter(Duration away) {
         final returned = now.add(away);
-        return accountServiceFor(api, browser: browser, now: () => returned);
+        return accountServiceFor(
+          api,
+          addSubscription: added.add,
+          browser: browser,
+          now: () => returned,
+        );
       }
 
       setUp(() => now = DateTime(2026, 11, 5, 12));
@@ -511,6 +523,7 @@ void main() {
       Future<void> leaveForTelegram() async {
         final first = accountServiceFor(
           api,
+          addSubscription: added.add,
           browser: browser,
           random: _CountingRandom(),
           now: () => now,
@@ -533,7 +546,8 @@ void main() {
           service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1')),
           isTrue,
         );
-        expect(await service.exchangeTelegramLogin(await code!), isNotNull);
+        await service.exchangeTelegramLogin(await code!);
+        expect(added, hasLength(1));
 
         expect(api.bodies('/api/app/auth/exchange').single, {
           'code': 'c1',
@@ -558,7 +572,12 @@ void main() {
       });
 
       test('a finished attempt is not restored', () async {
-        final first = accountServiceFor(api, browser: browser, now: () => now);
+        final first = accountServiceFor(
+          api,
+          addSubscription: added.add,
+          browser: browser,
+          now: () => now,
+        );
         final attempt = first.openTelegramLogin();
         await pumpEventQueue();
         first.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1'));
@@ -612,6 +631,7 @@ void main() {
       api.subscription(_configLink);
       final service = accountServiceFor(
         api,
+        addSubscription: added.add,
         browser: browser,
         random: _CountingRandom(),
         removeSubscription: (url) async => removed.add(url),
@@ -664,8 +684,9 @@ void main() {
       // access token, and a refused exchange burns the code.
       expect(api.authorizations('/api/app/auth/exchange'), ['Bearer a2']);
       expect(linked.addedDays, 30);
+      expect(linked.replacedSubscription, isTrue);
       expect(
-        linked.subscription,
+        added.last,
         Uri.parse(
           'launchvpn://sub/add?url=${Uri.encodeQueryComponent(telegramLink)}',
         ),
@@ -689,7 +710,7 @@ void main() {
       );
 
       expect(linked.addedDays, 0);
-      expect(linked.subscription, isNull);
+      expect(linked.replacedSubscription, isFalse);
       expect(removed, isEmpty);
     });
 
@@ -743,12 +764,9 @@ void main() {
       api.subscription(null);
       api.trialGrants(_configLink);
 
-      final link = await account().login(
-        email: 'ivan@proton.me',
-        password: 'pw',
-      );
+      await account().login(email: 'ivan@proton.me', password: 'pw');
 
-      expect(link, _subscriptionLink);
+      expect(added, [_subscriptionLink]);
       expect(api.bodies('/api/app/trial'), [
         {'hwid': 'device-hwid'},
       ]);
@@ -766,7 +784,8 @@ void main() {
       api.subscription(null);
       api.trialGrants(_configLink);
 
-      expect(await account().verifyCode(signup, '123456'), isNull);
+      await account().verifyCode(signup, '123456');
+      expect(added, isEmpty);
       expect(api.bodies('/api/app/trial'), isEmpty);
     });
 
@@ -778,10 +797,8 @@ void main() {
           api.subscription(null);
           api.trialGrants(_configLink);
 
-          expect(
-            await account().verifyCode(signup, '123456'),
-            _subscriptionLink,
-          );
+          await account().verifyCode(signup, '123456');
+          expect(added, [_subscriptionLink]);
           expect(api.bodies('/api/app/trial'), hasLength(1));
         },
       );
@@ -793,9 +810,9 @@ void main() {
       api.refuse('/api/app/trial', 403, 'trial_used');
       final service = account();
 
-      final link = await service.verifyCode(signup, '123456');
+      await service.verifyCode(signup, '123456');
 
-      expect(link, isNull);
+      expect(added, isEmpty);
       expect(service.signedIn.value, isTrue);
       expect(service.subscriptionMissing, isTrue);
       expect(api.bodies('/api/app/trial'), hasLength(1));

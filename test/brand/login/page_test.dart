@@ -20,12 +20,17 @@ void main() {
   late List<Uri> opened;
   late FakeBrowser browser;
   late StreamController<Uri> links;
+  late ShareService share;
 
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
     api = FakeAccountApi();
     browser = FakeBrowser();
-    account = accountServiceFor(api, browser: browser);
+    account = accountServiceFor(
+      api,
+      browser: browser,
+      addSubscription: (link) => share.addAppLink(link),
+    );
     opened = [];
   });
 
@@ -40,7 +45,7 @@ void main() {
       ..devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
     links = StreamController<Uri>.broadcast(sync: true);
-    final share = ShareService.forTesting(
+    share = ShareService.forTesting(
       appLinks: links.stream,
       receiveWidgetUri: (_) => false,
     );
@@ -270,9 +275,19 @@ void main() {
       /// In the test's zone: a restored attempt completes in the zone it was
       /// restored in.
       Future<void> restartedDuringSignIn(WidgetTester tester) async {
-        unawaited(accountServiceFor(api, browser: browser).openTelegramLogin());
+        unawaited(
+          accountServiceFor(
+            api,
+            browser: browser,
+            addSubscription: (link) => share.addAppLink(link),
+          ).openTelegramLogin(),
+        );
         await tester.pump();
-        account = accountServiceFor(api, browser: browser);
+        account = accountServiceFor(
+          api,
+          browser: browser,
+          addSubscription: (link) => share.addAppLink(link),
+        );
         await account.restore();
       }
 

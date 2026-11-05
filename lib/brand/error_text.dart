@@ -8,8 +8,6 @@ class ErrorText extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    liveRegion: true,
-    child: Text(message, style: BrandText.error),
-  );
+  Widget build(BuildContext context) =>
+      Semantics(liveRegion: true, child: Text(message, style: BrandText.error));
 }

@@ -13,6 +13,7 @@ import 'package:onexray/service/account/session_store.dart';
 import 'package:onexray/service/account/telegram_auth.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/settings/language/brand_language.dart';
+import 'package:onexray/service/shared/share/service.dart';
 
 /// The person's LaunchVPN account on this device: its session and the
 /// requests that carry it.
@@ -26,6 +27,7 @@ final class AccountService {
     AccountSessionStore? store,
     Future<DeviceIdentity?> Function()? readDevice,
     Future<void> Function(String url)? removeSubscription,
+    void Function(Uri link)? addSubscription,
     String Function()? language,
     TelegramBrowserAuth? telegram,
   }) : telegram = telegram ?? TelegramBrowserAuth(),
@@ -34,7 +36,8 @@ final class AccountService {
        _readDevice = readDevice ?? AppHostApi().deviceIdentity,
        _removeSubscription =
            removeSubscription ??
-           ((url) => SubscriptionLinkService().remove(url)) {
+           ((url) => SubscriptionLinkService().remove(url)),
+       _addSubscription = addSubscription ?? ShareService().addAppLink {
     _dio.interceptors.add(_BearerInterceptor(this));
   }
 
@@ -56,6 +59,10 @@ final class AccountService {
   final AccountSessionStore _store;
   final Future<DeviceIdentity?> Function() _readDevice;
   final Future<void> Function(String url) _removeSubscription;
+
+  /// The queue system links take, so the account's subscription is
+  /// confirmed, added and reported as one from a link is.
+  final void Function(Uri link) _addSubscription;
 
   /// The App's language, `ru` or `en`, for the emails the backend sends.
   final String Function() _language;
@@ -87,12 +94,11 @@ final class AccountService {
     _signedIn.value = _tokens != null;
   }
 
-  /// Signs in by email and returns the account's subscription as a
-  /// `launchvpn://sub/add` link, or null when it has none or could not be
-  /// read. Throws [AccountException] when the sign-in itself fails; for an
-  /// unconfirmed email it carries the [PendingSignup] the backend mailed a
-  /// code for.
-  Future<Uri?> login({required String email, required String password}) async {
+  /// Signs in by email and adds the account's subscription, unless it has
+  /// none or it could not be read. Throws [AccountException] when the
+  /// sign-in itself fails; for an unconfirmed email it carries the
+  /// [PendingSignup] the backend mailed a code for.
+  Future<void> login({required String email, required String password}) async {
     final device = await _device();
     return _signIn(
       await _send(
@@ -140,9 +146,9 @@ final class AccountService {
     );
   }
 
-  /// Confirms [signup] with the mailed [code], signs in and returns the
+  /// Confirms [signup] with the mailed [code], signs in and adds the
   /// account's subscription as [login] does.
-  Future<Uri?> verifyCode(PendingSignup signup, String code) async {
+  Future<void> verifyCode(PendingSignup signup, String code) async {
     final device = await _device();
     return _signIn(
       await _send(
@@ -185,9 +191,9 @@ final class AccountService {
         ),
   );
 
-  /// Signs in with the code from [openTelegramLogin] and returns the
-  /// account's subscription as [login] does.
-  Future<Uri?> exchangeTelegramLogin(TelegramCode code) async =>
+  /// Signs in with the code from [openTelegramLogin] and adds the account's
+  /// subscription as [login] does.
+  Future<void> exchangeTelegramLogin(TelegramCode code) async =>
       _signIn(await _exchange(code));
 
   /// Opens Telegram's page for linking it to the signed-in account and
@@ -215,7 +221,8 @@ final class AccountService {
 
   /// Links Telegram with the code from [openTelegramLink]. The backend merges
   /// the two accounts and answers with the survivor's session, which replaces
-  /// this one, and the account's subscription replaces the previous one.
+  /// this one, and the account's subscription, when it changed, replaces the
+  /// previous one on the device.
   /// Throws [AccountException], [AccountError.telegramTaken] when that
   /// Telegram has an account with an email of its own.
   Future<TelegramLink> exchangeTelegramLink(TelegramCode code) async {
@@ -229,9 +236,7 @@ final class AccountService {
     }
     final answer = await _exchange(code, options: _bearerOnce);
     await _keep(_tokenPair(answer));
-    final current = await _readSubscription(
-      () async => (await accountSubscription()).link,
-    );
+    final current = await _readSubscription(_subscriptionLink);
     final changed = current != null && current.url != previous;
     if (changed && previous != null) {
       try {
@@ -240,21 +245,23 @@ final class AccountService {
         ygLogger('remove account subscription failed (${error.runtimeType})');
       }
     }
+    if (changed) addSubscription(current);
     return TelegramLink(
       addedDays: switch (answer['addedDays']) {
         final int days when days > 0 => days,
         _ => 0,
       },
-      subscription: changed ? current.uri : null,
+      replacedSubscription: changed,
     );
   }
 
   /// Keeps the session from a token pair answer, then reads the account's
-  /// subscription. An account without one claims the trial, which the
-  /// backend refuses to one that had it, unless the answer says the trial
-  /// already started. Only the code from the email says so; a login cannot
-  /// tell an account that never had a subscription from an ended one.
-  Future<Uri?> _signIn(Map<String, Object?> answer) async {
+  /// subscription and adds it once signed in. An account without one claims
+  /// the trial, which the backend refuses to one that had it, unless the
+  /// answer says the trial already started. Only the code from the email
+  /// says so; a login cannot tell an account that never had a subscription
+  /// from an ended one.
+  Future<void> _signIn(Map<String, Object?> answer) async {
     await _keep(_tokenPair(answer));
     _unfinishedDeletion = false;
     final trialStarted = answer['trialGranted'] == true;
@@ -264,7 +271,7 @@ final class AccountService {
           (trialStarted ? null : await _claimTrial()),
     );
     _signedIn.value = true;
-    return link;
+    if (link != null) addSubscription(link);
   }
 
   /// Signs in, or links Telegram, with the code from the browser.
@@ -297,7 +304,7 @@ final class AccountService {
     }
   }
 
-  Future<Uri?> _claimTrial() async {
+  Future<SubscriptionDeepLink?> _claimTrial() async {
     final device = await _device();
     try {
       await _send(
@@ -335,8 +342,12 @@ final class AccountService {
     return AccountSubscription(link: link, maxDevices: maxDevices);
   }
 
-  Future<Uri?> _subscriptionLink() async =>
-      (await accountSubscription()).link?.uri;
+  Future<SubscriptionDeepLink?> _subscriptionLink() async =>
+      (await accountSubscription()).link;
+
+  /// Sends the account's subscription [link] down the queue system links
+  /// take.
+  void addSubscription(SubscriptionDeepLink link) => _addSubscription(link.uri);
 
   /// What the backend knows about the account.
   Future<AccountDetails> details() async => AccountDetails.fromJson(

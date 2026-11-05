@@ -33,7 +33,6 @@ class AccountPage extends StatefulWidget {
     super.key,
     required this.controller,
     required this.account,
-    required this.openLink,
     this.distribution = AppDistribution.current,
   });
 
@@ -41,7 +40,6 @@ class AccountPage extends StatefulWidget {
 
   /// For «Вход», which «Войти» opens over the tabs.
   final AccountService account;
-  final void Function(Uri) openLink;
 
   /// Only an APK build renews on the site: a store takes no payment outside
   /// its own.
@@ -71,7 +69,6 @@ class _AccountPageState extends State<AccountPage> {
   Future<void> _openLogin(LoginMode mode) => LoginPage.showOverTabs(
     context,
     account: widget.account,
-    openLink: widget.openLink,
     mode: mode,
     signedIn: _controller.stream.map((state) => state.signedIn),
   );

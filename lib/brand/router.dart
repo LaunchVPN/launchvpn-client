@@ -37,11 +37,7 @@ GoRouter createBrandRouter({
   late final shared = controller ?? HomeController();
   // «Аккаунт» and Home's «Лимит устройств» share the account's devices.
   late final session = account ?? AccountService.instance;
-  late final addLink = (shareService ?? ShareService()).addAppLink;
-  late final accountController = AccountController(
-    account: session,
-    openLink: addLink,
-  );
+  late final accountController = AccountController(account: session);
   return GoRouter(
     initialLocation: BrandRoutes.home,
     observers: [modals],
@@ -79,7 +75,6 @@ GoRouter createBrandRouter({
                     AccountPage(
                       controller: accountController,
                       account: session,
-                      openLink: addLink,
                     ),
               ),
             ],

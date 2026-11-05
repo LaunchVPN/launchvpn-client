@@ -19,38 +19,39 @@ import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
+import 'package:onexray/service/shared/share/service.dart';
 
 /// «Вход», in place of the tabs while the device has neither a session nor a
 /// subscription. It creates an account, as it opens by default, or signs in;
 /// a new account, or an unconfirmed email, continues to «Проверьте почту» on
-/// the same page. On Android it also signs in with Telegram. Sign-in, the
-/// code and a pasted link hand their subscription to [openLink], the queue
-/// incoming links go through.
+/// the same page. On Android it also signs in with Telegram. A pasted link
+/// goes to [links], the queue incoming links go through.
 class LoginPage extends StatefulWidget {
   const LoginPage({
     super.key,
     required this.account,
-    required this.openLink,
     this.mode = LoginMode.create,
+    this.links,
   });
 
   final AccountService account;
-  final void Function(Uri) openLink;
   final LoginMode mode;
+
+  /// [ShareService]'s own when null.
+  final ShareService? links;
 
   /// «Вход» over the tabs in [mode], closed by the sign-in it exists for:
   /// the first true from [signedIn].
   static Future<void> showOverTabs(
     BuildContext context, {
     required AccountService account,
-    required void Function(Uri) openLink,
     required LoginMode mode,
     required Stream<bool> signedIn,
+    ShareService? links,
   }) async {
     final navigator = Navigator.of(context, rootNavigator: true);
     final route = MaterialPageRoute<void>(
-      builder: (_) =>
-          LoginPage(account: account, openLink: openLink, mode: mode),
+      builder: (_) => LoginPage(account: account, mode: mode, links: links),
     );
     final closing = signedIn.where((value) => value).listen((_) {
       if (route.isActive) navigator.removeRoute(route);
@@ -69,7 +70,6 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   late final _login = LoginController(
     account: widget.account,
-    openLink: widget.openLink,
     mode: widget.mode,
   );
   final _email = TextEditingController();
@@ -108,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
       );
       return;
     }
-    widget.openLink(link);
+    (widget.links ?? ShareService()).addAppLink(link);
   }
 
   @override
@@ -157,7 +157,6 @@ class _LoginPageState extends State<LoginPage> {
                             key: ValueKey(signup),
                             signup: signup,
                             account: widget.account,
-                            openLink: widget.openLink,
                             onChangeEmail: _login.changeEmail,
                           ),
                       ],
