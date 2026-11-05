@@ -126,6 +126,22 @@ void main() {
     await settle(tester);
   }
 
+  HomeController homeController({
+    ConnectionPlatform platform = ConnectionPlatform.ios,
+    List<AndroidAppInfo> apps = const [],
+  }) {
+    final home = HomeController(
+      database: db,
+      coordinator: coordinator,
+      pingLocations: (_, {isCancelled}) async {},
+      dismissAnnounce: db.subscriptionDao.dismissAnnounce,
+      platform: platform,
+      installedApps: () async => apps,
+    );
+    addTearDown(home.close);
+    return home;
+  }
+
   /// On a Russian phone unless [system] says otherwise.
   Future<void> pumpApp(
     WidgetTester tester, {
@@ -171,15 +187,7 @@ void main() {
       );
     });
     addTearDown(coordinator.dispose);
-    controller = HomeController(
-      database: db,
-      coordinator: coordinator,
-      pingLocations: (_, {isCancelled}) async {},
-      dismissAnnounce: db.subscriptionDao.dismissAnnounce,
-      platform: platform,
-      installedApps: () async => apps,
-    );
-    addTearDown(controller.close);
+    controller = homeController(platform: platform, apps: apps);
     await pumpRouter(tester);
   }
 
@@ -645,6 +653,7 @@ void main() {
       expect(await stored(tester), isTrue);
 
       await tester.pumpWidget(const SizedBox());
+      controller = homeController();
       await pumpRouter(tester);
       await openTab(tester, 2);
       expect(toggled(tester), Tristate.isTrue);
