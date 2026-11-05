@@ -17,6 +17,7 @@ import 'package:onexray/brand/theme.dart';
 import 'package:onexray/brand/toast.dart';
 import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/distribution.dart';
+import 'package:onexray/core/tools/traffic_format.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
@@ -343,15 +344,8 @@ class _AccountPageState extends State<AccountPage> {
 
 /// [bytes] in the largest binary unit that keeps it at or above one.
 String _bytes(AppLocalizations l, int bytes) {
-  const units = ['b', 'kb', 'mb', 'gb', 'tb'];
-  var value = bytes.toDouble();
-  var unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit++;
-  }
-  final number = NumberFormat(unit == 0 ? '0' : '0.#', l.localeName);
-  return l.accountBytes(number.format(value), units[unit]);
+  final (:number, :unit) = localizedTraffic(bytes, l.localeName);
+  return l.accountBytes(number, unit.name);
 }
 
 /// How much of a limited plan the period used.
