@@ -18,11 +18,11 @@ import 'package:onexray/brand/settings/vpn_apps_page.dart';
 import 'package:onexray/brand/permission/vpn_permission_page.dart';
 import 'package:onexray/brand/state_hero.dart';
 import 'package:onexray/brand/theme.dart';
+import 'package:onexray/brand/toast.dart';
 import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/distribution.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
-import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/connect/preset.dart';
@@ -106,12 +106,13 @@ class _HomePageState extends State<HomePage> {
     final result = await _controller.refreshStatus();
     if (result == null || result.superseded || !mounted) return;
     if (!result.success) {
-      ContextAlert.showToast(
+      showBrandToast(
         context,
         subscriptionFailureMessage(l, result.status, error: result.error),
+        kind: ToastKind.error,
       );
     } else if (_controller.state.expired) {
-      ContextAlert.showToast(context, l.homeExpiredNotRenewed);
+      showBrandToast(context, l.homeExpiredNotRenewed);
     }
   }
 

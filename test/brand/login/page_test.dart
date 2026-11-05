@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/app.dart';
 import 'package:onexray/brand/router.dart';
@@ -251,6 +252,7 @@ void main() {
 
       await tester.tap(find.text('У меня есть ссылка подписки'));
       await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
       await tester.enterText(find.byType(TextField).last, _configLink);
       await tester.tap(find.text('Добавить'));
       await tester.pumpAndSettle();
@@ -260,6 +262,22 @@ void main() {
           'launchvpn://sub/add?url=${Uri.encodeQueryComponent(_configLink)}',
         ),
       ]);
+    });
+
+    testWidgets('a pasted text that is no link says so as an error', (
+      tester,
+    ) async {
+      await pumpApp(tester, hasSubscription: false);
+
+      await tester.tap(find.text('У меня есть ссылка подписки'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'привет');
+      await tester.tap(find.text('Добавить'));
+      await tester.pump();
+
+      expect(find.text('Эта ссылка не подходит для LaunchVPN'), findsOneWidget);
+      expect(find.byIcon(LucideIcons.triangleAlert), findsOneWidget);
+      expect(opened, isEmpty);
     });
   });
 

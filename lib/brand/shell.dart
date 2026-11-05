@@ -70,6 +70,8 @@ class _BrandShellState extends State<BrandShell> {
   bool _attached = false;
   bool _drainScheduled = false;
 
+  static const _tabBarHeight = 80.0;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -102,7 +104,7 @@ class _BrandShellState extends State<BrandShell> {
     final reports = CrashReports.instance;
     try {
       if (!await reports.noticeDue || !mounted) return;
-      showReadingToast(
+      showBrandToast(
         context,
         AppLocalizations.of(context)!.crashReportsNotice,
         duration: _noticeTime,
@@ -273,26 +275,32 @@ class _BrandShellState extends State<BrandShell> {
 
   Widget _tabs(AppLocalizations l) {
     final shell = widget.navigationShell;
-    return Scaffold(
-      body: shell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: shell.currentIndex,
-        onDestinationSelected: (index) =>
-            shell.goBranch(index, initialLocation: index == shell.currentIndex),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(LucideIcons.house),
-            label: l.homeTab,
+    return ToastArea(
+      bottom: _tabBarHeight,
+      child: Scaffold(
+        body: shell,
+        bottomNavigationBar: NavigationBar(
+          height: _tabBarHeight,
+          selectedIndex: shell.currentIndex,
+          onDestinationSelected: (index) => shell.goBranch(
+            index,
+            initialLocation: index == shell.currentIndex,
           ),
-          NavigationDestination(
-            icon: const Icon(LucideIcons.user),
-            label: l.accountTab,
-          ),
-          NavigationDestination(
-            icon: const Icon(LucideIcons.settings2),
-            label: l.prototypeSettings,
-          ),
-        ],
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(LucideIcons.house),
+              label: l.homeTab,
+            ),
+            NavigationDestination(
+              icon: const Icon(LucideIcons.user),
+              label: l.accountTab,
+            ),
+            NavigationDestination(
+              icon: const Icon(LucideIcons.settings2),
+              label: l.prototypeSettings,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -12,9 +12,10 @@ import 'package:onexray/brand/login/footer_link.dart';
 import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/shader_backdrop.dart';
 import 'package:onexray/brand/text_field.dart';
+import 'package:onexray/brand/sheet.dart';
 import 'package:onexray/brand/theme.dart';
+import 'package:onexray/brand/toast.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
-import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/model.dart';
@@ -96,17 +97,20 @@ class _LoginPageState extends State<LoginPage> {
       _password.text.isNotEmpty;
 
   Future<void> _addLink() async {
-    final text = await showDialog<String>(
-      context: context,
-      builder: (_) => const _SubscriptionLinkDialog(),
+    final l = AppLocalizations.of(context)!;
+    final text = await PromptSheet.show(
+      context,
+      title: l.loginLinkTitle,
+      body: l.loginLinkBody,
+      icon: LucideIcons.link,
+      hint: l.loginLinkHint,
+      action: l.loginLinkAdd,
+      keyboardType: TextInputType.url,
     );
     if (text == null || !mounted) return;
     final link = SubscriptionDeepLink.pasted(text);
     if (link == null) {
-      ContextAlert.showToast(
-        context,
-        AppLocalizations.of(context)!.subscriptionLinkInvalid,
-      );
+      showBrandToast(context, l.subscriptionLinkInvalid, kind: ToastKind.error);
       return;
     }
     (widget.links ?? ShareService()).addAppLink(link);
@@ -312,47 +316,3 @@ class _OrDivider extends StatelessWidget {
 }
 
 /// Asks for a subscription link and pops with the text, or null.
-class _SubscriptionLinkDialog extends StatefulWidget {
-  const _SubscriptionLinkDialog();
-
-  @override
-  State<_SubscriptionLinkDialog> createState() =>
-      _SubscriptionLinkDialogState();
-}
-
-class _SubscriptionLinkDialogState extends State<_SubscriptionLinkDialog> {
-  final _link = TextEditingController();
-
-  @override
-  void dispose() {
-    _link.dispose();
-    super.dispose();
-  }
-
-  void _add() => Navigator.of(context).pop(_link.text);
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    return AlertDialog(
-      backgroundColor: BrandColors.surface,
-      title: Text(l.loginLinkTitle, style: BrandText.cardTitle),
-      content: BrandTextField(
-        icon: LucideIcons.link,
-        hint: l.loginLinkHint,
-        controller: _link,
-        autofocus: true,
-        keyboardType: TextInputType.url,
-        textInputAction: TextInputAction.done,
-        onSubmitted: (_) => _add(),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.buttonCancel),
-        ),
-        TextButton(onPressed: _add, child: Text(l.loginLinkAdd)),
-      ],
-    );
-  }
-}

@@ -19,7 +19,6 @@ import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/distribution.dart';
 import 'package:onexray/core/tools/traffic_format.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
-import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/model.dart';
@@ -106,7 +105,7 @@ class _AccountPageState extends State<AccountPage> {
           await _openLogin(LoginMode.signIn);
         }
       case AccountDeletion.failed:
-        ContextAlert.showToast(context, l.accountDeleteFailed);
+        showBrandToast(context, l.accountDeleteFailed, kind: ToastKind.error);
     }
   }
 
@@ -129,11 +128,12 @@ class _AccountPageState extends State<AccountPage> {
     final l = AppLocalizations.of(context)!;
     switch (outcome) {
       case TelegramLinked(:final addedDays):
-        showReadingToast(
+        showBrandToast(
           context,
           addedDays > 0
               ? l.accountTelegramLinkedDays(addedDays)
               : l.accountTelegramLinked,
+          kind: ToastKind.success,
         );
       case TelegramLinkFailed(error: AccountError.cancelled):
         break;
@@ -145,7 +145,11 @@ class _AccountPageState extends State<AccountPage> {
           action: l.accountTelegramTakenOk,
         );
       case TelegramLinkFailed():
-        ContextAlert.showToast(context, l.accountLinkTelegramFailed);
+        showBrandToast(
+          context,
+          l.accountLinkTelegramFailed,
+          kind: ToastKind.error,
+        );
     }
   }
 

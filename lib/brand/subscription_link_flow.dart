@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:onexray/brand/sheet.dart';
+import 'package:onexray/brand/toast.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
-import 'package:onexray/pages/shared/alert.dart';
-import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/servers/subscription/failure.dart';
 import 'package:onexray/service/servers/subscription/model.dart';
@@ -20,7 +20,7 @@ Future<void> openSubscriptionLink(
   final l = AppLocalizations.of(context)!;
   final link = SubscriptionDeepLink.parse(uri);
   if (link == null) {
-    ContextAlert.showToast(context, l.subscriptionLinkInvalid);
+    showBrandToast(context, l.subscriptionLinkInvalid, kind: ToastKind.error);
     return;
   }
   final subscriptions = service ?? SubscriptionLinkService();
@@ -29,63 +29,40 @@ Future<void> openSubscriptionLink(
     replaces = await subscriptions.replacesAnother(link);
   } catch (error) {
     if (!context.mounted) return;
-    ContextAlert.showToast(
+    showBrandToast(
       context,
       subscriptionFailureMessage(
         l,
         SubscriptionUpdateResult.writeFailed,
         error: error,
       ),
+      kind: ToastKind.error,
     );
     return;
   }
   if (!context.mounted) return;
   if (replaces) {
-    final confirmed = await ContextAlert.showConfirmDialog(
+    final confirmed = await ConfirmSheet.show(
       context,
       title: l.subscriptionLinkReplaceTitle,
-      content: l.subscriptionLinkReplaceMessage,
-      confirmLabel: l.subscriptionLinkReplaceConfirm,
+      body: l.subscriptionLinkReplaceMessage,
+      action: l.subscriptionLinkReplaceConfirm,
     );
     if (!confirmed || !context.mounted) return;
   }
 
-  final navigator = Navigator.of(context);
-  final progress = DialogRoute<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) =>
-        _SubscriptionLinkProgress(message: l.subscriptionLinkAdding),
-  );
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final progress = ProgressSheet.route(context, l.subscriptionLinkAdding);
   unawaited(navigator.push(progress));
   final result = await subscriptions.apply(link);
   // Another dialog may have opened above it, so this cannot pop the top route.
   if (progress.isActive) navigator.removeRoute(progress);
   if (!context.mounted) return;
-  ContextAlert.showToast(
+  showBrandToast(
     context,
     result.success
         ? l.subscriptionLinkAdded
         : subscriptionFailureMessage(l, result.status, error: result.error),
-  );
-}
-
-class _SubscriptionLinkProgress extends StatelessWidget {
-  const _SubscriptionLinkProgress({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: false,
-    child: AlertDialog(
-      content: Row(
-        children: [
-          const ButtonProgressIndicator(size: 20),
-          const SizedBox(width: 16),
-          Expanded(child: Text(message)),
-        ],
-      ),
-    ),
+    kind: result.success ? ToastKind.success : ToastKind.error,
   );
 }
