@@ -18,6 +18,7 @@ final class AccountState {
     this.profile,
     this.devices,
     this.inactive = false,
+    this.refreshing = false,
   });
 
   final bool signedIn;
@@ -34,6 +35,9 @@ final class AccountState {
   /// The account has no active subscription.
   final bool inactive;
 
+  /// [AccountController.refresh] is running.
+  final bool refreshing;
+
   /// Days and traffic as the panel last reported them.
   SubscriptionUserInfo? get usage => switch (subscription) {
     final row? => SubscriptionUserInfo.fromSubscription(row),
@@ -46,12 +50,14 @@ final class AccountState {
     AccountProfile? profile,
     AccountDevices? devices,
     bool? inactive,
+    bool? refreshing,
   }) => AccountState(
     signedIn: signedIn ?? this.signedIn,
     subscription: subscription == null ? this.subscription : subscription(),
     profile: profile ?? this.profile,
     devices: devices ?? this.devices,
     inactive: inactive ?? this.inactive,
+    refreshing: refreshing ?? this.refreshing,
   );
 }
 
@@ -61,10 +67,9 @@ final class AccountController extends PageCubit<AccountState> {
   AccountController({
     required this._account,
     required this._openLink,
-    AppDatabase? database,
+    this._database,
     SubscriptionRefresh? refreshSubscription,
-  }) : _db = database ?? AppDatabase(),
-       _refreshSubscription =
+  }) : _refreshSubscription =
            refreshSubscription ??
            SubscriptionService().refreshSubscriptionResult,
        super(AccountState(signedIn: _account.signedIn.value)) {
@@ -75,9 +80,12 @@ final class AccountController extends PageCubit<AccountState> {
 
   /// The queue incoming links go through, which adds a subscription.
   final void Function(Uri) _openLink;
-  final AppDatabase _db;
+  final AppDatabase? _database;
   final SubscriptionRefresh _refreshSubscription;
   StreamSubscription<SubscriptionData?>? _rows;
+
+  // Opened on first use: Home builds this controller before it needs it.
+  AppDatabase get _db => _database ?? AppDatabase();
 
   void _sessionChanged() {
     final signedIn = _account.signedIn.value;
@@ -90,6 +98,16 @@ final class AccountController extends PageCubit<AccountState> {
   /// Loads everything the tab shows. The subscription is refreshed here too,
   /// and one the account has but the device lacks goes to the add path.
   Future<void> refresh() async {
+    if (state.refreshing) return;
+    emit(state.copyWith(refreshing: true));
+    try {
+      await _refresh();
+    } finally {
+      emit(state.copyWith(refreshing: false));
+    }
+  }
+
+  Future<void> _refresh() async {
     _rows ??= _db.subscriptionDao.allRowsStream
         .map((rows) => rows.lastOrNull)
         .listen(
@@ -107,14 +125,20 @@ final class AccountController extends PageCubit<AccountState> {
     }
     await Future.wait([
       _load(_account.profile, (profile) => state.copyWith(profile: profile)),
-      _load(_account.devices, (devices) => state.copyWith(devices: devices)),
+      loadDevices(),
       _load(_account.accountSubscription, (link) {
-        if (link != null && row == null) _openLink(link);
+        // The stream keeps the row current, unlike [row] read before.
+        if (link != null && state.subscription == null) _openLink(link);
         return state.copyWith(inactive: link == null);
       }),
       if (row != null) _refreshQuietly(row),
     ]);
   }
+
+  /// The account's devices alone, as «Лимит устройств» lists them.
+  Future<void> loadDevices() => state.signedIn
+      ? _load(_account.devices, (devices) => state.copyWith(devices: devices))
+      : Future.value();
 
   /// Takes [device] off the subscription. False when the backend refused.
   Future<bool> removeDevice(AccountDevice device) async {

@@ -207,6 +207,10 @@ class _BrandShellState extends State<BrandShell> {
             label: l.homeTab,
           ),
           NavigationDestination(
+            icon: const Icon(LucideIcons.user),
+            label: l.accountTab,
+          ),
+          NavigationDestination(
             icon: const Icon(LucideIcons.settings2),
             label: l.prototypeSettings,
           ),

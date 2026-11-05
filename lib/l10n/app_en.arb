@@ -3253,5 +3253,66 @@
   "loginErrorUnexpected": "Couldn't sign in. Try again later",
   "loginLinkTitle": "Subscription link",
   "loginLinkHint": "The link from the bot or the site",
-  "loginLinkAdd": "Add"
+  "loginLinkAdd": "Add",
+  "accountTab": "Account",
+  "accountUntil": "until {date}",
+  "@accountUntil": {
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "accountTrafficUnlimited": "{used} this period · no limit",
+  "@accountTrafficUnlimited": {
+    "placeholders": {"used": {"type": "String"}}
+  },
+  "accountTrafficLimited": "{used} this period · of {limit}",
+  "@accountTrafficLimited": {
+    "placeholders": {"used": {"type": "String"}, "limit": {"type": "String"}}
+  },
+  "accountBytes": "{value} {unit, select, b {B} kb {KB} mb {MB} gb {GB} other {TB}}",
+  "@accountBytes": {
+    "placeholders": {"value": {"type": "String"}, "unit": {"type": "String"}}
+  },
+  "accountRenew": "Renew subscription",
+  "accountDevices": "Devices · {count} of {max}",
+  "@accountDevices": {
+    "placeholders": {"count": {"type": "int"}, "max": {"type": "int"}}
+  },
+  "accountDevicesUnlimited": "Devices · {count}",
+  "@accountDevicesUnlimited": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "accountDevice": "Device",
+  "accountThisDevice": "this device",
+  "accountSeenToday": "today",
+  "accountSeenDays": "{days, plural, one {{days} day ago} other {{days} days ago}}",
+  "@accountSeenDays": {
+    "placeholders": {"days": {"type": "int"}}
+  },
+  "accountSeenWeeks": "{weeks, plural, one {a week ago} other {{weeks} weeks ago}}",
+  "@accountSeenWeeks": {
+    "placeholders": {"weeks": {"type": "int"}}
+  },
+  "accountSeenMonths": "{months, plural, one {a month ago} other {{months} months ago}}",
+  "@accountSeenMonths": {
+    "placeholders": {"months": {"type": "int"}}
+  },
+  "accountDeviceOnline": "online {seen}",
+  "@accountDeviceOnline": {
+    "placeholders": {"seen": {"type": "String"}}
+  },
+  "accountDeviceSheetBody": "{details}. Once removed, the device loses VPN access and its place on the subscription is freed.",
+  "@accountDeviceSheetBody": {
+    "placeholders": {"details": {"type": "String"}}
+  },
+  "accountDeviceRemove": "Remove device",
+  "accountDeviceRemoved": "{name} removed, its place is free",
+  "@accountDeviceRemoved": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "accountDeviceRemoveFailed": "Couldn't remove the device. Try again",
+  "accountTelegramLinked": "Telegram linked",
+  "accountEmailSignIn": "Signs in with email",
+  "accountSupport": "Support",
+  "accountLogout": "Sign out",
+  "accountLogoutTitle": "Sign out?",
+  "accountLogoutBody": "Your subscription stays. You can sign in again at any time."
 }

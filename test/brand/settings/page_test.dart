@@ -183,7 +183,7 @@ void main() {
   testWidgets('the mode row follows a choice made on Home', (tester) async {
     await pumpApp(tester);
 
-    await openTab(tester, 1);
+    await openTab(tester, 2);
     expect(find.text('Режим'), findsOneWidget);
     expect(find.text('Умный'), findsOneWidget);
 
@@ -191,7 +191,7 @@ void main() {
     await tester.tap(find.text('Всё через VPN'));
     await settle(tester);
 
-    await openTab(tester, 1);
+    await openTab(tester, 2);
     expect(find.text('Всё через VPN'), findsOneWidget);
     expect(find.text('Умный'), findsNothing);
   });
@@ -208,7 +208,7 @@ void main() {
 
     testWidgets('is off until the user turns it on', (tester) async {
       await pumpApp(tester);
-      await openTab(tester, 1);
+      await openTab(tester, 2);
 
       expect(toggled(tester), Tristate.isFalse);
     });
@@ -217,7 +217,7 @@ void main() {
       tester,
     ) async {
       await pumpApp(tester);
-      await openTab(tester, 1);
+      await openTab(tester, 2);
 
       await tester.tap(find.text(title));
       await settle(tester);
@@ -238,7 +238,7 @@ void main() {
     ) async {
       store.failReads = true;
       await pumpApp(tester);
-      await openTab(tester, 1);
+      await openTab(tester, 2);
       expect(toggled(tester), Tristate.isFalse);
 
       await tester.tap(find.text(title));
@@ -263,13 +263,13 @@ void main() {
 
     testWidgets('is remembered for the next launch', (tester) async {
       await pumpApp(tester);
-      await openTab(tester, 1);
+      await openTab(tester, 2);
       await tester.tap(find.text(title));
       await settle(tester);
 
       await tester.pumpWidget(const SizedBox());
       await pumpRouter(tester);
-      await openTab(tester, 1);
+      await openTab(tester, 2);
 
       expect(toggled(tester), Tristate.isTrue);
     });
@@ -282,7 +282,7 @@ void main() {
 
     testWidgets('are on by default, under App', (tester) async {
       await pumpApp(tester);
-      await openTab(tester, 1);
+      await openTab(tester, 2);
 
       expect(find.text('ПРИЛОЖЕНИЕ'), findsOneWidget);
       expect(find.text('За 3 дня и за 1 день'), findsOneWidget);
@@ -291,7 +291,7 @@ void main() {
 
     testWidgets('a tap turns them off and on, and it is saved', (tester) async {
       await pumpApp(tester);
-      await openTab(tester, 1);
+      await openTab(tester, 2);
 
       await tester.tap(find.text(title));
       await settle(tester);
@@ -308,7 +308,7 @@ void main() {
         'allows them in the system settings', (tester) async {
       await pumpApp(tester);
       notifications.allowed = false;
-      await openTab(tester, 1);
+      await openTab(tester, 2);
       expect(toggled(tester), Tristate.isFalse);
 
       notifications.prompt = Completer();
@@ -332,7 +332,7 @@ void main() {
 
   group('the preset screen', () {
     Future<void> openPresets(WidgetTester tester) async {
-      await openTab(tester, 1);
+      await openTab(tester, 2);
       await tester.tap(find.text('Режим'));
       await settle(tester);
     }
@@ -462,7 +462,7 @@ void main() {
 
     Future<void> pumpAndroid(WidgetTester tester) async {
       await pumpApp(tester, platform: ConnectionPlatform.android, apps: apps);
-      await openTab(tester, 1);
+      await openTab(tester, 2);
     }
 
     Future<void> leave(WidgetTester tester) async {
@@ -478,7 +478,7 @@ void main() {
 
     testWidgets('is not on iOS', (tester) async {
       await pumpApp(tester);
-      await openTab(tester, 1);
+      await openTab(tester, 2);
 
       expect(find.text(title), findsNothing);
     });
@@ -548,7 +548,7 @@ void main() {
             AndroidAppInfo(name: 'App $i', packageName: 'app.n$i'),
         ],
       );
-      await openTab(tester, 1);
+      await openTab(tester, 2);
       await tester.tap(find.text(title));
       await settle(tester);
 
@@ -565,7 +565,7 @@ void main() {
           restart: false,
         ),
       );
-      await openTab(tester, 1);
+      await openTab(tester, 2);
       await tester.tap(find.text(title));
       await settle(tester);
 
@@ -630,7 +630,7 @@ void main() {
       expect(find.text('Not connected'), findsOneWidget);
       expect(find.text('Smart'), findsOneWidget);
 
-      await openTab(tester, 1);
+      await openTab(tester, 2);
       expect(find.text('CONNECTION'), findsOneWidget);
       expect(find.text('Connect at launch'), findsOneWidget);
       expect(find.text('Language'), findsOneWidget);
@@ -655,7 +655,7 @@ void main() {
           ),
         );
       });
-      await openTab(tester, 1);
+      await openTab(tester, 2);
       expect(find.text('Как в системе'), findsOneWidget);
 
       await tester.tap(find.text('Язык'));

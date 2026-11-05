@@ -64,7 +64,7 @@ void main() {
     }
   }
 
-  testWidgets('opens on home with the two tabs from the mockups', (
+  testWidgets('opens on home with the three tabs from the mockups', (
     tester,
   ) async {
     prepare();
@@ -72,8 +72,9 @@ void main() {
 
     expect(find.text('home-body'), findsOneWidget);
     expect(find.text('Главная'), findsOneWidget);
+    expect(find.text('Аккаунт'), findsOneWidget);
     expect(find.text('Настройки'), findsOneWidget);
-    expect(find.byType(NavigationDestination), findsNWidgets(2));
+    expect(find.byType(NavigationDestination), findsNWidgets(3));
   });
 
   testWidgets('the settings tab opens and home keeps its place', (

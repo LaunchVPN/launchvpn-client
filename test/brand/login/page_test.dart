@@ -88,7 +88,7 @@ void main() {
       await pumpApp(tester, hasSubscription: true);
 
       expect(find.text('home-body'), findsOneWidget);
-      expect(find.byType(NavigationDestination), findsNWidgets(2));
+      expect(find.byType(NavigationDestination), findsNWidgets(3));
       expect(find.text('Войти'), findsNothing);
     });
 

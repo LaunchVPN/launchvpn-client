@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
+import 'package:onexray/brand/account/controller.dart';
+import 'package:onexray/brand/account/page.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/page.dart';
 import 'package:onexray/brand/settings/page.dart';
@@ -10,6 +12,7 @@ import 'package:onexray/service/shared/share/service.dart';
 
 abstract final class BrandRoutes {
   static const home = '/home';
+  static const account = '/account';
   static const settings = '/settings';
   static const homeBranch = 0;
 }
@@ -19,6 +22,7 @@ abstract final class BrandRoutes {
 GoRouter createBrandRouter({
   HomeController? controller,
   Widget? home,
+  Widget? accountTab,
   Widget? settings,
   Future<void> Function(BuildContext context)? initializeServices,
   ShareService? shareService,
@@ -27,9 +31,15 @@ GoRouter createBrandRouter({
   Stream<bool> Function()? watchSubscription,
 }) {
   final modals = AppModalRouteObserver();
-  // Both tabs share it, so a mode chosen on either is one choice and one
+  // Home and Settings share it, so a mode chosen on either is one choice and one
   // reconnect. It lives as long as the app.
   late final shared = controller ?? HomeController();
+  late final session = account ?? AccountService.instance;
+  late final addLink = (shareService ?? ShareService()).addAppLink;
+  late final accountController = AccountController(
+    account: session,
+    openLink: addLink,
+  );
   return GoRouter(
     initialLocation: BrandRoutes.home,
     observers: [modals],
@@ -53,6 +63,20 @@ GoRouter createBrandRouter({
               GoRoute(
                 path: BrandRoutes.home,
                 builder: (_, _) => home ?? HomePage(controller: shared),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: BrandRoutes.account,
+                builder: (_, _) =>
+                    accountTab ??
+                    AccountPage(
+                      controller: accountController,
+                      account: session,
+                      openLink: addLink,
+                    ),
               ),
             ],
           ),

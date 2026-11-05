@@ -82,6 +82,16 @@ abstract final class BrandText {
     letterSpacing: -0.11,
     color: BrandColors.ink,
   );
+
+  /// The days left at the top of «Аккаунт».
+  static const days = TextStyle(
+    fontFamily: _display,
+    fontWeight: FontWeight.w600,
+    fontSize: 40,
+    height: 44 / 40,
+    letterSpacing: -0.4,
+    color: BrandColors.ink,
+  );
   static const hint = TextStyle(
     fontFamily: _body,
     fontWeight: FontWeight.w500,
@@ -272,6 +282,12 @@ abstract final class BrandTheme {
     backgroundColor: BrandColors.surfaceRaised,
     foregroundColor: BrandColors.ink,
     side: const BorderSide(color: BrandColors.line),
+  ).merge(_wideButton);
+
+  /// The action of a sheet that deletes something.
+  static final dangerButton = FilledButton.styleFrom(
+    backgroundColor: BrandColors.danger,
+    foregroundColor: BrandColors.accentInk,
   ).merge(_wideButton);
   static final quietButton = TextButton.styleFrom(
     foregroundColor: BrandColors.ink,
