@@ -54,6 +54,12 @@ Write to [LaunchVPN support](https://t.me/launchbotsupport) in Telegram. Please
 leave subscription links and logs out of public issues: a subscription link
 gives access to your servers.
 
+## Privacy
+
+The app has no analytics or ads. What it sends, to whom and how to turn it off
+is in the [privacy policy](https://privacy.launch.tel), published from
+[privacy/](./privacy).
+
 ## Based on OneXray
 
 LaunchVPN is a fork of [OneXray](https://github.com/YuanDevTeam/OneXray) by Yuan
