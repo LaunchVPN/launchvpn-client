@@ -4,8 +4,8 @@ import 'package:onexray/brand/account/controller.dart';
 import 'package:onexray/brand/settings/row.dart';
 import 'package:onexray/brand/sheet.dart';
 import 'package:onexray/brand/theme.dart';
+import 'package:onexray/brand/toast.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
-import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/service/account/model.dart';
 
 /// The devices on the account's subscription as rows of one card. Another
@@ -73,10 +73,9 @@ Future<void> _confirmRemoval(
   if (!confirmed || !context.mounted) return;
   final removed = await controller.removeDevice(device);
   if (!context.mounted) return;
-  ContextAlert.showToast(
+  showReadingToast(
     context,
     removed ? l.accountDeviceRemoved(name) : l.accountDeviceRemoveFailed,
-    duration: const Duration(seconds: 3),
   );
 }
 

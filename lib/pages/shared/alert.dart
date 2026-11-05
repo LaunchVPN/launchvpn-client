@@ -106,11 +106,7 @@ class ContextAlert {
     if (closePage && ModalRoute.of(context)?.isCurrent == true) context.pop();
   }
 
-  static void showToast(
-    BuildContext context,
-    String message, {
-    Duration duration = const Duration(seconds: 2),
-  }) {
+  static void showToast(BuildContext context, String message) {
     final size = MediaQuery.sizeOf(context);
     final compact = size.width < 600;
     final availableWidth = math.max(0.0, size.width - 32);
@@ -133,7 +129,7 @@ class ContextAlert {
         padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 36, 14),
         crossAxisAlignment: CrossAxisAlignment.start,
         showCloseIconOnlyWhenHovered: false,
-        duration: duration,
+        duration: const Duration(seconds: 2),
       ),
     );
   }

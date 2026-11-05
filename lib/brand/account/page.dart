@@ -14,6 +14,7 @@ import 'package:onexray/brand/settings/row.dart';
 import 'package:onexray/brand/sheet.dart';
 import 'package:onexray/brand/state_hero.dart';
 import 'package:onexray/brand/theme.dart';
+import 'package:onexray/brand/toast.dart';
 import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/distribution.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
@@ -129,12 +130,11 @@ class _AccountPageState extends State<AccountPage> {
     final l = AppLocalizations.of(context)!;
     switch (outcome) {
       case TelegramLinked(:final addedDays):
-        ContextAlert.showToast(
+        showReadingToast(
           context,
           addedDays > 0
               ? l.accountTelegramLinkedDays(addedDays)
               : l.accountTelegramLinked,
-          duration: const Duration(seconds: 3),
         );
       case TelegramLinkFailed(error: AccountError.cancelled):
         break;
