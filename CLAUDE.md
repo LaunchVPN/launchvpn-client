@@ -10,7 +10,8 @@ and upstream docs may still differ. The app runs from `lib/brand/`; upstream's
 new work and do not rewrite upstream code just to match them.
 
 Docs we write in this public repo are in English, including over the language
-rule in `docs/AGENTS.md`.
+rule in `docs/AGENTS.md`. The privacy policy in `privacy/` is the exception: it
+is published in English and Russian, and both pages change together.
 
 ## Engineering rules
 

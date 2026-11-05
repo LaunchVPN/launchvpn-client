@@ -35,6 +35,7 @@ void main() {
         'server': '198.51.100.20',
         'v6': '2001:db8:: and ::1',
         'upper': 'VPN.EXAMPLE.COM',
+        'android_hwid': 'ANDROID_ID 9774d56d682e549c',
         'tld': 'vpn.example.so',
       },
       contexts: Contexts(device: SentryDevice(name: 'Pixel of Ivan'))
@@ -68,6 +69,7 @@ void main() {
       '::1',
       'VPN.EXAMPLE.COM',
       'example.so',
+      '9774d56d682e549c',
     ]) {
       expect(sent, isNot(contains(personal)), reason: personal);
     }

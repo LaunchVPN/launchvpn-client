@@ -121,6 +121,11 @@ gh secret set ANDROID_KEY_PASSWORD --repo "$REPO"
 gh secret set ANDROID_KEY_ALIAS --repo "$REPO" --body launchvpn
 ```
 
+[Privacy Policy](../.github/workflows/privacy.yml) publishes `privacy/` to GitHub
+Pages when it changes on `main`. The repository's Pages source is GitHub Actions,
+and its custom domain `privacy.launch.tel` has a DNS `CNAME` record pointing to
+`launchvpn.github.io`.
+
 ### Versions
 
 LaunchVPN numbers its releases `MAJOR.MINOR.PATCH` from 1.0.0, independently of
