@@ -23,6 +23,7 @@ import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/crash_reports/service.dart';
 import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
 import 'package:onexray/core/constants/preferences.dart';
@@ -36,6 +37,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 // ignore: depend_on_referenced_packages
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
+import '../../support/fake_crash_reporter.dart';
 import '../../support/fake_notifications.dart';
 
 final class _Store extends InMemorySharedPreferencesAsync {
@@ -77,6 +79,8 @@ void main() {
   late HomeController controller;
   late FakeNotifications notifications;
   late RenewalReminders reminders;
+  late FakeCrashReporter crashReporter;
+  late CrashReports crashReports;
   late Completer<HostConnection> start;
   var status = VpnStatus.disconnected;
   var starts = 0;
@@ -89,6 +93,8 @@ void main() {
   setUp(() async {
     store.failReads = false;
     await SharedPreferencesAsync().clear();
+    // As on every launch after the first, whose toast would cover the tabs.
+    await PreferencesKey().saveCrashReportsNoticeShown();
     start = Completer();
     status = VpnStatus.disconnected;
     starts = 0;
@@ -115,7 +121,11 @@ void main() {
     });
     final GoRouter router = createBrandRouter(
       controller: controller,
-      settings: BrandSettingsPage(controller: controller, reminders: reminders),
+      settings: BrandSettingsPage(
+        controller: controller,
+        reminders: reminders,
+        crashReports: crashReports,
+      ),
       shareService: share,
       watchSubscription: () => Stream.value(true),
       initializeServices: (_) => share.init(),
@@ -157,6 +167,9 @@ void main() {
     addTearDown(db.close);
     notifications = FakeNotifications();
     reminders = RenewalReminders(database: db, notifications: notifications);
+    // As main leaves it on a first launch.
+    crashReporter = FakeCrashReporter()..sending = true;
+    crashReports = CrashReports(reporter: crashReporter);
     final statusEvents = StreamController<VpnStatus>.broadcast(sync: true);
     addTearDown(statusEvents.close);
     await tester.runAsync(() async {
@@ -343,6 +356,53 @@ void main() {
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await settle(tester);
       expect(toggled(tester), Tristate.isTrue);
+    });
+  });
+
+  group('crash reports', () {
+    const title = 'Отчёты о сбоях';
+
+    Tristate toggled(WidgetTester tester) => isToggled(tester, title);
+
+    testWidgets('are on by default, under App, and say what they leave out', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await openTab(tester, 2);
+      await tester.scrollUntilVisible(find.text(title), 100);
+
+      expect(find.text('Без ссылок, адресов и email'), findsOneWidget);
+      expect(toggled(tester), Tristate.isTrue);
+    });
+
+    testWidgets('off stops sending and is remembered; on sends again', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await openTab(tester, 2);
+      await tester.scrollUntilVisible(find.text(title), 100);
+
+      await tester.tap(find.text(title));
+      await settle(tester);
+      expect(toggled(tester), Tristate.isFalse);
+      expect(crashReporter.sending, isFalse);
+
+      // The next launch, as main starts it.
+      crashReporter = FakeCrashReporter();
+      crashReports = CrashReports(reporter: crashReporter);
+      await tester.runAsync(crashReports.start);
+      expect(crashReporter.sending, isFalse);
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpRouter(tester);
+      await openTab(tester, 2);
+      await tester.scrollUntilVisible(find.text(title), 100);
+      expect(toggled(tester), Tristate.isFalse);
+
+      await tester.tap(find.text(title));
+      await settle(tester);
+      expect(toggled(tester), Tristate.isTrue);
+      expect(crashReporter.sending, isTrue);
     });
   });
 

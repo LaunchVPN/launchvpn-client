@@ -14,6 +14,7 @@ import 'package:onexray/brand/theme.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
 import 'package:onexray/service/connect/preset.dart';
+import 'package:onexray/service/crash_reports/service.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/event_bus/state.dart';
@@ -24,6 +25,7 @@ class BrandSettingsPage extends StatefulWidget {
     super.key,
     required this.controller,
     this.reminders,
+    this.crashReports,
   });
 
   final HomeController controller;
@@ -31,12 +33,18 @@ class BrandSettingsPage extends StatefulWidget {
   /// The App's own when null.
   final RenewalReminders? reminders;
 
+  /// The App's own when null.
+  final CrashReports? crashReports;
+
   @override
   State<BrandSettingsPage> createState() => _BrandSettingsPageState();
 }
 
 class _BrandSettingsPageState extends State<BrandSettingsPage> {
-  late final _settings = SettingsController(reminders: widget.reminders);
+  late final _settings = SettingsController(
+    reminders: widget.reminders,
+    crashReports: widget.crashReports,
+  );
 
   late final AppLifecycleListener _lifecycle;
 
@@ -187,6 +195,17 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
                       subtitle: l.settingsRenewalRemindersHint,
                       value: state.renewalReminders,
                       onChanged: _settings.setRenewalReminders,
+                    ),
+                  ),
+                  BlocBuilder<SettingsController, SettingsState>(
+                    bloc: _settings,
+                    buildWhen: (a, b) => a.crashReports != b.crashReports,
+                    builder: (context, state) => SettingsSwitchRow(
+                      icon: LucideIcons.bug,
+                      title: l.settingsCrashReports,
+                      subtitle: l.settingsCrashReportsHint,
+                      value: state.crashReports,
+                      onChanged: _settings.setCrashReports,
                     ),
                   ),
                 ],
