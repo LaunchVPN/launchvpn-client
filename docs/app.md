@@ -192,7 +192,8 @@ upstream pages kept for merging. They are not reachable in this build.
   failed load right after sign-in. A session restored at launch reads the account's subscription
   right away, so Home can tell an ended account before the tab opens. It shows the days left, the expiry date and the traffic of the
   period from the subscription headers, with a bar only for a plan with a traffic limit, or
-  Subscription ended as Home has it when the subscription expired or the account has none.
+  Subscription ended as Home has it: when the subscription expired, or the account has none and
+  the device has no subscription either.
   With a subscription or a session, an APK build adds Renew subscription, opening
   `Brand.renewalUrl`. Signed in, the tab lists
   the devices against the panel's limit for this user from `/api/subscription`, or the one

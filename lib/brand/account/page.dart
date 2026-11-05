@@ -225,11 +225,12 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  /// Days and traffic, or the ended subscription as Home tells it.
+  /// Days and traffic, or the ended subscription as Home tells it: an ended
+  /// account counts only when the device has no subscription either.
   List<Widget> _subscription(AppLocalizations l, AccountState state) {
     final now = DateTime.now();
     final usage = state.usage;
-    if ((state.signedIn && state.inactive) ||
+    if ((state.signedIn && state.inactive && state.subscription == null) ||
         (usage?.isExpired(now) ?? false)) {
       return [
         const SizedBox(height: 24),

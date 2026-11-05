@@ -39,7 +39,8 @@ void main() {
 
   /// Signed in on a Russian phone, on «Аккаунт», with this device and a
   /// Pixel 8 on the subscription. Not [signedIn], a subscription from a link
-  /// keeps the tabs; [linkSubscription] puts one on the device.
+  /// keeps the tabs; [linkSubscription] puts one on the device. Not
+  /// [accountActive], the account's subscription ended after the sign-in.
   Future<void> pumpAccount(
     WidgetTester tester, {
     AppDistribution distribution = AppDistribution.store,
@@ -47,6 +48,7 @@ void main() {
     String? linkSubscription,
     bool telegramOnly = false,
     bool openAccount = true,
+    bool accountActive = true,
   }) async {
     api.loginWith(access: 'a1', refresh: 'r1');
     api.subscription('https://sub.launch.tel/abc', maxDevices: 5);
@@ -68,6 +70,7 @@ void main() {
         () => account.email.login(email: 'ivan@proton.me', password: 'pw'),
       );
     }
+    if (!accountActive) api.subscription(null);
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     if (linkSubscription != null) {
@@ -166,6 +169,26 @@ void main() {
     expect(find.text('Вход через Telegram'), findsOneWidget);
     expect(find.text('Привязать Telegram'), findsNothing);
   });
+
+  for (final (linkSubscription, ended) in [
+    (null, true),
+    ('https://sub.launch.tel/from-bot', false),
+  ]) {
+    testWidgets('an ended account shows «Подписка закончилась» only without '
+        'a subscription on the device (one from a link: '
+        '${linkSubscription != null})', (tester) async {
+      await pumpAccount(
+        tester,
+        accountActive: false,
+        linkSubscription: linkSubscription,
+      );
+
+      expect(
+        find.text('Подписка закончилась'),
+        ended ? findsOneWidget : findsNothing,
+      );
+    });
+  }
 
   testWidgets('the APK build renews on the site', (tester) async {
     await pumpAccount(tester, distribution: AppDistribution.apk);
