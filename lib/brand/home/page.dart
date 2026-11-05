@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/toggle.dart';
 import 'package:onexray/brand/home/update_banner.dart';
+import 'package:onexray/brand/external_link.dart';
 import 'package:onexray/brand/locations/page.dart';
 import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/settings/preset_page.dart';
@@ -18,7 +19,6 @@ import 'package:onexray/brand/theme.dart';
 import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/distribution.dart';
-import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/alert.dart';
 import 'package:onexray/pages/shared/connection_action.dart';
@@ -29,7 +29,6 @@ import 'package:onexray/service/servers/subscription/failure.dart';
 import 'package:onexray/service/settings/app_update/service.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/event_bus/state.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({
@@ -90,17 +89,6 @@ class _HomePageState extends State<HomePage> {
         if (!_controller.state.explains(error)) rethrow;
       }
     });
-  }
-
-  /// Opens [uri] outside the App. A device with nothing to open it leaves the
-  /// screen as it is.
-  Future<void> _openLink(Uri uri, String name) async {
-    try {
-      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
-      ygLogger('open $name link failed: nothing handled it');
-    } catch (error) {
-      ygLogger('open $name link failed (${error.runtimeType})');
-    }
   }
 
   Future<void> _toggle() => _controller.toggle(_run, explain: _explain);
@@ -190,7 +178,7 @@ class _HomePageState extends State<HomePage> {
                                     const SizedBox(height: 20),
                                     UpdateBanner(
                                       update: update,
-                                      onUpdate: () => _openLink(
+                                      onUpdate: () => openExternalLink(
                                         update.releaseUri,
                                         'release',
                                       ),
@@ -232,7 +220,7 @@ class _HomePageState extends State<HomePage> {
   /// Null when the panel sent no support link.
   VoidCallback? _contactSupport(HomeState state) =>
       switch (state.subscription?.supportUrl) {
-        final url? => () => _openLink(Uri.parse(url), 'support'),
+        final url? => () => openExternalLink(Uri.parse(url), 'support'),
         null => null,
       };
 
@@ -257,7 +245,7 @@ class _HomePageState extends State<HomePage> {
       ),
       _ExpiredActions(
         onRenew: renews
-            ? () => _openLink(Uri.parse(Brand.renewalUrl), 'renewal')
+            ? () => openExternalLink(Uri.parse(Brand.renewalUrl), 'renewal')
             : null,
         onRefresh: state.refreshing ? null : _refreshStatus,
         onContactSupport: _contactSupport(state),
