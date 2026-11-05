@@ -3314,5 +3314,13 @@
   "accountSupport": "Support",
   "accountLogout": "Sign out",
   "accountLogoutTitle": "Sign out?",
-  "accountLogoutBody": "Your subscription stays. You can sign in again at any time."
+  "accountLogoutBody": "Your subscription stays. You can sign in again at any time.",
+  "homeDeviceLimitTitle": "Device limit",
+  "homeDeviceLimitBody": "{count, plural, one {The subscription has {count} device of {max}.} other {The subscription has {count} devices of {max}.}} Remove one to connect this phone.",
+  "@homeDeviceLimitBody": {
+    "placeholders": {"count": {"type": "int"}, "max": {"type": "int"}}
+  },
+  "homeDeviceLimitBodyAccount": "Every device place on the subscription is taken. Remove one to connect this phone.",
+  "homeDeviceLimitBodySupport": "Every device place on the subscription is taken. Write to support to free one.",
+  "homeDeviceLimitRefresh": "Refresh"
 }

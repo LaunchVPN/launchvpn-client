@@ -5,7 +5,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:onexray/brand/account/controller.dart';
 import 'package:onexray/brand/home/controller.dart';
+import 'package:onexray/brand/home/device_limit.dart';
 import 'package:onexray/brand/home/toggle.dart';
 import 'package:onexray/brand/home/update_banner.dart';
 import 'package:onexray/brand/external_link.dart';
@@ -34,10 +36,14 @@ class HomePage extends StatefulWidget {
   const HomePage({
     super.key,
     required this.controller,
+    required this.account,
     this.distribution = AppDistribution.current,
   });
 
   final HomeController controller;
+
+  /// The account's devices, which «Лимит устройств» lists.
+  final AccountController account;
 
   /// Only an APK build offers a newer release and renewal on the site: a store
   /// updates the rest and takes no payment outside its own.
@@ -169,8 +175,12 @@ class _HomePageState extends State<HomePage> {
                               child: Column(
                                 children: [
                                   _Header(
-                                    // The screen's title says it instead.
-                                    daysLeft: state.showsExpired
+                                    // The expired screen's title says it
+                                    // instead; the device limit's mockup
+                                    // leaves it out.
+                                    daysLeft:
+                                        state.showsExpired ||
+                                            state.showsDeviceLimit
                                         ? null
                                         : state.daysLeft(DateTime.now()),
                                   ),
@@ -186,6 +196,8 @@ class _HomePageState extends State<HomePage> {
                                   ],
                                   if (state.showsExpired)
                                     ..._expiredContent(state)
+                                  else if (state.showsDeviceLimit)
+                                    ..._deviceLimitContent(state)
                                   else if (state.failure case final failure?)
                                     ..._failureContent(state, failure)
                                   else
@@ -252,6 +264,17 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  List<Widget> _deviceLimitContent(HomeState state) => _stateContent(
+    DeviceLimitHero(account: widget.account),
+    DeviceLimitActions(
+      account: widget.account,
+      support: switch (_contactSupport(state)) {
+        final open? => _SupportLink(onPressed: open),
+        null => null,
+      },
+    ),
+  );
 
   List<Widget> _connectionContent(HomeState state, double toggleGap) => [
     SizedBox(height: toggleGap),

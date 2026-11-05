@@ -1079,5 +1079,10 @@
   "accountSupport": "Поддержка",
   "accountLogout": "Выйти",
   "accountLogoutTitle": "Выйти из аккаунта?",
-  "accountLogoutBody": "Подписка сохранится. Войти снова можно в любой момент."
+  "accountLogoutBody": "Подписка сохранится. Войти снова можно в любой момент.",
+  "homeDeviceLimitTitle": "Лимит устройств",
+  "homeDeviceLimitBody": "{count, plural, one {На подписке {count} устройство из {max}.} few {На подписке {count} устройства из {max}.} many {На подписке {count} устройств из {max}.} other {На подписке {count} устройства из {max}.}} Удалите одно, чтобы подключить этот телефон.",
+  "homeDeviceLimitBodyAccount": "На подписке заняты все места для устройств. Удалите одно, чтобы подключить этот телефон.",
+  "homeDeviceLimitBodySupport": "На подписке заняты все места для устройств. Чтобы освободить одно, напишите в поддержку.",
+  "homeDeviceLimitRefresh": "Обновить"
 }

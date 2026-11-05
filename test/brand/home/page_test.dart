@@ -8,6 +8,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:onexray/brand/account/controller.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/page.dart';
 import 'package:onexray/brand/home/toggle.dart';
@@ -22,6 +23,7 @@ import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
+import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/connect/preset.dart';
@@ -35,10 +37,13 @@ import 'package:onexray/service/settings/language/locale.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // ignore: depend_on_referenced_packages
 import 'package:url_launcher_platform_interface/link.dart';
 // ignore: depend_on_referenced_packages
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+
+import '../../support/fake_account_api.dart';
 
 const _largeScale = 3.0;
 
@@ -79,6 +84,7 @@ void main() {
   var prepares = 0;
   var sweeps = 0;
   late Future<SubscriptionRefreshResult> Function(SubscriptionData) refresh;
+  late ValueNotifier<bool> deviceLimit;
 
   Future<void> pumpHome(
     WidgetTester tester, {
@@ -87,6 +93,7 @@ void main() {
     Locale locale = const Locale('ru'),
     ConnectionPlatform platform = ConnectionPlatform.ios,
     List<AndroidAppInfo> apps = const [],
+    AccountService? account,
   }) async {
     bus = AppEventBus();
     addTearDown(bus.close);
@@ -130,8 +137,16 @@ void main() {
       refreshSubscription: (row) => refresh(row),
       platform: platform,
       installedApps: () async => apps,
+      deviceLimit: deviceLimit = ValueNotifier(false),
     );
     addTearDown(controller.close);
+    final accountController = AccountController(
+      account: account ?? accountServiceFor(FakeAccountApi()),
+      openLink: (_) {},
+      database: db,
+      refreshSubscription: (row) => refresh(row),
+    );
+    addTearDown(accountController.close);
     await tester.pumpWidget(
       MaterialApp(
         locale: locale,
@@ -148,7 +163,11 @@ void main() {
         ),
         home: BlocProvider.value(
           value: bus,
-          child: HomePage(controller: controller, distribution: distribution),
+          child: HomePage(
+            controller: controller,
+            account: accountController,
+            distribution: distribution,
+          ),
         ),
       ),
     );
@@ -1259,6 +1278,94 @@ void main() {
       expect(find.text('Your subscription has ended'), findsOneWidget);
       expect(find.text('Renew'), findsOneWidget);
       expect(find.text('Refresh status'), findsOneWidget);
+    });
+  });
+
+  group('device limit', () {
+    testWidgets(
+      'signed in, the other devices are listed to remove one, and «Обновить» '
+      'tries again',
+      (tester) async {
+        FlutterSecureStorage.setMockInitialValues({});
+        final api = FakeAccountApi()
+          ..loginWith(access: 'a1', refresh: 'r1')
+          ..subscription('https://sub.launch.tel/a')
+          ..devices([
+            {
+              'hwid': 'pixel-8',
+              'deviceModel': 'Pixel 8',
+              'platform': 'Android',
+              'osVersion': '16',
+            },
+            {'hwid': 'iphone-13', 'deviceModel': 'iPhone 13'},
+          ], max: 2);
+        final account = accountServiceFor(api);
+        await tester.runAsync(
+          () => account.login(email: 'ivan@proton.me', password: 'pw'),
+        );
+        await pumpHome(tester, account: account);
+        await addSubscription(tester, supportUrl: 'https://t.me/support');
+
+        deviceLimit.value = true;
+        await tester.runAsync(() => pumpEventQueue(times: 20));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Лимит устройств'), findsOneWidget);
+        expect(
+          find.text(
+            'На подписке 2 устройства из 2. Удалите одно, чтобы подключить '
+            'этот телефон.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.byType(ConnectToggle), findsNothing);
+        expect(find.byIcon(LucideIcons.trash2), findsNWidgets(2));
+        expect(find.text('Написать в поддержку'), findsOneWidget);
+
+        await tester.tap(find.text('Pixel 8'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Удалить устройство'));
+        await tester.runAsync(() => pumpEventQueue(times: 20));
+        await tester.pumpAndSettle();
+        expect(find.text('Pixel 8 удалён, место освободилось'), findsOneWidget);
+        expect(find.text('Pixel 8'), findsNothing);
+
+        final refreshed = <String>[];
+        refresh = (row) async {
+          refreshed.add(row.url);
+          return const SubscriptionRefreshResult(
+            status: SubscriptionUpdateResult.success,
+          );
+        };
+        await tester.tap(find.text('Обновить'));
+        await tester.runAsync(() => pumpEventQueue(times: 20));
+        await tester.pumpAndSettle();
+        expect(refreshed, ['https://sub.launch.tel/a']);
+
+        deviceLimit.value = false;
+        await tester.pumpAndSettle();
+        expect(find.byType(ConnectToggle), findsOneWidget);
+      },
+    );
+
+    testWidgets('from a link only, support is the one way out', (tester) async {
+      await pumpHome(tester);
+      await addSubscription(tester, supportUrl: 'https://t.me/support');
+
+      deviceLimit.value = true;
+      await tester.pumpAndSettle();
+
+      expect(find.text('Лимит устройств'), findsOneWidget);
+      expect(
+        find.text(
+          'На подписке заняты все места для устройств. Чтобы освободить '
+          'одно, напишите в поддержку.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Написать в поддержку'), findsOneWidget);
+      expect(find.text('Обновить'), findsNothing);
+      expect(find.byIcon(LucideIcons.trash2), findsNothing);
     });
   });
 }

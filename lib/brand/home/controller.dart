@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/pigeon/host_api.dart';
@@ -86,6 +87,7 @@ class HomeState {
     this.selection,
     this.expired = false,
     this.refreshing = false,
+    this.deviceLimit = false,
   }) : catalog = catalog ?? ServerCatalog();
 
   final ConnectionView view;
@@ -115,6 +117,13 @@ class HomeState {
 
   /// «Обновить статус» is loading the subscription.
   final bool refreshing;
+
+  /// The panel refused this device: the subscription has all its devices.
+  final bool deviceLimit;
+
+  /// «Лимит устройств» in place of the toggle, once the tunnel is off. An
+  /// ended subscription explains itself first.
+  bool get showsDeviceLimit => deviceLimit && _tunnelOff && !showsExpired;
 
   /// The screen waits for the tunnel to go off. Until then the toggle shows
   /// the disconnect, or a failed one to retry.
@@ -236,15 +245,10 @@ class HomeState {
   DateTime? get connectedSince => view.runtime?.startedAt;
 
   /// Null when the panel sets no expiry. A partial day counts as a whole one.
-  int? daysLeft(DateTime now) {
-    final row = subscription;
-    final expiresAt = row == null
-        ? null
-        : SubscriptionUserInfo.fromSubscription(row)?.expiresAt;
-    if (expiresAt == null) return null;
-    final left = expiresAt.difference(now).inMilliseconds;
-    return left <= 0 ? 0 : (left / Duration.millisecondsPerDay).ceil();
-  }
+  int? daysLeft(DateTime now) => switch (subscription) {
+    final row? => SubscriptionUserInfo.fromSubscription(row)?.daysLeft(now),
+    null => null,
+  };
 
   HomeState copyWith({
     ConnectionView? view,
@@ -255,6 +259,7 @@ class HomeState {
     ServerSelection? selection,
     bool? expired,
     bool? refreshing,
+    bool? deviceLimit,
   }) => HomeState(
     view: view ?? this.view,
     catalog: catalog ?? this.catalog,
@@ -265,6 +270,7 @@ class HomeState {
     selection: selection ?? this.selection,
     expired: expired ?? this.expired,
     refreshing: refreshing ?? this.refreshing,
+    deviceLimit: deviceLimit ?? this.deviceLimit,
   );
 
   HomeState _withRequest(HomeRequest? request) => HomeState(
@@ -277,6 +283,7 @@ class HomeState {
     selection: selection,
     expired: expired,
     refreshing: refreshing,
+    deviceLimit: deviceLimit,
   );
 }
 
@@ -289,6 +296,7 @@ class HomeController extends PageCubit<HomeState> {
     SubscriptionRefresh? refreshSubscription,
     ConnectionPlatform? platform,
     InstalledApps? installedApps,
+    ValueListenable<bool>? deviceLimit,
   }) : _db = database ?? AppDatabase(),
        installedApps = installedApps ?? AppHostApi().getInstalledApps,
        _platform = platform ?? connectionPlatform,
@@ -299,9 +307,12 @@ class HomeController extends PageCubit<HomeState> {
        _refreshSubscription =
            refreshSubscription ??
            SubscriptionService().refreshSubscriptionResult,
+       _deviceLimit = deviceLimit ?? SubscriptionService().deviceLimitReached,
        super(HomeState()) {
     this.coordinator.state.addListener(_connectionChanged);
     _connectionChanged();
+    _deviceLimit.addListener(_deviceLimitChanged);
+    _deviceLimitChanged();
   }
 
   final AppDatabase _db;
@@ -314,6 +325,7 @@ class HomeController extends PageCubit<HomeState> {
   final LocationPing _pingLocations;
   final AnnouncementDismissal _dismissAnnounce;
   final SubscriptionRefresh _refreshSubscription;
+  final ValueListenable<bool> _deviceLimit;
   StreamSubscription<ServerCatalog>? _catalog;
   StreamSubscription<void>? _settings;
   Timer? _expiry;
@@ -344,6 +356,9 @@ class HomeController extends PageCubit<HomeState> {
     _checkExpiry(state.subscription);
     _stopIfExpired();
   }
+
+  void _deviceLimitChanged() =>
+      emit(state.copyWith(deviceLimit: _deviceLimit.value));
 
   Future<void> initialize() async {
     _catalog ??= ServerCatalog.watch(_db).listen(
@@ -614,6 +629,7 @@ class HomeController extends PageCubit<HomeState> {
   @override
   Future<void> disposePageResources() async {
     coordinator.state.removeListener(_connectionChanged);
+    _deviceLimit.removeListener(_deviceLimitChanged);
     _expiry?.cancel();
     await _catalog?.cancel();
     await _settings?.cancel();

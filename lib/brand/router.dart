@@ -34,6 +34,7 @@ GoRouter createBrandRouter({
   // Home and Settings share it, so a mode chosen on either is one choice and one
   // reconnect. It lives as long as the app.
   late final shared = controller ?? HomeController();
+  // «Аккаунт» and Home's «Лимит устройств» share the account's devices.
   late final session = account ?? AccountService.instance;
   late final addLink = (shareService ?? ShareService()).addAppLink;
   late final accountController = AccountController(
@@ -62,7 +63,9 @@ GoRouter createBrandRouter({
             routes: [
               GoRoute(
                 path: BrandRoutes.home,
-                builder: (_, _) => home ?? HomePage(controller: shared),
+                builder: (_, _) =>
+                    home ??
+                    HomePage(controller: shared, account: accountController),
               ),
             ],
           ),
