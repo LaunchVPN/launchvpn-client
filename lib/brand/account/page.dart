@@ -116,7 +116,8 @@ class _AccountPageState extends State<AccountPage> {
                 children: [
                   Text(l.accountTab, style: BrandText.screenTitle),
                   ..._subscription(l, state),
-                  if (state.signedIn &&
+                  // From a link too: the cabinet renews any subscription.
+                  if ((state.signedIn || state.subscription != null) &&
                       widget.distribution == AppDistribution.apk) ...[
                     const SizedBox(height: 20),
                     FilledButton.icon(
