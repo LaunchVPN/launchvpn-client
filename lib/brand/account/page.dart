@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/account/controller.dart';
 import 'package:onexray/brand/account/devices.dart';
 import 'package:onexray/brand/external_link.dart';
+import 'package:onexray/brand/login/controller.dart';
 import 'package:onexray/brand/login/page.dart';
 import 'package:onexray/brand/settings/row.dart';
 import 'package:onexray/brand/sheet.dart';
@@ -19,7 +20,7 @@ import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/service/account/service.dart';
 
 /// «Аккаунт»: days and traffic for everyone; the devices, the account and
-/// «Выйти» once signed in, «Войти» otherwise.
+/// «Выйти» once signed in, «Войти» and «Создать аккаунт» otherwise.
 class AccountPage extends StatefulWidget {
   const AccountPage({
     super.key,
@@ -57,12 +58,15 @@ class _AccountPageState extends State<AccountPage> {
     _visible = visible;
   }
 
-  /// «Вход» over the tabs, closed by the sign-in it exists for.
-  Future<void> _signIn() async {
+  /// «Вход» over the tabs in [mode], closed by the sign-in it exists for.
+  Future<void> _openLogin(LoginMode mode) async {
     final navigator = Navigator.of(context, rootNavigator: true);
     final route = MaterialPageRoute<void>(
-      builder: (_) =>
-          LoginPage(account: widget.account, openLink: widget.openLink),
+      builder: (_) => LoginPage(
+        account: widget.account,
+        openLink: widget.openLink,
+        mode: mode,
+      ),
     );
     void close() {
       if (widget.account.signedIn.value && route.isActive) {
@@ -129,8 +133,14 @@ class _AccountPageState extends State<AccountPage> {
                     const SizedBox(height: 20),
                     FilledButton(
                       style: BrandTheme.primaryButton,
-                      onPressed: _signIn,
+                      onPressed: () => _openLogin(LoginMode.signIn),
                       child: Text(l.loginSubmit),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      style: BrandTheme.secondaryButton,
+                      onPressed: () => _openLogin(LoginMode.create),
+                      child: Text(l.loginCreate),
                     ),
                   ],
                   if (devices != null && devices.items.isNotEmpty) ...[
