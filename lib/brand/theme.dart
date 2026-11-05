@@ -138,6 +138,9 @@ abstract final class BrandText {
     color: BrandColors.muted,
   );
   static const preset = caption;
+
+  /// Why an attempt failed, under the field or the button it concerns.
+  static final error = caption.copyWith(color: BrandColors.danger);
   static const topBar = TextStyle(
     fontFamily: _display,
     fontWeight: FontWeight.w500,

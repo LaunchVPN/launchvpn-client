@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:onexray/brand/error_text.dart';
 import 'package:onexray/brand/login/code_view.dart';
 import 'package:onexray/brand/login/controller.dart';
 import 'package:onexray/brand/login/footer_link.dart';
@@ -212,7 +213,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
           if (state.error case final error?) ...[
             const SizedBox(height: 12),
-            _ErrorText(_errorMessage(l, error)),
+            ErrorText(_errorMessage(l, error)),
           ],
           const SizedBox(height: 12),
           ListenableBuilder(
@@ -245,7 +246,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             if (state.telegramError case final error?) ...[
               const SizedBox(height: 12),
-              _ErrorText(_errorMessage(l, error)),
+              ErrorText(_errorMessage(l, error)),
             ],
           ],
           const SizedBox(height: 12),
@@ -286,22 +287,6 @@ String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
   AccountError.alreadyLinked ||
   AccountError.unexpected => l.loginErrorUnexpected,
 };
-
-/// Why the last attempt failed, read out when it appears.
-class _ErrorText extends StatelessWidget {
-  const _ErrorText(this.message);
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    liveRegion: true,
-    child: Text(
-      message,
-      style: BrandText.caption.copyWith(color: BrandColors.danger),
-    ),
-  );
-}
 
 /// «или» between the form and the Telegram sign-in.
 class _OrDivider extends StatelessWidget {

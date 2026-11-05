@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:onexray/brand/error_text.dart';
 import 'package:onexray/brand/login/code_controller.dart';
 import 'package:onexray/brand/login/footer_link.dart';
 import 'package:onexray/brand/text_field.dart';
@@ -93,13 +94,7 @@ class _EmailCodeViewState extends State<EmailCodeView> {
           ),
           if (state.error case final error?) ...[
             const SizedBox(height: 12),
-            Semantics(
-              liveRegion: true,
-              child: Text(
-                _errorMessage(l, error, state.attemptsLeft),
-                style: BrandText.caption.copyWith(color: BrandColors.danger),
-              ),
-            ),
+            ErrorText(_errorMessage(l, error, state.attemptsLeft)),
           ],
           const SizedBox(height: 12),
           ListenableBuilder(
