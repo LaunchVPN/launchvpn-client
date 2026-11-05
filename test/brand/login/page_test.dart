@@ -179,6 +179,19 @@ void main() {
         (FakeAccountApi api) => api.unreachable(),
         'Нет связи с сервером. Попробуйте ещё раз',
       ),
+      (
+        (FakeAccountApi api) => api.refuseLogin(403, 'account_blocked'),
+        'Аккаунт заблокирован. Напишите в поддержку',
+      ),
+      (
+        (FakeAccountApi api) => api.refuseLogin(403, 'app_not_available'),
+        'Вход в приложении пока недоступен',
+      ),
+      // Without the attempt the code screen needs.
+      (
+        (FakeAccountApi api) => api.refuseLogin(403, 'email_not_verified'),
+        'Почта не подтверждена. Попробуйте войти ещё раз',
+      ),
     ]) {
       testWidgets('a refused login says «$message»', (tester) async {
         refuse(api);
@@ -262,6 +275,20 @@ void main() {
       );
       expect(find.byType(NavigationBar), findsNothing);
     });
+
+    for (final (error, message) in [
+      ('account_blocked', 'Аккаунт заблокирован. Напишите в поддержку'),
+      ('app_not_available', 'Вход в приложении пока недоступен'),
+    ]) {
+      testWidgets('a return with error=$error says «$message»', (tester) async {
+        await pumpApp(tester, hasSubscription: false);
+
+        await returnFromTelegram(tester, 'error=$error');
+
+        expect(find.text(message), findsOneWidget);
+        expect(find.textContaining('Telegram. Попробуйте'), findsNothing);
+      });
+    }
 
     testWidgets('a cancelled sign-in leaves the form as it was', (
       tester,

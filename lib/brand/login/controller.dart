@@ -14,6 +14,7 @@ final class LoginState {
     this.submitting = false,
     this.redeemingTelegram = false,
     this.error,
+    this.telegramError,
     this.signup,
   });
 
@@ -27,6 +28,10 @@ final class LoginState {
 
   /// Why the last attempt failed, shown under the fields until the next one.
   final AccountError? error;
+
+  /// Why the last Telegram sign-in failed, shown under its button:
+  /// [AccountError.telegramFailed] unless the backend named the reason.
+  final AccountError? telegramError;
 
   /// A signup waiting for the code from the email: «Проверьте почту» shows
   /// instead of the form.
@@ -104,10 +109,24 @@ final class LoginController extends PageCubit<LoginState> {
       emit(LoginState(mode: state.mode));
     } on AccountException catch (error) {
       if (error.error == AccountError.cancelled) return;
-      emit(LoginState(mode: state.mode, error: AccountError.telegramFailed));
+      emit(
+        LoginState(
+          mode: state.mode,
+          telegramError: switch (error.error) {
+            AccountError.accountBlocked ||
+            AccountError.appNotAvailable => error.error,
+            _ => AccountError.telegramFailed,
+          },
+        ),
+      );
     } catch (error) {
       ygLogger('Telegram sign-in failed (${error.runtimeType})');
-      emit(LoginState(mode: state.mode, error: AccountError.telegramFailed));
+      emit(
+        LoginState(
+          mode: state.mode,
+          telegramError: AccountError.telegramFailed,
+        ),
+      );
     }
   }
 

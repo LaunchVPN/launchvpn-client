@@ -184,8 +184,7 @@ class _LoginPageState extends State<LoginPage> {
             ],
             onSubmitted: (_) => _submit(),
           ),
-          if (state.error case final error?
-              when error != AccountError.telegramFailed) ...[
+          if (state.error case final error?) ...[
             const SizedBox(height: 12),
             _ErrorText(_errorMessage(l, error)),
           ],
@@ -218,9 +217,9 @@ class _LoginPageState extends State<LoginPage> {
                 child: Text(l.loginTelegram),
               ),
             ),
-            if (state.error == AccountError.telegramFailed) ...[
+            if (state.telegramError case final error?) ...[
               const SizedBox(height: 12),
-              _ErrorText(l.loginErrorTelegram),
+              _ErrorText(_errorMessage(l, error)),
             ],
           ],
           const SizedBox(height: 12),
@@ -250,14 +249,14 @@ String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
   AccountError.invalidRequest => l.loginErrorInvalidRequest,
   AccountError.network => l.loginErrorNetwork,
   AccountError.telegramFailed => l.loginErrorTelegram,
+  AccountError.accountBlocked => l.loginErrorAccountBlocked,
+  AccountError.appNotAvailable => l.loginErrorAppNotAvailable,
   AccountError.invalidCode ||
   AccountError.codeExpired ||
   AccountError.trialUsed ||
   AccountError.cancelled ||
   AccountError.telegramTaken ||
   AccountError.alreadyLinked ||
-  AccountError.accountBlocked ||
-  AccountError.appNotAvailable ||
   AccountError.signedOut ||
   AccountError.unexpected => l.loginErrorUnexpected,
 };

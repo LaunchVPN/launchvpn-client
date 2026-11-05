@@ -109,6 +109,19 @@ void main() {
     expect(code.state.error, EmailCodeError.codeExpired);
   });
 
+  test('a blocked account or a closed app sign-in says why', () async {
+    final code = codeStep();
+    addTearDown(code.close);
+
+    api.refuse(_verifyPath, 403, 'account_blocked');
+    await code.verify('123456');
+    expect(code.state.error, EmailCodeError.accountBlocked);
+
+    api.refuse(_verifyPath, 403, 'app_not_available');
+    await code.verify('123456');
+    expect(code.state.error, EmailCodeError.appNotAvailable);
+  });
+
   test('the right code adds the account subscription', () async {
     api.verifyWith(access: 'a1', refresh: 'r1');
     api.subscription(_configLink);

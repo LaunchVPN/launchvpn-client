@@ -16,6 +16,8 @@ enum EmailCodeError {
 
   /// The signup attempt itself is gone: the form has to be sent again.
   attemptGone,
+  accountBlocked,
+  appNotAvailable,
   rateLimited,
   network,
   unexpected,
@@ -127,6 +129,8 @@ final class EmailCodeController extends PageCubit<EmailCodeState> {
   }
 
   static EmailCodeError _general(AccountError error) => switch (error) {
+    AccountError.accountBlocked => EmailCodeError.accountBlocked,
+    AccountError.appNotAvailable => EmailCodeError.appNotAvailable,
     AccountError.rateLimited => EmailCodeError.rateLimited,
     AccountError.network => EmailCodeError.network,
     _ => EmailCodeError.unexpected,

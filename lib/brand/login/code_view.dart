@@ -154,6 +154,8 @@ String _errorMessage(
   },
   EmailCodeError.codeExpired => l.codeErrorExpired,
   EmailCodeError.attemptGone => l.codeErrorAttemptGone,
+  EmailCodeError.accountBlocked => l.loginErrorAccountBlocked,
+  EmailCodeError.appNotAvailable => l.loginErrorAppNotAvailable,
   EmailCodeError.rateLimited => l.loginErrorRateLimited,
   EmailCodeError.network => l.loginErrorNetwork,
   EmailCodeError.unexpected => l.loginErrorUnexpected,
