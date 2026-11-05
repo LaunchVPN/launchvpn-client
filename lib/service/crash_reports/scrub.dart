@@ -2,7 +2,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// Takes out of a crash report what could identify the person or their
 /// servers: links (subscription, share and server ones), email addresses,
-/// UUIDs such as the HWID, IP addresses and host names, which also covers DNS
+/// UUIDs and the HWID, IP addresses and host names, which also covers DNS
 /// queries. Stack frames, types and the device model stay, since they locate
 /// the bug and name nobody. Pure but for one thing: as Sentry's `beforeSend`
 /// expects, it edits [event] in place and returns it.
@@ -67,6 +67,8 @@ final List<_Pattern> _patterns = [
     ),
     '<id>',
   ),
+  // Android's HWID, the ANDROID_ID: 16 hex digits, no dashes.
+  _fixed(RegExp(r'\b[0-9a-f]{16}\b', caseSensitive: false), '<id>'),
   _fixed(RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b'), '<ip>'),
   // Three colons at least, or a `::` anywhere (`2001:db8::`, `::1`), so times
   // such as 12:30:45 stay.
