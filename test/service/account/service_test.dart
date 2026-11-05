@@ -236,6 +236,36 @@ void main() {
       expect(service.signedIn.value, isFalse);
     });
 
+    for (final (answer, expected) in [
+      (false, false),
+      (true, true),
+      (null, true),
+    ]) {
+      test('trialAvailable $answer from the backend says whether the code '
+          'starts the trial', () async {
+        api.signupWith(token: 'st1', trialAvailable: answer);
+        api.refuse('/api/app/auth/login', 403, 'email_not_verified', {
+          'signupToken': 'st2',
+          'trialAvailable': ?answer,
+        });
+        final service = account();
+
+        final created = await service.signup(
+          email: 'ivan@proton.me',
+          password: 'long-secret',
+        );
+        final unconfirmed = await service
+            .login(email: 'ivan@proton.me', password: 'pw')
+            .then<PendingSignup?>(
+              (_) => null,
+              onError: (Object error) => (error as AccountException).signup,
+            );
+
+        expect(created.trialAvailable, expected);
+        expect(unconfirmed?.trialAvailable, expected);
+      });
+    }
+
     test('a registered email is refused', () async {
       api.refuse('/api/app/auth/signup', 409, 'email_taken');
 

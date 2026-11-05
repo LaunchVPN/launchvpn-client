@@ -3352,6 +3352,10 @@
   "@codeBody": {
     "placeholders": {"email": {"type": "String"}}
   },
+  "codeBodyConfirm": "We sent a code to {email}. Enter it to confirm your email.",
+  "@codeBodyConfirm": {
+    "placeholders": {"email": {"type": "String"}}
+  },
   "codeHint": "6-digit code",
   "codeSubmit": "Confirm",
   "codeResend": "Send the code again",

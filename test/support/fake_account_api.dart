@@ -36,10 +36,21 @@ final class FakeAccountApi implements HttpClientAdapter {
       _routes[path] = (_) async =>
           (status, {'ok': false, 'code': code, ...extra});
 
-  /// Signup mails a code and hands back the token of this attempt.
-  void signupWith({required String token, int resendIn = 60}) =>
-      _routes['/api/app/auth/signup'] = (_) async =>
-          (200, {'ok': true, 'resendIn': resendIn, 'signupToken': token});
+  /// Signup mails a code and hands back the token of this attempt, and
+  /// whether its code will start the trial; an older backend leaves that out.
+  void signupWith({
+    required String token,
+    int resendIn = 60,
+    bool? trialAvailable,
+  }) => _routes['/api/app/auth/signup'] = (_) async => (
+    200,
+    {
+      'ok': true,
+      'resendIn': resendIn,
+      'signupToken': token,
+      'trialAvailable': ?trialAvailable,
+    },
+  );
 
   /// The right code: the email is confirmed and the device signed in.
   void verifyWith({required String access, required String refresh}) =>

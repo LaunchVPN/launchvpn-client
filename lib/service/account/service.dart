@@ -130,7 +130,12 @@ final class AccountService {
     if (token is! String || token.isEmpty) {
       throw const AccountException(AccountError.unexpected);
     }
-    return PendingSignup(email: email, token: token, resendIn: _wait(data));
+    return PendingSignup(
+      email: email,
+      token: token,
+      resendIn: _wait(data),
+      trialAvailable: PendingSignup.trialIn(data),
+    );
   }
 
   /// Confirms [signup] with the mailed [code], signs in and returns the
@@ -510,7 +515,12 @@ final class AccountService {
       },
       retryAfter: data.containsKey('retryAfter') ? _wait(data) : null,
       signup: email != null && token is String && token.isNotEmpty
-          ? PendingSignup(email: email, token: token, resendIn: _resendGap)
+          ? PendingSignup(
+              email: email,
+              token: token,
+              resendIn: _resendGap,
+              trialAvailable: PendingSignup.trialIn(data),
+            )
           : null,
     );
   }

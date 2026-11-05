@@ -330,6 +330,23 @@ void main() {
       ]);
     });
 
+    testWidgets('without a trial to start, the code only confirms the email', (
+      tester,
+    ) async {
+      api.signupWith(token: 'st1', trialAvailable: false);
+      await pumpApp(tester, hasSubscription: false);
+
+      await createAccount(tester);
+
+      expect(
+        find.text(
+          'Отправили код на ivan@proton.me. Введите его, чтобы подтвердить '
+          'почту.',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('a wrong code is explained under the field', (tester) async {
       api.signupWith(token: 'st1');
       api.refuse('/api/app/auth/verify-code', 400, 'invalid_code', {

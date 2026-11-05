@@ -5,6 +5,7 @@ final class PendingSignup {
     required this.email,
     required this.token,
     required this.resendIn,
+    this.trialAvailable = true,
   });
 
   final String email;
@@ -12,6 +13,15 @@ final class PendingSignup {
 
   /// How long until another code may be sent.
   final Duration resendIn;
+
+  /// Whether confirming the email starts the trial. A backend that does not
+  /// say is taken to offer it.
+  final bool trialAvailable;
+
+  /// The answer to a signup, or to a login of an unconfirmed email, carries
+  /// whether the trial waits.
+  static bool trialIn(Map<Object?, Object?> data) =>
+      data['trialAvailable'] != false;
 }
 
 /// Telegram linked to the signed-in account, which may now be another one:
