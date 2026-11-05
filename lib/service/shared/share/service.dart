@@ -61,18 +61,24 @@ final class ShareService {
         if ((_receiveWidgetUri ?? AppleWidgetService().receiveOpenUri)(uri)) {
           return;
         }
-        if (_activeAppLink?.uri == uri ||
-            _pendingAppLinks.any((event) => event.uri == uri)) {
-          return;
-        }
-        _pendingAppLinks.add(IncomingAppLink._(uri));
-        _changes?.add(null);
+        addAppLink(uri);
       },
       onError: (Object error, StackTrace stackTrace) {
         // Native errors may contain private subscription URLs.
         ygLogger('receive app link failed');
       },
     );
+  }
+
+  /// Queues a link the app produced itself, such as the subscription an
+  /// account brings, so it opens the way a system link does.
+  void addAppLink(Uri uri) {
+    if (_activeAppLink?.uri == uri ||
+        _pendingAppLinks.any((event) => event.uri == uri)) {
+      return;
+    }
+    _pendingAppLinks.add(IncomingAppLink._(uri));
+    _changes?.add(null);
   }
 
   Future<void> init() async {
