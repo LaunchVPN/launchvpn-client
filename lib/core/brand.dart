@@ -47,4 +47,8 @@ abstract final class Brand {
   static const subscriptionClient = 'v2rayN';
 
   static const githubRepository = 'LaunchVPN/launchvpn-client';
+
+  /// Crash reports. A DSN only lets one send events, so it is not a secret.
+  static const sentryDsn =
+      'https://b8a45d71119187498301161db2d2ad72@o4512378829602816.ingest.de.sentry.io/4512378850443344';
 }
