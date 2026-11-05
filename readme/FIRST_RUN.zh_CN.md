@@ -135,4 +135,4 @@ FFI 头文件与配置见 `pubspec.yaml`；已入库的模型、数据库、资�
 普通 Debug 不需要 `BUILD_NUMBER`、Fastlane 或商店上传凭据；平台开发签名另行准备。
 打包时转到构建手册。
 
-[返回 README](./README.zh_CN.md)
+[返回 README](../README.md)

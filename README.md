@@ -1,115 +1,68 @@
-<p align="center">
-  <img src="./assets/logo.png" width="96" alt="OneXray logo">
-</p>
+# LaunchVPN
 
-<h1 align="center">OneXray</h1>
+The LaunchVPN app for Android and iOS. It connects to LaunchVPN servers through
+[Xray-core](https://github.com/XTLS/Xray-core) and works only with a LaunchVPN
+subscription.
 
-<p align="center">
-  An open-source Xray-core client for phones, tablets and desktops.
-</p>
+## What the app does
 
-<p align="center">
-  English · <a href="./readme/README.zh_CN.md">简体中文</a> · <a href="./readme/README.ru.md">Русский</a>
-</p>
+- **Signs you in.** Sign in with email and password, or on Android with
+  Telegram, and the subscription of your account comes with it. A subscription
+  link from LaunchVPN works without an account too.
+- **Connects in one tap.** Home shows the connection, the days left on the
+  subscription and the location in use. The automatic location is the default;
+  you can pick a country or a service instead.
+- **Chooses what goes through the VPN.** Smart follows the routing of the
+  subscription, Everything through VPN tunnels all internet traffic except
+  torrents, which it blocks, and on Android Apps tunnels only the apps you choose.
+- **Speaks Russian and English**, following the system language unless you pick
+  one in Settings.
 
-<p align="center"><strong>Download from the official stores</strong></p>
-
-<p align="center">
-  <a href="https://apps.apple.com/us/app/onexray/id6745748773"><img src="./readme/store-badges/en/app-store.svg" height="48" align="middle" alt="Download on the App Store"></a>&nbsp;
-  <a href="https://play.google.com/store/apps/details?id=net.yuandev.onexray"><img src="./readme/store-badges/en/google-play.png" height="72" align="middle" alt="Get it on Google Play"></a>&nbsp;
-  <a href="https://apps.microsoft.com/detail/9NJ0MVHW215D"><img src="./readme/store-badges/en/microsoft-store.svg" height="48" align="middle" alt="Get it from Microsoft Store"></a>
-</p>
-
-<p align="center">
-  <a href="#linux">Linux</a> · <a href="#onexrayse">OneXraySE</a> · <a href="#other-downloads">Other downloads</a>
-</p>
-
-<p align="center">
-  If OneXray is useful to you, give this repository a ⭐ <strong>Star</strong> to support its continued development.
-</p>
-
-<p align="center">
-  <a href="https://github.com/YuanDevTeam/OneXray"><img src="https://img.shields.io/github/stars/YuanDevTeam/OneXray?style=social" alt="GitHub stars"></a>
-  <a href="https://github.com/YuanDevTeam/OneXray/releases/latest"><img src="https://img.shields.io/github/v/release/YuanDevTeam/OneXray?display_name=tag&sort=semver" alt="Latest release"></a>
-</p>
-
-**Bring your own servers or subscription.** OneXray does not provide VPN access or proxy servers.
-
-[![OneXray running on Mac, iPad and iPhone](./readme/images/devices-en.png)](./readme/images/devices-en.png)
-
-## Why OneXray
-
-- **Across your devices.** Use iPhone, iPad, Mac, Android, Windows or Linux, with light/dark themes and five interface languages.
-- **Your servers, organized.** Import share links, Xray JSON and subscriptions. Group manual nodes and reorder them by dragging.
-- **Routing you control.** Choose Smart or Custom Routing, or use complete Raw and provider configurations, including Remnawave subscriptions.
-- **Open and private.** GPL-3.0 source with a [VPN provider exception](#license), without accounts, advertising, analytics or tracking. [Privacy policy](https://onexray.com/docs/privacy/).
-
-## Get started
-
-1. Install from the official store and complete setup and system permissions. Windows and Linux also need an outbound-interface selection.
-2. Open **Servers** and add your subscription, share links or Xray JSON. Complete provider configurations are recognized during subscription import.
-3. On **Connect**, choose a server or complete configuration and start the VPN. For App-managed nodes, Smart Routing is a useful starting point; provider configurations use their own routing and DNS.
-
-[First connection guide](https://onexray.com/docs/getting-started/) · [Import guide](https://onexray.com/docs/servers/import/) · [Remnawave guide](https://onexray.com/docs/servers/remnawave/)
+Renewal, payment and the devices on a subscription are managed in the
+[account Cabinet](https://app.launch.tel) or in the LaunchVPN bot.
 
 ## Download
 
-Choose the official store for your device:
+There is no public release yet. Android APKs will be published on
+[Releases](https://github.com/LaunchVPN/launchvpn-client/releases), and the App
+Store and Google Play listings will follow.
 
-- **iPhone / iPad:** [App Store](https://apps.apple.com/us/app/onexray/id6745748773) — iOS / iPadOS 15+.
-- **macOS:** [Mac App Store](https://apps.apple.com/us/app/onexray/id6745748773) — macOS 13+, Apple silicon or Intel.
-- **Android phones / tablets:** [Google Play](https://play.google.com/store/apps/details?id=net.yuandev.onexray) — Android 10+, arm64-v8a or x86_64.
-- **Windows:** [Microsoft Store](https://apps.microsoft.com/detail/9NJ0MVHW215D) — Windows 10 20H2+ (x64) or Windows 11 (ARM64).
+## Build from source
 
-### Linux
+The App builds next to a [libXray](https://github.com/XTLS/libXray) checkout at
+the commit our CI pins as `LIBXRAY_REF` in the
+[LaunchVPN Build workflow](./.github/workflows/launchvpn-build.yml):
 
-[DEB · x86_64](https://github.com/YuanDevTeam/OneXray/releases/latest/download/OneXray-linux-x86_64.deb) · [DEB · arm64](https://github.com/YuanDevTeam/OneXray/releases/latest/download/OneXray-linux-aarch64.deb). Requires Linux 5.3+ and glibc 2.39+. See the [Linux installation guide](https://onexray.com/docs/install/#linux) for dependencies and permissions.
+```shell
+git clone https://github.com/LaunchVPN/launchvpn-client.git
+git clone https://github.com/XTLS/libXray.git
+git -C libXray checkout <LIBXRAY_REF>
+cd launchvpn-client
+```
 
-### OneXraySE
+Install the tools listed in the [development setup](./readme/FIRST_RUN.md) and
+skip its clone commands, which the ones above replace. Then continue from its
+[native libraries step](./readme/FIRST_RUN.md#2-native-libraries-and-geodata)
+to prepare the core for Android or iOS and run the App. The guide comes from
+OneXray, so read its `OneXray/` as this checkout. Packaging, CI and APK releases
+are in the [build guide](./build_scripts/README.md), and the App's behavior is
+described in the [App contracts](./docs/README.md).
 
-The macOS System Extension edition is available through [Homebrew](https://formulae.brew.sh/cask/onexrayse) or [Universal ZIP](https://github.com/YuanDevTeam/OneXray/releases/latest/download/OneXray-macos-universal.zip). Requires macOS 13+, Apple silicon or Intel. Follow the [macOS installation guide](https://onexray.com/docs/install/#macos) for extension approval and updates.
+## Help
 
-### Other downloads
+Write to [LaunchVPN support](https://t.me/launchbotsupport) in Telegram. Please
+leave subscription links and logs out of public issues: a subscription link
+gives access to your servers.
 
-<details>
-<summary>Direct packages and installation details</summary>
+## Based on OneXray
 
-| Platform | Packages |
-| --- | --- |
-| iPhone / iPad | [IPA](https://github.com/YuanDevTeam/OneXray/releases/latest/download/OneXray-ios.ipa) |
-| Android | [Universal APK](https://github.com/YuanDevTeam/OneXray/releases/latest/download/OneXray-android-universal.apk) |
-| Windows x64 | [EXE via winget](https://onexray.com/docs/install/#windows) · [ZIP](https://github.com/YuanDevTeam/OneXray/releases/latest/download/OneXray-windows-amd64.zip) |
-| Windows ARM64 | [EXE via winget](https://onexray.com/docs/install/#windows) · [ZIP](https://github.com/YuanDevTeam/OneXray/releases/latest/download/OneXray-windows-arm64.zip) |
-| Linux x86_64 | [ZIP](https://github.com/YuanDevTeam/OneXray/releases/latest/download/OneXray-linux-x86_64.zip) |
-| Linux arm64 | [ZIP](https://github.com/YuanDevTeam/OneXray/releases/latest/download/OneXray-linux-aarch64.zip) |
-
-The [installation guide](https://onexray.com/docs/install/) covers IPA signing, Windows editions and separate data locations, ZIP permissions and updates. [All releases](https://github.com/YuanDevTeam/OneXray/releases).
-
-</details>
-
-## Configuration and help
-
-- [User documentation](https://onexray.com/docs/) — setup, routing, subscriptions and platform features.
-- [Configure with AI](https://onexray.com/docs/ai/) — copy the guide's prompt into an assistant you trust, or attach the [complete guide](https://onexray.com/llms-full.txt). OneXray has no built-in AI service and does not send configurations to an assistant; review generated JSON in the App before connecting.
-- [Report a bug or request a feature](https://github.com/YuanDevTeam/OneXray/issues) — include your platform, App/Core versions and reproduction steps. Remove credentials from shared configurations, subscription links and logs.
-- [Telegram community](https://t.me/YuanDevTeam).
-
-## Support OneXray
-
-Enjoy OneXray? Give this repository a ⭐ **Star** to support its continued development.
-
-[App Store](https://apps.apple.com/us/app/onexray/id6745748773) · [Google Play](https://play.google.com/store/apps/details?id=net.yuandev.onexray) · [Microsoft Store](https://apps.microsoft.com/detail/9NJ0MVHW215D)
-
-Code, translations and documentation contributions are welcome. Start with the [development setup](./readme/FIRST_RUN.md), [build guide](./build_scripts/README.md) and [App contracts](./docs/README.md).
+LaunchVPN is a fork of [OneXray](https://github.com/YuanDevTeam/OneXray) by Yuan
+Dev Team. The core, the native tunnel and the build tooling come from OneXray and
+are merged regularly; the interface and the brand are our own.
 
 ## License
 
-OneXray is licensed under the [GNU General Public License v3.0](./LICENSE), with the [OneXray VPN Provider Exception](./LICENSE-EXCEPTION).
-
-VPN service providers may build and distribute customized, closed-source clients for their own VPN services without complying with the repository's GPL requirements for the code covered by the exception. Other uses remain subject to the GPL or another applicable permission.
-
-Yuan Dev Team guarantees that it will not introduce direct third-party dependencies that require a qualifying customized client as a whole to be GPL-licensed or to disclose its source code under the GPL. Third-party licenses and their component-specific obligations still apply; the exception only covers rights Yuan Dev Team owns or is authorized to license.
-
-## Business inquiries
-
-For business partnerships, please email [yuan@yuandev.net](mailto:yuan@yuandev.net).
+The code is licensed under the [GNU General Public License v3.0](./LICENSE).
+OneXray's code also carries the [OneXray VPN Provider Exception](./LICENSE-EXCEPTION),
+an additional permission for VPN providers. Yuan Dev Team grants it only for the
+code it holds the rights to.
