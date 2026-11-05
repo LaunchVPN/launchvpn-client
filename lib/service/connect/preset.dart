@@ -46,21 +46,23 @@ extension VpnApps on ConnectionConfiguration {
   ConnectionConfiguration withVpnApps(Iterable<String> packages) =>
       _with(android: {'includedAppPackageNames': packages.toList()});
 
-  Map<String, dynamic> get _android => policySection('android');
+  Map<String, dynamic> get _android => policySection(_section);
 
   ConnectionConfiguration _with({
     TrafficMode? trafficMode,
     required Map<String, dynamic> android,
   }) {
-    final next = withPolicySection('android', android);
-    return trafficMode == null
-        ? next
+    final next = trafficMode == null
+        ? this
         : ConnectionConfiguration(
             connection: ConnectionSettings.fromJson({
               ...connection.toJson(),
               'trafficMode': trafficMode.name,
             }),
-            policy: next.policy,
+            policy: policy,
           );
+    return next.withPolicySection(_section, android);
   }
+
+  static const _section = 'android';
 }

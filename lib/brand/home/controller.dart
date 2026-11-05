@@ -14,6 +14,7 @@ import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/connect/keep_vpn_on.dart';
 import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/resolver.dart';
+import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/catalog.dart';
 import 'package:onexray/service/servers/locations.dart';
@@ -344,7 +345,7 @@ class HomeController extends PageCubit<HomeState> {
   List<ConnectionPreset> get presets => ConnectionPreset.offeredOn(_platform);
 
   /// Settings offers «Не отключать VPN» on iOS only.
-  bool get offersKeepVpnOn => _platform == ConnectionPlatform.ios;
+  bool get offersKeepVpnOn => KeepVpnOn.offeredOn(_platform);
 
   void _connectionChanged() {
     final view = coordinator.state.value;
@@ -409,10 +410,12 @@ class HomeController extends PageCubit<HomeState> {
     ConnectionActionRunner run,
   ) async {
     if (!state.canChangeConnection || preset == state.preset) return;
-    final request = _choiceRequest;
-    emit(state.copyWith(preset: () => preset));
-    await _perform(request, run, () => coordinator.applyChange(preset.applyTo));
-    await _showStoredChoices();
+    await _saveChoice(
+      state.copyWith(preset: () => preset),
+      _choiceRequest,
+      run,
+      preset.applyTo,
+    );
   }
 
   /// Saves what «Приложения» sends through the VPN, and with [select] also
@@ -430,35 +433,43 @@ class HomeController extends PageCubit<HomeState> {
         : (select ? ConnectionPreset.apps : current);
     if (preset == current && _sameApps(apps, state.vpnApps)) return;
     final restart = preset != current || preset == ConnectionPreset.apps;
-    final request = restart ? _choiceRequest : HomeRequest.saveChoice;
-    emit(
+    await _saveChoice(
       state.copyWith(preset: () => preset, vpnApps: List.unmodifiable(apps)),
-    );
-    await _perform(
-      request,
+      restart ? _choiceRequest : HomeRequest.saveChoice,
       run,
-      () => coordinator.applyChange(
-        (stored) =>
-            preset?.applyTo(stored.withVpnApps(apps)) ??
-            stored.withVpnApps(apps),
-        restart: restart,
-      ),
+      (stored) =>
+          preset?.applyTo(stored.withVpnApps(apps)) ?? stored.withVpnApps(apps),
+      restart: restart,
     );
-    await _showStoredChoices();
   }
 
   /// Saves «Не отключать VPN». Like the other tunnel settings, it reaches the
   /// system with the next connection, so a running tunnel keeps going.
   Future<void> saveKeepVpnOn(bool value, ConnectionActionRunner run) async {
     if (!state.canChangeConnection || value == state.keepVpnOn) return;
-    emit(state.copyWith(keepVpnOn: value));
-    await _perform(
+    await _saveChoice(
+      state.copyWith(keepVpnOn: value),
       HomeRequest.saveChoice,
       run,
-      () => coordinator.applyChange(
-        (stored) => stored.withKeepVpnOn(value),
-        restart: false,
-      ),
+      (stored) => stored.withKeepVpnOn(value),
+      restart: false,
+    );
+  }
+
+  /// Shows [shown] at once, stores [change] and shows what was stored, so a
+  /// failed save puts the previous choice back.
+  Future<void> _saveChoice(
+    HomeState shown,
+    HomeRequest request,
+    ConnectionActionRunner run,
+    ConnectionConfiguration Function(ConnectionConfiguration stored) change, {
+    bool restart = true,
+  }) async {
+    emit(shown);
+    await _perform(
+      request,
+      run,
+      () => coordinator.applyChange(change, restart: restart),
     );
     await _showStoredChoices();
   }

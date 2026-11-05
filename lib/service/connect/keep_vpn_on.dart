@@ -1,10 +1,14 @@
 import 'package:onexray/service/connect/policy_section.dart';
 import 'package:onexray/service/connect/runtime.dart';
+import 'package:onexray/service/connect/settings.dart';
 
 /// «Не отключать VPN»: on iOS the tunnel gets OneXray's always-on rule, so the
 /// system connects it on any network, after a restart too. Android has its own
 /// always-on VPN setting, so the App offers this on iOS only.
 extension KeepVpnOn on ConnectionConfiguration {
+  static bool offeredOn(ConnectionPlatform platform) =>
+      platform == ConnectionPlatform.ios;
+
   bool get keepVpnOn => policySection(_apple)[_alwaysOn] == true;
 
   ConnectionConfiguration withKeepVpnOn(bool value) =>
