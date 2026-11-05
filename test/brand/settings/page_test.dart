@@ -112,6 +112,7 @@ void main() {
       controller: controller,
       settings: BrandSettingsPage(controller: controller, reminders: reminders),
       shareService: share,
+      watchSubscription: () => Stream.value(true),
       initializeServices: (_) => share.init(),
       openLink: (_, _) async {},
     );

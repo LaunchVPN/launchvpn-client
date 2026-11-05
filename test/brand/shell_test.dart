@@ -38,6 +38,7 @@ void main() {
     home: const Text('home-body'),
     settings: const Text('settings-body'),
     shareService: share,
+    watchSubscription: () => Stream.value(true),
     initializeServices: (_) async {
       await share.init();
       await ready?.future;
@@ -178,6 +179,7 @@ void main() {
     final config = createBrandRouter(
       home: const Text('home-body'),
       shareService: share,
+      watchSubscription: () => Stream.value(true),
       initializeServices: (_) async {
         if (++attempts == 1) throw StateError('no storage');
       },

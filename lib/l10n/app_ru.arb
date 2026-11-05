@@ -1041,5 +1041,18 @@
   "vpnAppsChosen": "Через VPN · {count}",
   "vpnAppsOthers": "Остальные",
   "vpnAppsNone": "Ничего не найдено",
-  "vpnAppsLoadFailed": "Не удалось получить список приложений"
+  "vpnAppsLoadFailed": "Не удалось получить список приложений",
+  "loginTitle": "Интернет\nбез границ",
+  "loginEmail": "Email",
+  "loginPassword": "Пароль",
+  "loginSubmit": "Войти",
+  "loginHaveLink": "У меня есть ссылка подписки",
+  "loginErrorInvalidCredentials": "Неверная почта или пароль",
+  "loginErrorEmailNotVerified": "Почта не подтверждена. Откройте ссылку из письма",
+  "loginErrorRateLimited": "Слишком много попыток. Подождите немного",
+  "loginErrorNetwork": "Нет связи с сервером. Попробуйте ещё раз",
+  "loginErrorUnexpected": "Не получилось войти. Попробуйте позже",
+  "loginLinkTitle": "Ссылка подписки",
+  "loginLinkHint": "Ссылка из бота или с сайта",
+  "loginLinkAdd": "Добавить"
 }

@@ -8,6 +8,12 @@ class LaunchMark extends StatelessWidget {
       inset = 0.28125,
       stroke = 0.09375;
 
+  /// Inside the app-icon tile at the top of «Вход».
+  const LaunchMark.tile({super.key, required this.color})
+    : size = 36,
+      inset = 0.28125,
+      stroke = 0.09375;
+
   const LaunchMark.knob({super.key, required this.color})
     : size = 40,
       inset = 0.25,

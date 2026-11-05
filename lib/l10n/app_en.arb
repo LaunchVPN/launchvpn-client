@@ -3240,5 +3240,18 @@
   },
   "vpnAppsOthers": "Other apps",
   "vpnAppsNone": "Nothing found",
-  "vpnAppsLoadFailed": "Couldn't get the list of apps"
+  "vpnAppsLoadFailed": "Couldn't get the list of apps",
+  "loginTitle": "Internet\nwithout borders",
+  "loginEmail": "Email",
+  "loginPassword": "Password",
+  "loginSubmit": "Sign in",
+  "loginHaveLink": "I have a subscription link",
+  "loginErrorInvalidCredentials": "Wrong email or password",
+  "loginErrorEmailNotVerified": "Your email isn't confirmed yet. Open the link in our email",
+  "loginErrorRateLimited": "Too many attempts. Wait a little",
+  "loginErrorNetwork": "Can't reach the server. Try again",
+  "loginErrorUnexpected": "Couldn't sign in. Try again later",
+  "loginLinkTitle": "Subscription link",
+  "loginLinkHint": "The link from the bot or the site",
+  "loginLinkAdd": "Add"
 }

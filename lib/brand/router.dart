@@ -5,6 +5,7 @@ import 'package:onexray/brand/home/page.dart';
 import 'package:onexray/brand/settings/page.dart';
 import 'package:onexray/brand/shell.dart';
 import 'package:onexray/pages/main/modal_route_observer.dart';
+import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/shared/share/service.dart';
 
 abstract final class BrandRoutes {
@@ -22,6 +23,8 @@ GoRouter createBrandRouter({
   Future<void> Function(BuildContext context)? initializeServices,
   ShareService? shareService,
   Future<void> Function(BuildContext, Uri)? openLink,
+  AccountService? account,
+  Stream<bool> Function()? watchSubscription,
 }) {
   final modals = AppModalRouteObserver();
   // Both tabs share it, so a mode chosen on either is one choice and one
@@ -41,6 +44,8 @@ GoRouter createBrandRouter({
           initializeServices: initializeServices,
           shareService: shareService,
           openLink: openLink,
+          account: account,
+          watchSubscription: watchSubscription,
         ),
         branches: [
           StatefulShellBranch(

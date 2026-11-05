@@ -64,6 +64,16 @@ abstract final class BrandText {
     letterSpacing: -0.34,
     color: BrandColors.ink,
   );
+
+  /// The large two-line title of «Вход».
+  static const heroTitle = TextStyle(
+    fontFamily: _display,
+    fontWeight: FontWeight.w600,
+    fontSize: 30,
+    height: 36 / 30,
+    letterSpacing: -0.3,
+    color: BrandColors.ink,
+  );
   static const screenTitle = TextStyle(
     fontFamily: _display,
     fontWeight: FontWeight.w600,
