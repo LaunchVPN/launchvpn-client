@@ -367,12 +367,11 @@ jobs:
           keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
           keychain: signing_temp
 
-      # The deploy lane fetches the three App Store profiles, archives, exports
-      # the IPA and uploads it, so the checks below run after the upload; the
-      # pull request ran them on the same code. agvtool gives the app and both
-      # extensions the run number, since TestFlight takes each build number
+      # The lane fetches the three App Store profiles, archives and exports the
+      # IPA; the upload waits for the checks below. agvtool gives the app and
+      # both extensions the run number, since TestFlight takes each build number
       # once. The team comes from a variable, as the project leaves it empty.
-      - name: Sign and upload to TestFlight
+      - name: Sign
         if: steps.signing.outputs.upload == 'true'
         env:
           FASTLANE_ASC_KEY_ID: ${{ secrets.FASTLANE_ASC_KEY_ID }}
@@ -381,7 +380,7 @@ jobs:
         working-directory: launchvpn-client/ios
         run: |
           xcrun agvtool new-version -all "$BUILD_NUMBER"
-          fastlane deploy
+          fastlane signed_ipa
 
       - name: Check the app embeds the tunnel and the Widget
         run: |
@@ -412,3 +411,11 @@ jobs:
           plugins=$(jq -r '.plugins.ios[].name' .flutter-plugins-dependencies)
           grep -qx url_launcher_ios <<< "$plugins"
           ! grep -xE 'mobile_scanner|image_picker_ios' <<< "$plugins"
+
+      - name: Upload to TestFlight
+        if: steps.signing.outputs.upload == 'true'
+        env:
+          FASTLANE_ASC_KEY_ID: ${{ secrets.FASTLANE_ASC_KEY_ID }}
+          FASTLANE_ASC_ISSUER_ID: ${{ secrets.FASTLANE_ASC_ISSUER_ID }}
+        working-directory: launchvpn-client/ios
+        run: fastlane upload_ipa

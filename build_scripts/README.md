@@ -131,9 +131,10 @@ and its custom domain `privacy.launch.tel` has a DNS `CNAME` record pointing to
 Until the organization's Apple account exists, `main` uploads to TestFlight from
 an individual test account with the temporary IDs `com.launchvpn.dev`, `.tun`,
 `.widget` and `group.com.launchvpn.dev`. The App can never be released from it,
-since only organizations may offer VPN apps. The `ios` job runs the
-[deploy lane](../ios/fastlane/Fastfile), which fetches the App Store profiles
-`LaunchVPNiOS`, `LaunchVPNiOSTun` and `LaunchVPNiOSWidget` by name. It needs the
+since only organizations may offer VPN apps. The `ios` job runs the two halves
+of the [deploy lane](../ios/fastlane/Fastfile): `signed_ipa` fetches the App
+Store profiles `LaunchVPNiOS`, `LaunchVPNiOSTun` and `LaunchVPNiOSWidget` by name
+and exports the IPA, and `upload_ipa` runs after the bundle checks. It needs the
 Apple secrets from the workflow header and the repository variable `APPLE_TEAM_ID`.
 Without them `main` builds unsigned with a warning. Each upload takes the run
 number as its build number. TestFlight accepts a build number only once, so

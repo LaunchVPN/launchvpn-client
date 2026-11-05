@@ -6,14 +6,26 @@ def flutter_build_args(*args)
   ['flutter', 'build', *args]
 end
 
+OUTPUT_DIR = File.expand_path('../../../output', __dir__)
+OUTPUT_NAME = 'OneXray-ios'
+
+def asc_api_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch('FASTLANE_ASC_KEY_ID'),
+    issuer_id: ENV.fetch('FASTLANE_ASC_ISSUER_ID'),
+    key_filepath: './fastlane/AuthKey.p8'
+  )
+end
+
 platform :ios do
   lane :deploy do
-    api_key = app_store_connect_api_key(
-      key_id: ENV.fetch('FASTLANE_ASC_KEY_ID'),
-      issuer_id: ENV.fetch('FASTLANE_ASC_ISSUER_ID'),
-      key_filepath: './fastlane/AuthKey.p8'
-    )
+    signed_ipa
+    upload_ipa
+  end
 
+  # CI checks the archive between these two lanes.
+  lane :signed_ipa do
+    api_key = asc_api_key
     [
       ['com.launchvpn.dev', 'LaunchVPNiOS'],
       ['com.launchvpn.dev.tun', 'LaunchVPNiOSTun'],
@@ -35,8 +47,8 @@ platform :ios do
     build_app(
         skip_build_archive: true,
         archive_path: "../build/ios/archive/Runner.xcarchive",
-        output_directory: File.expand_path('../../../output', __dir__),
-        output_name: 'OneXray-ios',
+        output_directory: OUTPUT_DIR,
+        output_name: OUTPUT_NAME,
         export_options: {
           method: 'app-store-connect',
           provisioningProfiles: {
@@ -45,8 +57,12 @@ platform :ios do
             'com.launchvpn.dev.widget' => 'LaunchVPNiOSWidget'
           }
         })
+  end
+
+  lane :upload_ipa do
     upload_to_testflight(
-      api_key: api_key,
+      api_key: asc_api_key,
+      ipa: File.join(OUTPUT_DIR, "#{OUTPUT_NAME}.ipa"),
       skip_waiting_for_build_processing: true
     )
   end
