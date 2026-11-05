@@ -10,6 +10,7 @@ import 'package:onexray/brand/login/page.dart';
 import 'package:onexray/brand/permission/vpn_permission_page.dart';
 import 'package:onexray/brand/router.dart';
 import 'package:onexray/brand/subscription_link_flow.dart';
+import 'package:onexray/brand/toast.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/main/modal_route_observer.dart';
@@ -18,6 +19,7 @@ import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/account/telegram_auth.dart';
 import 'package:onexray/service/connect/connection_permissions.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/crash_reports/service.dart';
 import 'package:onexray/service/manager.dart';
 import 'package:onexray/service/shared/failure.dart';
 import 'package:onexray/service/shared/menu/short_cut/service.dart';
@@ -29,7 +31,8 @@ import 'package:onexray/service/shared/share/service.dart';
 /// `launchvpn://auth` returns go to the Telegram attempt waiting for them,
 /// every other link to the subscription flow. A return to linking opens
 /// «Аккаунт», which tells the outcome; a sign-in the system closed the App
-/// during, which no «Вход» took back, opens one over the tabs.
+/// during, which no «Вход» took back, opens one over the tabs. The first
+/// launch says in a toast what crash reports hold, over «Вход» or the tabs.
 class BrandShell extends StatefulWidget {
   const BrandShell({
     super.key,
@@ -88,7 +91,26 @@ class _BrandShellState extends State<BrandShell> {
       // Links received during startup precede this subscription.
       _scheduleDrain();
       ShortCutService().attach(_handleQuickAction);
+      unawaited(_tellAboutCrashReports());
     });
+  }
+
+  /// Long enough to read two sentences.
+  static const _noticeTime = Duration(seconds: 8);
+
+  Future<void> _tellAboutCrashReports() async {
+    final reports = CrashReports.instance;
+    try {
+      if (!await reports.noticeDue || !mounted) return;
+      showReadingToast(
+        context,
+        AppLocalizations.of(context)!.crashReportsNotice,
+        duration: _noticeTime,
+      );
+      await reports.noticeShown();
+    } catch (error) {
+      ygLogger('crash reports notice failed (${error.runtimeType})');
+    }
   }
 
   void _scheduleDrain() {

@@ -6,9 +6,15 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/app.dart';
 import 'package:onexray/brand/router.dart';
+import 'package:onexray/core/constants/preferences.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/account/telegram_auth.dart';
 import 'package:onexray/service/shared/share/service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+// ignore: depend_on_referenced_packages
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+// ignore: depend_on_referenced_packages
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import '../support/fake_account_api.dart';
 
@@ -21,6 +27,18 @@ void main() {
   Completer<void>? ready;
   late List<Uri> opened;
   late Completer<void> finishLink;
+
+  // PreferencesKey keeps the first platform it sees, so tests share one store.
+  setUpAll(
+    () => SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty(),
+  );
+
+  // As on every launch after the first.
+  setUp(() async {
+    await SharedPreferencesAsync().clear();
+    await PreferencesKey().saveCrashReportsNoticeShown();
+  });
 
   // Called inside each test: streams and timers must belong to its fake clock.
   void prepare() {
@@ -81,6 +99,29 @@ void main() {
     expect(find.text('Аккаунт'), findsOneWidget);
     expect(find.text('Настройки'), findsOneWidget);
     expect(find.byType(NavigationDestination), findsNWidgets(3));
+  });
+
+  testWidgets('the first launch says once what crash reports hold', (
+    tester,
+  ) async {
+    const notice = 'Если приложение сломается, оно пришлёт нам отчёт без '
+        'ссылок, адресов и email. Выключить можно в настройках.';
+    await tester.runAsync(SharedPreferencesAsync().clear);
+    prepare();
+    await pumpApp(tester, router());
+    await tester.runAsync(() => pumpEventQueue());
+    await tester.pump();
+    expect(find.text(notice), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 9));
+    await tester.pumpAndSettle();
+    expect(find.text(notice), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await pumpApp(tester, router());
+    await tester.runAsync(() => pumpEventQueue());
+    await tester.pumpAndSettle();
+    expect(find.text(notice), findsNothing);
   });
 
   testWidgets('the settings tab opens and home keeps its place', (
