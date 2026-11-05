@@ -134,6 +134,19 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
                             : null,
                       ),
                     ),
+                  if (widget.controller.offersKeepVpnOn)
+                    BlocBuilder<HomeController, HomeState>(
+                      bloc: widget.controller,
+                      buildWhen: (a, b) => a.keepVpnOn != b.keepVpnOn,
+                      builder: (context, state) => SettingsSwitchRow(
+                        icon: LucideIcons.shieldCheck,
+                        title: l.settingsKeepVpnOn,
+                        subtitle: l.settingsKeepVpnOnHint,
+                        value: state.keepVpnOn,
+                        onChanged: (value) =>
+                            widget.controller.saveKeepVpnOn(value, _run),
+                      ),
+                    ),
                   BlocBuilder<SettingsController, SettingsState>(
                     bloc: _settings,
                     buildWhen: (a, b) => a.connectOnLaunch != b.connectOnLaunch,

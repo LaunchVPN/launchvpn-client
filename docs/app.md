@@ -110,6 +110,11 @@ upstream pages kept for merging. They are not reachable in this build.
   later triggers another check. Without a subscription Home asks for one rather than reporting a
   failed attempt. Without VPN consent the launch makes no attempt, since only a tap may bring up the
   prompt.
+- Keep VPN on, under Connection, is on iPhone only and off by default. On, the tunnel gets
+  OneXray's always-on rule, so iOS connects it on any network, after a restart or a network change
+  too; off, the tunnel gets no rules. Like the other tunnel settings it is stored at once and
+  reaches the system with the next connection. Disconnecting in the App removes the rule until the
+  next connection. Android has no row, since its system settings have their own always-on VPN.
 - Renewal reminders, under App, are on by default. `RenewalReminders` sets two local
   notifications at noon local time, three days and one day before the expiry date from the
   subscription headers, and leaves out one whose time has passed. They carry no payment link. The

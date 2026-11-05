@@ -11,6 +11,7 @@ import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/connect/connection_permissions.dart';
 import 'package:onexray/service/advanced/platform_policy.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/connect/keep_vpn_on.dart';
 import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/settings.dart';
@@ -80,6 +81,7 @@ class HomeState {
     this.restoring = false,
     this.preset,
     this.vpnApps = const [],
+    this.keepVpnOn,
     this.selection,
     this.expired = false,
     this.refreshing = false,
@@ -95,6 +97,9 @@ class HomeState {
 
   /// What «Приложения» sends through the VPN, kept under the other modes.
   final List<String> vpnApps;
+
+  /// «Не отключать VPN» on iOS. Null until the saved choices are read.
+  final bool? keepVpnOn;
 
   /// Null until the saved choices are read.
   final ServerSelection? selection;
@@ -252,6 +257,7 @@ class HomeState {
     bool? restoring,
     ConnectionPreset? Function()? preset,
     List<String>? vpnApps,
+    bool? keepVpnOn,
     ServerSelection? selection,
     bool? expired,
     bool? refreshing,
@@ -263,6 +269,7 @@ class HomeState {
     restoring: restoring ?? this.restoring,
     preset: preset == null ? this.preset : preset(),
     vpnApps: vpnApps ?? this.vpnApps,
+    keepVpnOn: keepVpnOn ?? this.keepVpnOn,
     selection: selection ?? this.selection,
     expired: expired ?? this.expired,
     refreshing: refreshing ?? this.refreshing,
@@ -276,6 +283,7 @@ class HomeState {
     restoring: restoring,
     preset: preset,
     vpnApps: vpnApps,
+    keepVpnOn: keepVpnOn,
     selection: selection,
     expired: expired,
     refreshing: refreshing,
@@ -335,6 +343,9 @@ class HomeController extends PageCubit<HomeState> {
   /// What Home and «Режим» offer on this device.
   List<ConnectionPreset> get presets => ConnectionPreset.offeredOn(_platform);
 
+  /// Settings offers «Не отключать VPN» on iOS only.
+  bool get offersKeepVpnOn => _platform == ConnectionPlatform.ios;
+
   void _connectionChanged() {
     final view = coordinator.state.value;
     final wasUp =
@@ -382,6 +393,7 @@ class HomeController extends PageCubit<HomeState> {
         state.copyWith(
           preset: () => ConnectionPreset.of(stored, platform: _platform),
           vpnApps: stored.vpnApps,
+          keepVpnOn: stored.keepVpnOn,
           selection: stored.connection.selection,
         ),
       );
@@ -430,6 +442,22 @@ class HomeController extends PageCubit<HomeState> {
             preset?.applyTo(stored.withVpnApps(apps)) ??
             stored.withVpnApps(apps),
         restart: restart,
+      ),
+    );
+    await _showStoredChoices();
+  }
+
+  /// Saves «Не отключать VPN». Like the other tunnel settings, it reaches the
+  /// system with the next connection, so a running tunnel keeps going.
+  Future<void> saveKeepVpnOn(bool value, ConnectionActionRunner run) async {
+    if (!state.canChangeConnection || value == state.keepVpnOn) return;
+    emit(state.copyWith(keepVpnOn: value));
+    await _perform(
+      HomeRequest.saveChoice,
+      run,
+      () => coordinator.applyChange(
+        (stored) => stored.withKeepVpnOn(value),
+        restart: false,
       ),
     );
     await _showStoredChoices();

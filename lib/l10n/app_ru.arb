@@ -1015,6 +1015,8 @@
   "settingsConnection": "Подключение",
   "settingsPresets": "Режим",
   "settingsConnectOnLaunch": "Подключать при запуске",
+  "settingsKeepVpnOn": "Не отключать VPN",
+  "settingsKeepVpnOnHint": "Включается сам после перезагрузки и смены сети",
   "settingsPresetSmartHint": "Сайты, которым VPN не нужен, открываются напрямую",
   "settingsPresetAllVpnHint": "Весь трафик идёт через сервер",
   "settingsPresetFootnote": "Режим можно сменить и на главном экране.",

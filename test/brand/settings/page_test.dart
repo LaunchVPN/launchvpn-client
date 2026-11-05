@@ -18,6 +18,7 @@ import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/connect/keep_vpn_on.dart';
 import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
@@ -49,7 +50,9 @@ final class _Store extends InMemorySharedPreferencesAsync {
   }
 }
 
-ConnectionRuntime _runtime() => ConnectionRuntime.create(
+ConnectionRuntime _runtime({
+  ConnectionPlatform platform = ConnectionPlatform.android,
+}) => ConnectionRuntime.create(
   configuration: ConnectionConfiguration(),
   compiled: CompiledConnection(
     xrayJson: '{}',
@@ -63,7 +66,7 @@ ConnectionRuntime _runtime() => ConnectionRuntime.create(
       config: const {},
     ),
   ),
-  platform: ConnectionPlatform.android,
+  platform: platform,
   request: StartVpnRequest(null, null, '18003', '{}'),
   startedAt: DateTime(2026),
 );
@@ -76,6 +79,7 @@ void main() {
   late RenewalReminders reminders;
   late Completer<HostConnection> start;
   var status = VpnStatus.disconnected;
+  var starts = 0;
   ConnectionRuntime? runtime;
 
   // PreferencesKey keeps the first platform it sees, so tests share one store.
@@ -87,6 +91,7 @@ void main() {
     await SharedPreferencesAsync().clear();
     start = Completer();
     status = VpnStatus.disconnected;
+    starts = 0;
     runtime = null;
   });
 
@@ -148,7 +153,10 @@ void main() {
         inspect: (current, {observedStatus}) async =>
             HostConnection(observedStatus ?? status, runtime: current),
         prepare: (_, _) async => _runtime(),
-        start: (_) => start.future,
+        start: (_) {
+          starts++;
+          return start.future;
+        },
         stop: () async => const HostConnection(VpnStatus.disconnected),
       );
       await coordinator.initialize(registerReferences: false);
@@ -597,6 +605,73 @@ void main() {
       expect(find.text('Умный'), findsOneWidget);
       expect(find.text('1'), findsOneWidget);
       expect((await stored(tester)).vpnApps, ['com.google.android.youtube']);
+    });
+  });
+
+  group('keep VPN on', () {
+    const title = 'Не отключать VPN';
+
+    Tristate toggled(WidgetTester tester) => isToggled(tester, title);
+
+    Future<bool> stored(WidgetTester tester) async =>
+        (await tester.runAsync(() => coordinator.configuration))!.keepVpnOn;
+
+    testWidgets('is off by default on iPhone', (tester) async {
+      await pumpApp(tester);
+      await openTab(tester, 2);
+
+      expect(
+        find.text('Включается сам после перезагрузки и смены сети'),
+        findsOneWidget,
+      );
+      expect(toggled(tester), Tristate.isFalse);
+    });
+
+    testWidgets('is not on Android', (tester) async {
+      await pumpApp(tester, platform: ConnectionPlatform.android);
+      await openTab(tester, 2);
+
+      expect(find.text(title), findsNothing);
+    });
+
+    testWidgets('a tap turns it on and off, and it is remembered for the next '
+        'launch', (tester) async {
+      await pumpApp(tester);
+      await openTab(tester, 2);
+
+      await tester.tap(find.text(title));
+      await settle(tester);
+      expect(toggled(tester), Tristate.isTrue);
+      expect(await stored(tester), isTrue);
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpRouter(tester);
+      await openTab(tester, 2);
+      expect(toggled(tester), Tristate.isTrue);
+
+      await tester.tap(find.text(title));
+      await settle(tester);
+      expect(toggled(tester), Tristate.isFalse);
+      expect(await stored(tester), isFalse);
+    });
+
+    testWidgets('while connected it waits for the next connection', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      runtime = _runtime(platform: ConnectionPlatform.ios);
+      status = VpnStatus.connected;
+      await tester.runAsync(coordinator.refresh);
+      await openTab(tester, 2);
+
+      await tester.tap(find.text(title));
+      await settle(tester);
+
+      expect(toggled(tester), Tristate.isTrue);
+      expect(await stored(tester), isTrue);
+      // The save is over without a reconnect, so the row works again.
+      expect(controller.state.canChangeConnection, isTrue);
+      expect(starts, 0);
     });
   });
 
