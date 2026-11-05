@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -265,6 +266,135 @@ void main() {
     });
   });
 
+  group('Telegram', () {
+    late FakeBrowser browser;
+
+    setUp(() => browser = FakeBrowser());
+
+    AccountService telegramAccount() =>
+        accountServiceFor(api, browser: browser, random: _CountingRandom());
+
+    test('opens the browser with an S256 challenge and redeems the code with '
+        'its verifier', () async {
+      api.exchangeWith(access: 'a1', refresh: 'r1');
+      api.subscription(_configLink);
+      final service = telegramAccount();
+
+      final attempt = service.openTelegramLogin();
+      await pumpEventQueue();
+      // RFC 7636 S256 of the verifier the bytes 0..31 make, by Python.
+      expect(browser.opened, [
+        Uri.parse(
+          'https://api.test/api/auth/telegram/start?mode=app_login&lang=ru'
+          '&challenge=6oZqdX5MOLq_qBJ8vppAnT4fk6AP8UiP9zX8-Rev_9A',
+        ),
+      ]);
+      expect(
+        service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1')),
+        isTrue,
+      );
+      final link = await service.exchangeTelegramLogin(await attempt);
+
+      expect(link, _subscriptionLink);
+      expect(service.signedIn.value, isTrue);
+      expect(api.bodies('/api/app/auth/exchange'), [
+        {
+          'code': 'c1',
+          'verifier': 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+          'hwid': 'device-hwid',
+          'platform': 'android',
+        },
+      ]);
+    });
+
+    for (final (error, expected) in [
+      ('cancelled', AccountError.cancelled),
+      ('telegram_failed', AccountError.telegramFailed),
+      ('account_blocked', AccountError.accountBlocked),
+      ('not_found', AccountError.unexpected),
+    ]) {
+      test('a return with error=$error fails as ${expected.name}', () async {
+        final service = telegramAccount();
+        final attempt = service.openTelegramLogin();
+        await pumpEventQueue();
+
+        service.telegram.handleReturn(
+          Uri.parse('launchvpn://auth?error=$error'),
+        );
+
+        await expectLater(attempt, throwsA(_error(expected)));
+        expect(api.requests, isEmpty);
+      });
+    }
+
+    test('a refused code does not sign in', () async {
+      api.refuse('/api/app/auth/exchange', 401, 'invalid_code');
+      final service = telegramAccount();
+      final attempt = service.openTelegramLogin();
+      await pumpEventQueue();
+      service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1'));
+
+      await expectLater(
+        service.exchangeTelegramLogin(await attempt),
+        throwsA(_error(AccountError.invalidCode)),
+      );
+      expect(service.signedIn.value, isFalse);
+    });
+
+    test('a device without a browser fails at once', () async {
+      browser.available = false;
+      final service = telegramAccount();
+
+      await expectLater(
+        service.openTelegramLogin(),
+        throwsA(_error(AccountError.unexpected)),
+      );
+      expect(
+        service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1')),
+        isFalse,
+      );
+    });
+
+    test('returns no attempt waits for are ignored', () async {
+      final service = telegramAccount();
+      final code = Uri.parse('launchvpn://auth?code=c1');
+
+      expect(service.telegram.handleReturn(code), isFalse);
+
+      final attempt = service.openTelegramLogin();
+      await pumpEventQueue();
+      expect(
+        service.telegram.handleReturn(
+          Uri.parse('launchvpn://auth?code=c0&mode=link'),
+        ),
+        isFalse,
+      );
+      expect(service.telegram.handleReturn(code), isTrue);
+      expect((await attempt).code, 'c1');
+      expect(service.telegram.handleReturn(code), isFalse);
+    });
+
+    test('a new attempt quietly replaces the waiting one', () async {
+      final service = telegramAccount();
+      final first = expectLater(
+        service.openTelegramLogin(),
+        throwsA(_error(AccountError.cancelled)),
+      );
+      await pumpEventQueue();
+
+      final second = service.openTelegramLogin();
+      await pumpEventQueue();
+      service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c2'));
+
+      await first;
+      expect((await second).code, 'c2');
+      expect(
+        browser.opened.map((url) => url.queryParameters['challenge']).toSet(),
+        hasLength(2),
+      );
+    });
+  });
+
   group('trial', () {
     test('an account without a subscription claims the trial once', () async {
       api.loginWith(access: 'a1', refresh: 'r1');
@@ -304,6 +434,20 @@ void main() {
       expect(api.bodies('/api/app/trial'), hasLength(1));
     });
   });
+}
+
+/// Bytes 0, 1, 2… where the App wants randomness, for a known verifier.
+final class _CountingRandom implements Random {
+  int _next = 0;
+
+  @override
+  int nextInt(int max) => _next++ % max;
+
+  @override
+  bool nextBool() => nextInt(2) == 1;
+
+  @override
+  double nextDouble() => nextInt(1000) / 1000;
 }
 
 final _subscriptionLink = Uri.parse(

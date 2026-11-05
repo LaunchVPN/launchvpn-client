@@ -9,6 +9,7 @@ import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/session_store.dart';
+import 'package:onexray/service/account/telegram_auth.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/settings/language/brand_language.dart';
 
@@ -25,7 +26,9 @@ final class AccountService {
     Future<DeviceIdentity?> Function()? readDevice,
     Future<void> Function(String url)? removeSubscription,
     String Function()? language,
-  }) : _store = store ?? AccountSessionStore(),
+    TelegramBrowserAuth? telegram,
+  }) : telegram = telegram ?? TelegramBrowserAuth(),
+       _store = store ?? AccountSessionStore(),
        _language = language ?? (() => BrandLanguage.current.languageCode),
        _readDevice = readDevice ?? AppHostApi().deviceIdentity,
        _removeSubscription =
@@ -45,6 +48,10 @@ final class AccountService {
   );
 
   final Dio _dio;
+
+  /// Telegram's sign-in in the browser. The deep-link handler hands it the
+  /// `launchvpn://auth` returns.
+  final TelegramBrowserAuth telegram;
   final AccountSessionStore _store;
   final Future<DeviceIdentity?> Function() _readDevice;
   final Future<void> Function(String url) _removeSubscription;
@@ -155,6 +162,41 @@ final class AccountService {
       ),
     ),
   );
+
+  /// Opens Telegram's sign-in in the browser and completes with its code once
+  /// the person is back in the App. The form stays usable meanwhile: they may
+  /// come back without finishing. Throws [AccountException].
+  Future<TelegramCode> openTelegramLogin() => telegram.authorize(
+    TelegramAuthPurpose.login,
+    (challenge) => Uri.parse(_dio.options.baseUrl)
+        .resolve('/api/auth/telegram/start')
+        .replace(
+          queryParameters: {
+            'mode': 'app_login',
+            'lang': _language(),
+            'challenge': challenge,
+          },
+        ),
+  );
+
+  /// Signs in with the code from [openTelegramLogin] and returns the
+  /// account's subscription as [login] does.
+  Future<Uri?> exchangeTelegramLogin(TelegramCode code) async {
+    final device = await _device();
+    return _signIn(
+      await _send(
+        () => _dio.post<Object?>(
+          '/api/app/auth/exchange',
+          data: {
+            'code': code.code,
+            'verifier': code.verifier,
+            'hwid': device.hwid,
+            'platform': device.os.toLowerCase(),
+          },
+        ),
+      ),
+    );
+  }
 
   /// Keeps the session from a token pair answer, then reads the account's
   /// subscription. An account without one claims the trial, once; one that

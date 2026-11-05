@@ -19,6 +19,9 @@ abstract final class Brand {
   /// Host of the deep link that adds a subscription.
   static const subscriptionLinkHost = 'sub';
 
+  /// Host of the deep link the browser returns to after Telegram's sign-in.
+  static const authLinkHost = 'auth';
+
   /// Host of upstream's share links, read by upstream's paste and QR import.
   /// Android does not register it, and iOS rejects it after opening the app.
   static const appLinkHost = 'app';

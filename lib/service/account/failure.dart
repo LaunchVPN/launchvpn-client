@@ -25,6 +25,12 @@ enum AccountError {
   /// The account or this device already had its trial.
   trialUsed,
 
+  /// The person turned Telegram's sign-in down, or started another one.
+  cancelled,
+
+  /// Telegram's sign-in did not finish in the browser.
+  telegramFailed,
+
   /// The backend could not be reached.
   network,
 
@@ -45,6 +51,8 @@ enum AccountError {
     'invalid_code' => invalidCode,
     'code_expired' => codeExpired,
     'trial_used' => trialUsed,
+    'cancelled' => cancelled,
+    'telegram_failed' => telegramFailed,
     'invalid_token' => signedOut,
     _ => unexpected,
   };

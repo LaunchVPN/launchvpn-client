@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/service/account/service.dart';
+import 'package:onexray/service/account/telegram_auth.dart';
 
 typedef _Reply = Future<(int, Map<String, Object?>)> Function(RequestOptions);
 
@@ -55,6 +57,10 @@ final class FakeAccountApi implements HttpClientAdapter {
     subscription(configLink);
     return (200, <String, Object?>{'ok': true, 'endDate': '2026-11-08'});
   };
+
+  /// The code from a Telegram return signs in with this token pair.
+  void exchangeWith({required String access, required String refresh}) =>
+      _routes['/api/app/auth/exchange'] = (_) async => _pair(access, refresh);
 
   /// Bodies sent to [path], in order.
   List<Object?> bodies(String path) => [
@@ -171,15 +177,35 @@ final class FakeAccountApi implements HttpClientAdapter {
   );
 }
 
+/// The external browser: records what the App opened in it.
+final class FakeBrowser {
+  final opened = <Uri>[];
+
+  /// Whether the device has a browser to open a page in.
+  bool available = true;
+
+  Future<bool> open(Uri uri) async {
+    opened.add(uri);
+    return available;
+  }
+}
+
 /// An [AccountService] that talks to [api] from a Pixel 9, with this device's
-/// subscriptions behind [removeSubscription].
+/// subscriptions behind [removeSubscription] and Telegram's sign-in opening
+/// in [browser].
 AccountService accountServiceFor(
   FakeAccountApi api, {
   Future<void> Function(String url)? removeSubscription,
+  FakeBrowser? browser,
+  Random? random,
 }) => AccountService(
   dio: Dio(BaseOptions(baseUrl: 'https://api.test'))..httpClientAdapter = api,
   removeSubscription: removeSubscription ?? (_) async {},
   language: () => 'ru',
+  telegram: TelegramBrowserAuth(
+    openBrowser: (browser ?? FakeBrowser()).open,
+    random: random,
+  ),
   readDevice: () async => DeviceIdentity(
     hwid: 'device-hwid',
     os: 'Android',
