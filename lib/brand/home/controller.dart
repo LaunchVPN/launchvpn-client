@@ -72,10 +72,6 @@ typedef AnnouncementDismissal = Future<void> Function(int subId, String text);
 /// The apps Android lists, as the bridge returns them.
 typedef InstalledApps = Future<List<AndroidAppInfo>> Function();
 
-typedef SubscriptionRefresh = Future<SubscriptionRefreshResult> Function(
-  SubscriptionData row,
-);
-
 class HomeState {
   HomeState({
     this.view = const ConnectionView(),

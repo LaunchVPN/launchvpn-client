@@ -73,6 +73,12 @@ final class SubscriptionLoadResult {
 typedef SubscriptionReferenceReader =
     FutureOr<SubscriptionNodeReferences> Function();
 
+/// Loads one stored subscription again, as
+/// [SubscriptionService.refreshSubscriptionResult] does.
+typedef SubscriptionRefresh = Future<SubscriptionRefreshResult> Function(
+  SubscriptionData row,
+);
+
 final class _SupersededSubscriptionUpdate implements Exception {
   const _SupersededSubscriptionUpdate();
 }

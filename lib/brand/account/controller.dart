@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:onexray/brand/home/controller.dart' show SubscriptionRefresh;
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/pages/shared/page_cubit.dart';
