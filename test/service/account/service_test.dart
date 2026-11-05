@@ -218,7 +218,7 @@ void main() {
 
         expect(service.signedIn.value, isTrue);
         expect(removed, isEmpty);
-        await service.profile();
+        await service.details();
         expect(api.authorizations('/api/me'), ['Bearer a1']);
       });
     }
@@ -675,7 +675,7 @@ void main() {
 
       final restarted = account();
       await restarted.restore();
-      await restarted.profile();
+      await restarted.details();
       expect(api.authorizations('/api/me'), ['Bearer a3']);
     });
 
@@ -708,7 +708,7 @@ void main() {
       expect(removed, isEmpty);
       expect(service.signedIn.value, isTrue);
       expect(api.bodies('/api/app/auth/exchange'), hasLength(1));
-      await service.profile();
+      await service.details();
       expect(api.authorizations('/api/me'), ['Bearer a2']);
     });
 

@@ -18,7 +18,7 @@ final class AccountState {
   const AccountState({
     this.signedIn = false,
     this.subscription,
-    this.profile,
+    this.details,
     this.devices,
     this.subscriptionMaxDevices,
     this.inactive = false,
@@ -34,7 +34,7 @@ final class AccountState {
   final SubscriptionData? subscription;
 
   /// Null until loaded, and from a link only.
-  final AccountProfile? profile;
+  final AccountDetails? details;
 
   /// Null until loaded, and from a link only.
   final AccountDevices? devices;
@@ -71,7 +71,7 @@ final class AccountState {
   AccountState copyWith({
     bool? signedIn,
     SubscriptionData? Function()? subscription,
-    AccountProfile? profile,
+    AccountDetails? details,
     AccountDevices? devices,
     int? subscriptionMaxDevices,
     bool? inactive,
@@ -82,7 +82,7 @@ final class AccountState {
   }) => AccountState(
     signedIn: signedIn ?? this.signedIn,
     subscription: subscription == null ? this.subscription : subscription(),
-    profile: profile ?? this.profile,
+    details: details ?? this.details,
     devices: devices ?? this.devices,
     subscriptionMaxDevices:
         subscriptionMaxDevices ?? this.subscriptionMaxDevices,
@@ -210,7 +210,7 @@ final class AccountController extends PageCubit<AccountState> {
     }
     SubscriptionDeepLink? link;
     await Future.wait([
-      _loadProfile(),
+      _loadDetails(),
       loadDevices(),
       _load(_account.accountSubscription, (subscription) {
         link = subscription.link;
@@ -237,8 +237,8 @@ final class AccountController extends PageCubit<AccountState> {
     return devices != null && (limit == null || devices.items.length < limit);
   }
 
-  Future<void> _loadProfile() =>
-      _load(_account.profile, (profile) => state.copyWith(profile: profile));
+  Future<void> _loadDetails() =>
+      _load(_account.details, (details) => state.copyWith(details: details));
 
   /// The account's devices alone, as «Лимит устройств» lists them.
   Future<void> loadDevices() => state.signedIn
@@ -300,7 +300,7 @@ final class AccountController extends PageCubit<AccountState> {
         return TelegramLinkFailed(error.error);
       }
       // Linked meanwhile, on the site or in another attempt.
-      await _loadProfile();
+      await _loadDetails();
       return const TelegramLinked(0);
     } catch (error) {
       ygLogger('link Telegram failed (${error.runtimeType})');
@@ -309,14 +309,14 @@ final class AccountController extends PageCubit<AccountState> {
   }
 
   /// What linking changed: the subscription, which got the days, and the
-  /// profile, which now has Telegram.
+  /// account details, which now have Telegram.
   Future<void> _reloadLinked(TelegramLink linked) async {
     if (linked.subscription case final link?) {
       _openLink(link);
     } else if (state.subscription case final row?) {
       await _refreshQuietly(row);
     }
-    await Future.wait([_loadProfile(), loadDevices()]);
+    await Future.wait([_loadDetails(), loadDevices()]);
     if (!isClosed) {
       emit(state.copyWith(inactive: _account.subscriptionMissing));
     }

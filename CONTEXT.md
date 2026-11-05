@@ -51,10 +51,15 @@ API address, which is the site's own domain.
 _Avoid_: flavor, theme, white-label
 
 **Account**:
-A person's login on the site, by email and password. Signing in on a device opens a
-session there and brings the account's subscription. Without an account a
+A person's login, by email and password or by Telegram. Signing in on a device opens
+a session there and brings the account's subscription. Without an account a
 subscription can still come from a deeplink.
 _Avoid_: profile, user, cabinet
+
+**Cabinet**:
+The site at app.launch.tel where a person manages the account: renewal, payment and
+the devices on the subscription. The account API lives on the same domain.
+_Avoid_: dashboard, personal area, panel
 
 **Upstream**:
 The OneXray repository. We regularly merge `lib/service`, `lib/core`, the native

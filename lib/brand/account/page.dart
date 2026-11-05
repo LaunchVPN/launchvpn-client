@@ -278,11 +278,11 @@ class _AccountPageState extends State<AccountPage> {
   /// Support for everyone, the panel's or the bot's; signed in, also the
   /// account, «Привязать Telegram», «Выйти» and «Удалить аккаунт».
   List<Widget> _details(AppLocalizations l, AccountState state) {
-    final profile = state.profile;
+    final details = state.details;
     final support = state.subscription?.supportUrl ?? Brand.supportUrl;
     return [
-      ?switch (profile) {
-        AccountProfile(:final email?, :final telegramLinked) => SettingsRow(
+      ?switch (details) {
+        AccountDetails(:final email?, :final telegramLinked) => SettingsRow(
           icon: LucideIcons.user,
           title: email,
           subtitle: telegramLinked
@@ -290,7 +290,7 @@ class _AccountPageState extends State<AccountPage> {
               : l.accountEmailSignIn,
           onTap: null,
         ),
-        AccountProfile() => SettingsRow(
+        AccountDetails() => SettingsRow(
           icon: LucideIcons.send,
           title: l.accountTelegram,
           subtitle: l.accountTelegramSignIn,
@@ -298,7 +298,7 @@ class _AccountPageState extends State<AccountPage> {
         ),
         null => null,
       },
-      if (state.signedIn && profile != null && !profile.telegramLinked)
+      if (state.signedIn && details != null && !details.telegramLinked)
         SettingsRow(
           icon: LucideIcons.send,
           title: l.accountLinkTelegram,

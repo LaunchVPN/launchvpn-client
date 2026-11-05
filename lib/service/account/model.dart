@@ -53,14 +53,14 @@ final class AccountSubscription {
 }
 
 /// What `GET /api/me` says about the signed-in account.
-final class AccountProfile {
-  const AccountProfile({required this.email, required this.telegramLinked});
+final class AccountDetails {
+  const AccountDetails({required this.email, required this.telegramLinked});
 
   /// Null for an account that has only Telegram.
   final String? email;
   final bool telegramLinked;
 
-  static AccountProfile fromJson(Map<String, Object?> data) => AccountProfile(
+  static AccountDetails fromJson(Map<String, Object?> data) => AccountDetails(
     email: switch (data['email']) {
       final String email when email.isNotEmpty => email,
       _ => null,

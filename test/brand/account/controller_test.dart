@@ -114,8 +114,8 @@ void main() {
 
       final state = controller.state;
       expect(state.signedIn, isTrue);
-      expect(state.profile?.email, 'ivan@proton.me');
-      expect(state.profile?.telegramLinked, isTrue);
+      expect(state.details?.email, 'ivan@proton.me');
+      expect(state.details?.telegramLinked, isTrue);
       expect(state.devices?.max, 3);
       expect(
         [
@@ -165,7 +165,7 @@ void main() {
     await controller.refresh();
 
     expect(controller.state.signedIn, isFalse);
-    expect(controller.state.profile, isNull);
+    expect(controller.state.details, isNull);
     expect(controller.state.devices, isNull);
     expect(controller.state.usage?.usedBytes, 272600000000);
     expect(refreshed, ['https://sub.launch.tel/from-bot']);
@@ -258,7 +258,7 @@ void main() {
   });
 
   test('linking Telegram swaps in the merged account\'s subscription and '
-      'profile', () async {
+      'account details', () async {
     final service = await signedIn();
     await addRow(_configLink);
     const telegramLink = 'https://sub.launch.tel/telegram';
@@ -285,7 +285,7 @@ void main() {
         'launchvpn://sub/add?url=${Uri.encodeQueryComponent(telegramLink)}',
       ),
     ]);
-    expect(controller.state.profile?.telegramLinked, isTrue);
+    expect(controller.state.details?.telegramLinked, isTrue);
     expect(controller.state.linkingTelegram, isFalse);
   });
 

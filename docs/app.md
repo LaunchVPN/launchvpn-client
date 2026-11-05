@@ -67,7 +67,7 @@ upstream pages kept for merging. They are not reachable in this build.
   none, the account's subscription goes to the link queue only once the list shows a free place,
   so neither Refresh nor opening Account repeats the add dialog and the limit toast while the
   limit stands. From a link only, the screen
-  says a device can be removed in the bot or in the cabinet at app.launch.tel, and offers support.
+  says a device can be removed in the bot or in the Cabinet, and offers support.
   An ended subscription takes precedence.
 - If a command failed and the tunnel may still be up, the screen says so and a tap disconnects.
   Without a subscription the toggle is disabled.
@@ -181,7 +181,7 @@ upstream pages kept for merging. They are not reachable in this build.
   once, shared by every request waiting on it, and is retried once; only the backend refusing the
   refresh ends the session, while an outage keeps it.
 - Account, the middle tab, refreshes when it opens: the subscription on the device is loaded again
-  quietly, and when signed in the profile (`/api/me`), the devices (`/api/devices`) and the
+  quietly, and when signed in the account details (`/api/me`), the devices (`/api/devices`) and the
   account's subscription are read too; one the device lacks goes to the link queue, which covers a
   failed load right after sign-in. It shows the days left, the expiry date and the traffic of the
   period from the subscription headers, with a bar only for a plan with a traffic limit, or
@@ -200,14 +200,14 @@ upstream pages kept for merging. They are not reachable in this build.
 - Signed in without Telegram, on Android and iOS, the account card has «Привязать Telegram» («Дни
   из бота добавятся к подписке») under the email. A tap posts the PKCE challenge to
   `/api/app/link/telegram/start` with the Bearer and opens the returned page in the external
-  browser. `already_linked`, from the start or the exchange, reloads the profile and says
+  browser. `already_linked`, from the start or the exchange, reloads the account details and says
   «Telegram привязан». The browser returns to `launchvpn://auth?…&mode=link`, which iOS takes
   through the registered `launchvpn` scheme. The session is refreshed first, because the trip may
   outlast the access token and a refused exchange burns the code, then `/api/app/auth/exchange`
   gets the code, the verifier and the Bearer, without the usual retry, while the row shows
   progress. Its token pair replaces the session; the backend merged the accounts. The account's
   subscription is read again: a changed URL removes the previous subscription and sends the new
-  one down the link queue, an unchanged one is refreshed for the added days. The profile and the
+  one down the link queue, an unchanged one is refreshed for the added days. The account details and the
   devices reload, the row goes and the email's subtitle says Telegram linked, and a 3-second toast
   says «Telegram привязан, N дней добавлены», or only «Telegram привязан» with no days added.
   `telegram_taken` opens the sheet «Этот Telegram уже занят», which explains signing in with that

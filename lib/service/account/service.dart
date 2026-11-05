@@ -343,7 +343,7 @@ final class AccountService {
       (await accountSubscription()).link?.uri;
 
   /// What the backend knows about the account.
-  Future<AccountProfile> profile() async => AccountProfile.fromJson(
+  Future<AccountDetails> details() async => AccountDetails.fromJson(
     await _send(() => _dio.get<Object?>('/api/me', options: _bearer)),
   );
 
