@@ -104,7 +104,8 @@ void main() {
   testWidgets('the first launch says once what crash reports hold', (
     tester,
   ) async {
-    const notice = 'Если приложение сломается, оно пришлёт нам отчёт без '
+    const notice =
+        'Если приложение сломается, оно пришлёт нам отчёт без '
         'ссылок, адресов и email. Выключить можно в настройках.';
     await tester.runAsync(SharedPreferencesAsync().clear);
     prepare();
