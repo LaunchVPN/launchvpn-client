@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/pages/shared/page_cubit.dart';
+import 'package:onexray/service/servers/subscription/deep_link.dart';
 
 enum AccessGateState {
   /// The subscription table has not answered yet.
@@ -20,7 +20,7 @@ final class AccessGateController extends PageCubit<AccessGateState> {
   AccessGateController({required this._signedIn, Stream<bool>? hasSubscription})
     : super(AccessGateState.checking) {
     _signedIn.addListener(_update);
-    _subscription = (hasSubscription ?? watchSubscription()).listen(
+    _subscription = (hasSubscription ?? _watchSubscription()).listen(
       (value) {
         _hasSubscription = value;
         _update();
@@ -39,10 +39,9 @@ final class AccessGateController extends PageCubit<AccessGateState> {
   bool? _hasSubscription;
 
   /// Whether the device has a subscription, as the database changes.
-  static Stream<bool> watchSubscription() => AppDatabase()
-      .subscriptionDao
-      .allRowsStream
-      .map((rows) => rows.isNotEmpty)
+  static Stream<bool> _watchSubscription() => SubscriptionLinkService()
+      .watchCurrent()
+      .map((row) => row != null)
       .distinct();
 
   void _update() {

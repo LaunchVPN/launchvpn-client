@@ -55,13 +55,27 @@ final class SubscriptionLinkService {
     AppDatabase? database,
     SubscriptionService? subscriptions,
     ServerAssetService? servers,
-  }) : _database = database ?? AppDatabase(),
+  }) : _databaseOverride = database,
        _subscriptions = subscriptions ?? SubscriptionService(),
-       _servers = servers ?? ServerAssetService();
+       _serversOverride = servers;
 
-  final AppDatabase _database;
+  final AppDatabase? _databaseOverride;
+  final ServerAssetService? _serversOverride;
   final SubscriptionService _subscriptions;
-  final ServerAssetService _servers;
+
+  // Opened on first use: screens built before startup prepares the database
+  // hold this service too.
+  late final _database = _databaseOverride ?? AppDatabase();
+  late final _servers = _serversOverride ?? ServerAssetService();
+
+  /// The subscription on the device as the database changes: the latest one,
+  /// null while there is none.
+  Stream<SubscriptionData?> watchCurrent() =>
+      _database.subscriptionDao.allRowsStream.map((rows) => rows.lastOrNull);
+
+  /// The subscription on the device now, as [watchCurrent] names it.
+  Future<SubscriptionData?> current() async =>
+      (await _database.subscriptionDao.allRows).lastOrNull;
 
   /// Whether [apply] would delete a subscription, which the UI confirms first.
   Future<bool> replacesAnother(SubscriptionDeepLink link) async =>

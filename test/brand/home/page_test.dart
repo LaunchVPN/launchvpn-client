@@ -23,6 +23,7 @@ import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
+import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/coordinator.dart';
@@ -140,7 +141,7 @@ void main() {
     final accountController = AccountController(
       account: account ?? accountServiceFor(FakeAccountApi()),
       openLink: (_) {},
-      database: db,
+      subscriptions: SubscriptionLinkService(database: db),
       refreshSubscription: (row) => refresh(row),
     );
     addTearDown(accountController.close);

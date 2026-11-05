@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/brand/account/controller.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
+import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/servers/subscription/model.dart';
 
@@ -50,7 +51,7 @@ void main() {
     final controller = AccountController(
       account: account,
       openLink: opened.add,
-      database: db,
+      subscriptions: SubscriptionLinkService(database: db),
       deviceLimit: deviceLimit ?? ValueNotifier(false),
       refreshSubscription: (row) async {
         refreshed.add(row.url);

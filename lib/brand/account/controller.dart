@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/tools/logger.dart';
@@ -131,10 +130,11 @@ final class AccountController extends PageCubit<AccountState> {
   AccountController({
     required this._account,
     required this._openLink,
-    this._database,
+    SubscriptionLinkService? subscriptions,
     SubscriptionRefresh? refreshSubscription,
     ValueListenable<bool>? deviceLimit,
-  }) : _refreshSubscription =
+  }) : _subscriptions = subscriptions ?? SubscriptionLinkService(),
+       _refreshSubscription =
            refreshSubscription ??
            SubscriptionService().refreshSubscriptionResult,
        _deviceLimit = deviceLimit ?? SubscriptionService().deviceLimitReached,
@@ -154,16 +154,15 @@ final class AccountController extends PageCubit<AccountState> {
 
   /// The queue incoming links go through, which adds a subscription.
   final void Function(Uri) _openLink;
-  final AppDatabase? _database;
+
+  /// The subscription on this device.
+  final SubscriptionLinkService _subscriptions;
   final SubscriptionRefresh _refreshSubscription;
 
   /// The panel last refused this device: the subscription has all its
   /// devices.
   final ValueListenable<bool> _deviceLimit;
   StreamSubscription<SubscriptionData?>? _rows;
-
-  // Opened on first use: Home builds this controller before it needs it.
-  AppDatabase get _db => _database ?? AppDatabase();
 
   void _sessionChanged() {
     final signedIn = _account.signedIn.value;
@@ -192,15 +191,12 @@ final class AccountController extends PageCubit<AccountState> {
   }
 
   Future<void> _refresh() async {
-    _rows ??= _db.subscriptionDao.allRowsStream
-        .map((rows) => rows.lastOrNull)
-        .listen(
-          (row) => emit(state.copyWith(subscription: () => row)),
-          onError: (Object error) => ygLogger(
-            'read account subscription failed (${error.runtimeType})',
-          ),
-        );
-    final row = (await _db.subscriptionDao.allRows).lastOrNull;
+    _rows ??= _subscriptions.watchCurrent().listen(
+      (row) => emit(state.copyWith(subscription: () => row)),
+      onError: (Object error) =>
+          ygLogger('read account subscription failed (${error.runtimeType})'),
+    );
+    final row = await _subscriptions.current();
     if (isClosed) return;
     emit(state.copyWith(subscription: () => row));
     if (!state.signedIn) {
@@ -338,7 +334,7 @@ final class AccountController extends PageCubit<AccountState> {
       ygLogger('delete account failed (${error.error.name})');
       if (error.error != AccountError.signedOut) return AccountDeletion.failed;
       // Read now: the stream may not have seen the removal yet.
-      final row = (await _db.subscriptionDao.allRows).lastOrNull;
+      final row = await _subscriptions.current();
       if (!isClosed) emit(state.copyWith(subscription: () => row));
       return AccountDeletion.signInAgain;
     } finally {

@@ -10,6 +10,7 @@ import 'package:onexray/brand/app.dart';
 import 'package:onexray/brand/router.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/distribution.dart';
+import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/servers/subscription/model.dart';
 import 'package:onexray/service/shared/share/service.dart';
@@ -83,7 +84,7 @@ void main() {
     final controller = AccountController(
       account: account,
       openLink: (_) {},
-      database: db,
+      subscriptions: SubscriptionLinkService(database: db),
       refreshSubscription: (_) async => const SubscriptionRefreshResult(
         status: SubscriptionUpdateResult.success,
       ),
