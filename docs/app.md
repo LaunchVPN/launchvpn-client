@@ -126,6 +126,12 @@ upstream pages kept for merging. They are not reachable in this build.
   (Sign in, «Нет аккаунта? Создать») and back. The button waits for both fields. A refusal shows its
   text under the fields: wrong email or password, email already registered, invalid email or a
   password under 8 characters, too many attempts, no connection, and one general text for the rest.
+- «Вход» and «Проверьте почту» sit on the animated backdrop of app.launch.tel: `ShaderBackdrop`
+  draws the site's DarkVeil from `shaders/dark_veil.frag` at the site's speed, with the CSS filter,
+  glows and tint of its `.shader-backdrop`, in `BrandBackdrop` colors. Under the system's reduced
+  motion it holds the first frame. It stops while another screen covers it or the App is hidden,
+  and resumes from the same frame. If the shader fails to load, the page keeps its plain
+  background.
 - On Android, «Вход» also offers «Войти через Telegram» below the form, after «или»; iOS does not
   (App Store guideline 4.8 would require Sign in with Apple). A tap makes a PKCE verifier, kept in
   memory for this attempt only, and opens `<api>/api/auth/telegram/start?mode=app_login` with the
