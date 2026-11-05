@@ -497,6 +497,81 @@ void main() {
       expect(service.telegram.handleReturn(code), isFalse);
     });
 
+    group('after the App was closed', () {
+      var now = DateTime(2026, 11, 5, 12);
+
+      AccountService restartedAfter(Duration away) {
+        final returned = now.add(away);
+        return accountServiceFor(api, browser: browser, now: () => returned);
+      }
+
+      setUp(() => now = DateTime(2026, 11, 5, 12));
+
+      /// Opens Telegram's sign-in, which the system closes with the App.
+      Future<void> leaveForTelegram() async {
+        final first = accountServiceFor(
+          api,
+          browser: browser,
+          random: _CountingRandom(),
+          now: () => now,
+        );
+        unawaited(first.openTelegramLogin());
+        await pumpEventQueue();
+      }
+
+      test('an attempt younger than ten minutes completes with its '
+          'verifier', () async {
+        api.exchangeWith(access: 'a1', refresh: 'r1');
+        api.subscription(_configLink);
+        await leaveForTelegram();
+        final service = restartedAfter(const Duration(minutes: 9));
+        await service.restore();
+
+        final code = service.telegram.resume(TelegramAuthPurpose.login);
+        expect(service.telegram.resume(TelegramAuthPurpose.link), isNull);
+        expect(
+          service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1')),
+          isTrue,
+        );
+        expect(await service.exchangeTelegramLogin(await code!), isNotNull);
+
+        expect(api.bodies('/api/app/auth/exchange').single, {
+          'code': 'c1',
+          'verifier': 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+          'hwid': 'device-hwid',
+          'platform': 'android',
+        });
+        // Claimed once.
+        expect(service.telegram.resume(TelegramAuthPurpose.login), isNull);
+      });
+
+      test('an older attempt is forgotten', () async {
+        await leaveForTelegram();
+        final service = restartedAfter(const Duration(minutes: 11));
+        await service.restore();
+
+        expect(service.telegram.resume(TelegramAuthPurpose.login), isNull);
+        expect(
+          service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1')),
+          isFalse,
+        );
+      });
+
+      test('a finished attempt is not restored', () async {
+        final first = accountServiceFor(api, browser: browser, now: () => now);
+        final attempt = first.openTelegramLogin();
+        await pumpEventQueue();
+        first.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1'));
+        await attempt;
+        await pumpEventQueue();
+
+        final service = restartedAfter(const Duration(minutes: 1));
+        await service.restore();
+
+        expect(service.telegram.resume(TelegramAuthPurpose.login), isNull);
+      });
+    });
+
     test('a new attempt quietly replaces the waiting one', () async {
       final service = telegramAccount();
       final first = expectLater(

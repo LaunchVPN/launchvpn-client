@@ -73,8 +73,10 @@ final class AccountService {
   /// The wait before another code when the backend names none.
   static const _resendGap = Duration(seconds: 60);
 
-  /// Picks up the session saved by an earlier launch, without a request.
+  /// Picks up the session and the Telegram attempt saved by an earlier
+  /// launch, without a request.
   Future<void> restore() async {
+    await telegram.restore();
     try {
       _tokens = await _store.readTokens();
     } catch (error) {

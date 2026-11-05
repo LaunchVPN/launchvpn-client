@@ -226,12 +226,13 @@ final class FakeBrowser {
 
 /// An [AccountService] that talks to [api] from a Pixel 9, with this device's
 /// subscriptions behind [removeSubscription] and Telegram's sign-in opening
-/// in [browser].
+/// in [browser] at the time [now] tells.
 AccountService accountServiceFor(
   FakeAccountApi api, {
   Future<void> Function(String url)? removeSubscription,
   FakeBrowser? browser,
   Random? random,
+  DateTime Function()? now,
 }) => AccountService(
   dio: Dio(BaseOptions(baseUrl: 'https://api.test'))..httpClientAdapter = api,
   removeSubscription: removeSubscription ?? (_) async {},
@@ -239,6 +240,7 @@ AccountService accountServiceFor(
   telegram: TelegramBrowserAuth(
     openBrowser: (browser ?? FakeBrowser()).open,
     random: random,
+    now: now,
   ),
   readDevice: () async => DeviceIdentity(
     hwid: 'device-hwid',
