@@ -97,7 +97,7 @@ upstream pages kept for merging. They are not reachable in this build.
   name. A tap stores the group as a fixed selection and returns Home; a running tunnel reconnects at
   once, as with a preset. Until the user chooses, the selection stays automatic, which is the first
   group.
-- Settings has Connection and App sections so far. Mode opens a screen above the tabs with the same
+- Settings has Connection, App and More sections. Mode opens a screen above the tabs with the same
   presets as Home, through the same `HomeController`, so both tabs show one value and a choice while
   connected reconnects and reads as a reconnect on Home. A tap returns to Settings. On Android,
   Apps through VPN shows how many apps are chosen and opens the list above the tabs: apps with a
@@ -143,6 +143,10 @@ upstream pages kept for merging. They are not reachable in this build.
 - Language, under App, opens a screen above the tabs with «Как в системе», «Русский» and
   «English». A tap applies at once on every screen, including the open one, and is saved. Pending
   reminders are set again in the new language.
+- About, under More, shows the version and opens a screen above the tabs with the version and
+  build from the package, the GPL-3.0 license, OneXray, which LaunchVPN is based on, the privacy
+  policy and support. Each opens in the browser: the license on gnu.org, OneXray's repository, the
+  policy in the App's language, and the panel's support or the bot's, as on Home.
 - «Вход» talks to the account API at `Brand.apiUrl` through `AccountService`, which wires its
   parts: `AccountSession` (tokens, the Bearer header and the refresh), `EmailAuth`,
   `TelegramAccount` (sign-in and linking) and `AccountData` (the account's subscription, details,
