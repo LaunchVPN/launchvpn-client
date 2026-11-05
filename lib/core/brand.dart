@@ -33,6 +33,9 @@ abstract final class Brand {
   /// payment.
   static const renewalUrl = 'https://app.$subscriptionDomain';
 
+  /// The privacy policy in English; the Russian page is under `ru/`.
+  static const privacyUrl = 'https://privacy.$subscriptionDomain/';
+
   /// Support in Telegram, for a subscription whose panel names none.
   static const supportUrl = 'https://t.me/launchbotsupport';
 

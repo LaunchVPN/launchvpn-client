@@ -5,12 +5,14 @@ import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
 import 'package:onexray/service/shared/event_bus/enum.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsState {
   const SettingsState({
     this.connectOnLaunch,
     this.renewalReminders,
     this.crashReports,
+    this.app,
   });
 
   /// Null until the saved value is read.
@@ -23,14 +25,19 @@ class SettingsState {
   /// Null until the saved value is read.
   final bool? crashReports;
 
+  /// The installed version and build. Null until read.
+  final PackageInfo? app;
+
   SettingsState copyWith({
     bool? connectOnLaunch,
     bool? renewalReminders,
     bool? crashReports,
+    PackageInfo? app,
   }) => SettingsState(
     connectOnLaunch: connectOnLaunch ?? this.connectOnLaunch,
     renewalReminders: renewalReminders ?? this.renewalReminders,
     crashReports: crashReports ?? this.crashReports,
+    app: app ?? this.app,
   );
 }
 
@@ -48,6 +55,11 @@ class SettingsController extends PageCubit<SettingsState> {
   Future<void> _languageSaves = Future.value();
 
   Future<void> initialize() async {
+    try {
+      emit(state.copyWith(app: await PackageInfo.fromPlatform()));
+    } catch (error) {
+      ygLogger('read app version failed (${error.runtimeType})');
+    }
     try {
       final value = await AppStartupService().readConnectOnAppLaunch();
       emit(state.copyWith(connectOnLaunch: value));

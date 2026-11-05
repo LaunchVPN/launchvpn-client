@@ -14,9 +14,11 @@ Future<void> openExternalLink(Uri uri, String name) async {
   }
 }
 
-/// Opens support for [subscription]: the panel's link, or the bot's when the
-/// panel sent none or there is no subscription.
-Future<void> openSupport(SubscriptionData? subscription) => openExternalLink(
-  Uri.parse(subscription?.supportUrl ?? Brand.supportUrl),
-  'support',
-);
+/// Support for [subscription]: the panel's link, or the bot's when the panel
+/// sent none or there is no subscription.
+Uri supportUri(SubscriptionData? subscription) =>
+    Uri.parse(subscription?.supportUrl ?? Brand.supportUrl);
+
+/// Opens [supportUri] for [subscription].
+Future<void> openSupport(SubscriptionData? subscription) =>
+    openExternalLink(supportUri(subscription), 'support');

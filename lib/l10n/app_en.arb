@@ -3225,6 +3225,38 @@
   "settingsRenewalRemindersHint": "3 days and 1 day before",
   "settingsCrashReports": "Crash reports",
   "settingsCrashReportsHint": "Without links, addresses or email",
+  "settingsMore": "More",
+  "settingsAbout": "About",
+  "settingsVersion": "Version {version}",
+  "@settingsVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutVersion": "Version {version} ({build})",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutLicense": "License",
+  "aboutBasedOn": "Based on {project}",
+  "@aboutBasedOn": {
+    "placeholders": {
+      "project": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutPrivacy": "Privacy",
+  "aboutSupport": "Support",
   "crashReportsNotice": "If the app crashes, it sends us a report without links, addresses or email. You can turn this off in Settings.",
   "renewalReminderThreeDays": "Your subscription ends in 3 days",
   "renewalReminderTomorrow": "Your subscription ends tomorrow",

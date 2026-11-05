@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/home/controller.dart';
+import 'package:onexray/brand/settings/about_page.dart';
 import 'package:onexray/brand/settings/controller.dart';
 import 'package:onexray/brand/settings/language_page.dart';
 import 'package:onexray/brand/settings/preset_page.dart';
@@ -86,6 +87,14 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
       Navigator.of(context, rootNavigator: true).push<void>(
         MaterialPageRoute(
           builder: (_) => LanguagePage(onSelected: _settings.setLanguage),
+        ),
+      );
+
+  Future<void> _openAbout() =>
+      Navigator.of(context, rootNavigator: true).push<void>(
+        MaterialPageRoute(
+          builder: (_) =>
+              AboutPage(settings: _settings, home: widget.controller),
         ),
       );
 
@@ -206,6 +215,26 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
                       subtitle: l.settingsCrashReportsHint,
                       value: state.crashReports,
                       onChanged: _settings.setCrashReports,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SettingsSectionLabel(l.settingsMore),
+              SettingsCard(
+                children: [
+                  BlocBuilder<SettingsController, SettingsState>(
+                    bloc: _settings,
+                    buildWhen: (a, b) => a.app != b.app,
+                    builder: (context, state) => SettingsLinkRow(
+                      icon: LucideIcons.info,
+                      title: l.settingsAbout,
+                      subtitle: switch (state.app) {
+                        final app? => l.settingsVersion(app.version),
+                        null => null,
+                      },
+                      value: null,
+                      onTap: _openAbout,
                     ),
                   ),
                 ],
