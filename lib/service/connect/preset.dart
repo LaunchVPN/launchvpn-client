@@ -1,4 +1,4 @@
-import 'package:onexray/service/advanced/platform_policy.dart';
+import 'package:onexray/service/connect/policy_section.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/settings.dart';
 
@@ -46,23 +46,23 @@ extension VpnApps on ConnectionConfiguration {
   ConnectionConfiguration withVpnApps(Iterable<String> packages) =>
       _with(android: {'includedAppPackageNames': packages.toList()});
 
-  Map<String, dynamic> get _android =>
-      policy.toJson()['android'] as Map<String, dynamic>;
+  Map<String, dynamic> get _android => policySection(_section);
 
   ConnectionConfiguration _with({
     TrafficMode? trafficMode,
     required Map<String, dynamic> android,
   }) {
-    final next = policy.toJson();
-    next['android'] = {..._android, ...android};
-    return ConnectionConfiguration(
-      connection: trafficMode == null
-          ? connection
-          : ConnectionSettings.fromJson({
+    final next = trafficMode == null
+        ? this
+        : ConnectionConfiguration(
+            connection: ConnectionSettings.fromJson({
               ...connection.toJson(),
               'trafficMode': trafficMode.name,
             }),
-      policy: PlatformPolicy.fromJson(next),
-    );
+            policy: policy,
+          );
+    return next.withPolicySection(_section, android);
   }
+
+  static const _section = 'android';
 }

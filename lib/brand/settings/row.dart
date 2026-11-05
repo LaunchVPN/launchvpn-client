@@ -29,7 +29,7 @@ class SettingsCard extends StatelessWidget {
 }
 
 /// A row that is one switch: a tap anywhere on it flips [value]. Null while
-/// the value is unknown, which disables the row.
+/// the value is unknown, which disables the row, as a null [onChanged] does.
 class SettingsSwitchRow extends StatelessWidget {
   const SettingsSwitchRow({
     super.key,
@@ -46,21 +46,23 @@ class SettingsSwitchRow extends StatelessWidget {
   final String title;
   final String? subtitle;
   final bool? value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
     final current = value;
+    final change = onChanged;
     return SettingsRow(
       icon: icon,
       leading: leading,
       title: title,
       subtitle: subtitle,
       toggled: current ?? false,
-      onTap: current == null ? null : () => onChanged(!current),
+      onTap: current == null || change == null ? null : () => change(!current),
       trailing: IgnorePointer(
         child: ShadSwitch(
           value: current ?? false,
+          enabled: change != null,
           width: 51,
           height: 31,
           margin: 2,

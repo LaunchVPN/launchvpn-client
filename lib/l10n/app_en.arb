@@ -3210,6 +3210,8 @@
   "settingsConnection": "Connection",
   "settingsPresets": "Mode",
   "settingsConnectOnLaunch": "Connect at launch",
+  "settingsKeepVpnOn": "Keep VPN on",
+  "settingsKeepVpnOnHint": "Turns on by itself after a restart or network change",
   "settingsPresetSmartHint": "Sites that don't need a VPN open directly",
   "settingsPresetAllVpnHint": "All traffic goes through the server",
   "settingsPresetFootnote": "You can also change the mode on the home screen.",

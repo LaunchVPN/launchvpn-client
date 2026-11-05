@@ -1015,6 +1015,8 @@
   "settingsConnection": "اتصال",
   "settingsPresets": "حالت",
   "settingsConnectOnLaunch": "اتصال هنگام اجرا",
+  "settingsKeepVpnOn": "Keep VPN on",
+  "settingsKeepVpnOnHint": "Turns on by itself after a restart or network change",
   "settingsPresetSmartHint": "سایت‌هایی که به VPN نیاز ندارند مستقیم باز می‌شوند",
   "settingsPresetAllVpnHint": "همهٔ ترافیک از سرور عبور می‌کند",
   "settingsPresetFootnote": "حالت را در صفحهٔ اصلی هم می‌توانید تغییر دهید.",

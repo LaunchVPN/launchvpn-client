@@ -308,6 +308,10 @@ Apps, on Android only, routes as Smart and sets the platform policy's Android ap
 chosen packages, so upstream's allowed-apps tunnel carries only those apps and the rest bypass the
 VPN. Smart and Everything through VPN set the scope back to all apps and keep the list.
 
+Keep VPN on, on iOS only, sets the platform policy's Apple `alwaysOn`, which upstream compiles into
+a single connect-on-any-network on-demand rule. Settings stores it without a restart, so it reaches
+Apple's on-demand rules with the next App start. Stopping VPN in the App clears the rules until then.
+
 A rule whose `outboundTag` names a `freedom` outbound changes as follows:
 
 - `ip` entries that are `geoip:private` or inside a special-use range stay direct, and the rule
@@ -408,7 +412,8 @@ an App start/restart compiles fresh input. Widget, Tile, Android automation and 
 starts keep the last generated configuration until that happens, including its sharing setting.
 Turning sharing off in settings therefore does not close an existing listener. Stopping VPN closes
 that running listener but leaves the saved input unchanged; a background start can still reuse it.
-Other platform-policy changes retain their existing reconnect behavior.
+Other platform-policy changes retain their existing reconnect behavior, except Keep VPN on (see
+Provider presets).
 
 Complete Raw JSON and provider configurations are unaffected by managed sharing. In these modes, saving sharing settings only
 stores them for other modes; no inbound is added and no sharing-specific tag/port conflict is imposed.
