@@ -34,11 +34,7 @@
   <p>When the app loads or updates a subscription, it sends our server
   panel:</p>
   <ul>
-    <li>a device identifier (HWID). On Android it is the identifier the system
-    gives the app. It changes after a factory reset, and the version from
-    Google Play gets a different one than the version from GitHub. On iOS it is a random
-    identifier the app creates on first launch and keeps in the Keychain, so it
-    survives a reinstall;</li>
+    <li>a device identifier (HWID);</li>
     <li>the operating system, its version and the device model;</li>
     <li>the app version.</li>
   </ul>
@@ -72,11 +68,11 @@
     Cabinet or in the bot. If you saved a card for automatic renewal, also its
     last four digits and card network.</li>
   </ul>
-  <p>The trial is given once. For that, the server keeps hashes of the emails
-  and device identifiers that already got it. The hashes are not linked to an
-  account and stay after it is deleted.</p>
-  <p>On sign-in and sign-up the server looks at the IP address to limit the
-  number of attempts. The address is not stored. The app keeps its sign-in
+  <p>So that the trial is given once, the server keeps pseudonymized marks of
+  who already got it. They are not linked to an account and stay after it is
+  deleted.</p>
+  <p>On sign-in and sign-up the server sees the IP address to guard against
+  abuse and does not store it. The app keeps its sign-in
   keys in the system's secure storage: the Keychain on iOS and the Keystore on
   Android.</p>
   <p>Account data is kept until you delete the account.</p>
@@ -87,7 +83,7 @@
   Deletion cannot be undone.</p>
   <ul>
     <li>If there were no payments, we delete the account, the user in the
-    panel and the devices. Only the trial hashes stay.</li>
+    panel and the devices. Only the trial marks stay.</li>
     <li>If there were payments, we delete access: the user in the panel,
     email sign-in and sign-in keys. To account for the payments, the user
     record stays: the Telegram ID if one was linked, the language, the sign-up
