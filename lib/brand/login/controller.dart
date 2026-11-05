@@ -12,12 +12,18 @@ final class LoginState {
   const LoginState({
     this.mode = LoginMode.create,
     this.submitting = false,
+    this.redeemingTelegram = false,
     this.error,
     this.signup,
   });
 
   final LoginMode mode;
   final bool submitting;
+
+  /// Back from Telegram, the App is signing in with the code it brought.
+  final bool redeemingTelegram;
+
+  bool get busy => submitting || redeemingTelegram;
 
   /// Why the last attempt failed, shown under the fields until the next one.
   final AccountError? error;
@@ -27,10 +33,10 @@ final class LoginState {
   final PendingSignup? signup;
 }
 
-/// The «Вход» form. Signing in hands the account's subscription to
-/// [_openLink], the queue system links also take, so it is added the same
-/// way. Creating an account, or signing in with an unconfirmed email, leads
-/// to the code from the email.
+/// The «Вход» form. Signing in, by email or Telegram, hands the account's
+/// subscription to [_openLink], the queue system links also take, so it is
+/// added the same way. Creating an account, or signing in with an unconfirmed
+/// email, leads to the code from the email.
 final class LoginController extends PageCubit<LoginState> {
   LoginController({
     required this._account,
@@ -42,7 +48,7 @@ final class LoginController extends PageCubit<LoginState> {
   final void Function(Uri) _openLink;
 
   void switchMode() {
-    if (state.submitting) return;
+    if (state.busy) return;
     emit(
       LoginState(
         mode: state.mode == LoginMode.create
@@ -53,7 +59,7 @@ final class LoginController extends PageCubit<LoginState> {
   }
 
   Future<void> submit({required String email, required String password}) async {
-    if (state.submitting) return;
+    if (state.busy) return;
     final mode = state.mode;
     emit(LoginState(mode: mode, submitting: true));
     try {
@@ -81,6 +87,27 @@ final class LoginController extends PageCubit<LoginState> {
     } catch (error) {
       ygLogger('${mode.name} failed (${error.runtimeType})');
       emit(LoginState(mode: mode, error: AccountError.unexpected));
+    }
+  }
+
+  /// «Войти через Telegram»: Telegram's sign-in opens in the browser, and the
+  /// form stays usable until the person comes back with its code. Turning
+  /// Telegram down, or tapping again, leaves the form as it is.
+  Future<void> signInWithTelegram() async {
+    if (state.busy) return;
+    emit(LoginState(mode: state.mode));
+    try {
+      final code = await _account.openTelegramLogin();
+      emit(LoginState(mode: state.mode, redeemingTelegram: true));
+      final link = await _account.exchangeTelegramLogin(code);
+      if (link != null) _openLink(link);
+      emit(LoginState(mode: state.mode));
+    } on AccountException catch (error) {
+      if (error.error == AccountError.cancelled) return;
+      emit(LoginState(mode: state.mode, error: AccountError.telegramFailed));
+    } catch (error) {
+      ygLogger('Telegram sign-in failed (${error.runtimeType})');
+      emit(LoginState(mode: state.mode, error: AccountError.telegramFailed));
     }
   }
 

@@ -17,21 +17,28 @@ void main() {
   late AccountService account;
   late StreamController<bool> subscriptions;
   late List<Uri> opened;
+  late FakeBrowser browser;
+  late StreamController<Uri> links;
 
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
     api = FakeAccountApi();
-    account = accountServiceFor(api);
+    browser = FakeBrowser();
+    account = accountServiceFor(api, browser: browser);
     opened = [];
   });
 
-  /// The app on a Russian phone, with [hasSubscription] as the first word of
-  /// the subscription table.
+  /// The app on a Russian phone with a Pixel's screen, with [hasSubscription]
+  /// as the first word of the subscription table.
   Future<void> pumpApp(
     WidgetTester tester, {
     required bool hasSubscription,
   }) async {
-    final links = StreamController<Uri>.broadcast(sync: true);
+    tester.view
+      ..physicalSize = const Size(1080, 2400)
+      ..devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    links = StreamController<Uri>.broadcast(sync: true);
     final share = ShareService.forTesting(
       appLinks: links.stream,
       receiveWidgetUri: (_) => false,
@@ -208,6 +215,69 @@ void main() {
         ),
       ]);
     });
+  });
+
+  group('Telegram', () {
+    Future<void> returnFromTelegram(WidgetTester tester, String query) async {
+      await tester.tap(find.text('Войти через Telegram'));
+      await tester.pumpAndSettle();
+      expect(browser.opened, hasLength(1));
+      links.add(Uri.parse('launchvpn://auth?$query'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'signing in passes the gate and adds the account subscription',
+      (tester) async {
+        api.exchangeWith(access: 'a1', refresh: 'r1');
+        api.subscription(_configLink);
+        await pumpApp(tester, hasSubscription: false);
+
+        expect(find.text('или'), findsOneWidget);
+        await returnFromTelegram(tester, 'code=c1');
+
+        expect(find.text('home-body'), findsOneWidget);
+        expect(opened, [
+          Uri.parse(
+            'launchvpn://sub/add?url=${Uri.encodeQueryComponent(_configLink)}',
+          ),
+        ]);
+      },
+    );
+
+    testWidgets('a failed sign-in asks to try again', (tester) async {
+      await pumpApp(tester, hasSubscription: false);
+
+      await returnFromTelegram(tester, 'error=telegram_failed');
+
+      expect(
+        find.text('Не получилось войти через Telegram. Попробуйте ещё раз'),
+        findsOneWidget,
+      );
+      expect(find.byType(NavigationBar), findsNothing);
+    });
+
+    testWidgets('a cancelled sign-in leaves the form as it was', (
+      tester,
+    ) async {
+      await pumpApp(tester, hasSubscription: false);
+
+      await returnFromTelegram(tester, 'error=cancelled');
+
+      expect(find.textContaining('Telegram. Попробуйте'), findsNothing);
+      expect(find.text('Войти через Telegram'), findsOneWidget);
+    });
+
+    testWidgets('iOS offers no Telegram sign-in', (tester) async {
+      await pumpApp(tester, hasSubscription: false);
+
+      expect(find.text('Войти через Telegram'), findsNothing);
+      expect(find.text('или'), findsNothing);
+      expect(
+        find.widgetWithText(FilledButton, 'Создать аккаунт'),
+        findsOneWidget,
+      );
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
   });
 
   group('create account', () {
