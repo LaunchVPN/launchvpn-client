@@ -99,7 +99,6 @@ void main() {
 
   group('iOS matches the brand config', () {
     const appGroup = 'group.${Brand.iosId}';
-    const cloudContainer = 'iCloud.${Brand.iosId}';
 
     test('every target builds under the iOS ID and the brand name', () {
       final project = _read('ios/Runner.xcodeproj/project.pbxproj');
@@ -114,15 +113,17 @@ void main() {
       expect(project, isNot(contains(_upstreamTeam)));
     });
 
-    test('Info.plist declares the name, deep link and iCloud container', () {
+    test('Info.plist declares the name and deep link, and no iCloud', () {
       final plist = _read('ios/Runner/Info.plist');
 
       expect(plist, contains('<string>${Brand.name}</string>'));
       expect(plist, contains('<string>${Brand.scheme}</string>'));
-      expect(plist, contains('<key>$cloudContainer</key>'));
+      expect(plist, isNot(contains('NSUbiquitousContainers')));
     });
 
-    test('entitlements share one app group and iCloud container', () {
+    // The App IDs have no iCloud capability, so an entitlement for it, as an
+    // upstream merge could bring back, fails signing.
+    test('entitlements share one app group, and the App has no iCloud', () {
       for (final path in const [
         'ios/Runner/Runner.entitlements',
         'ios/tunnel/tunnel.entitlements',
@@ -130,10 +131,9 @@ void main() {
       ]) {
         expect(_read(path), contains('<string>$appGroup</string>'));
       }
-      expect(
-        _read('ios/Runner/Runner.entitlements'),
-        contains('<string>$cloudContainer</string>'),
-      );
+      final app = _read('ios/Runner/Runner.entitlements');
+      expect(app, isNot(contains('icloud')));
+      expect(app, isNot(contains('ubiquity')));
     });
 
     test('Swift reaches the tunnel and app group of the iOS ID', () {

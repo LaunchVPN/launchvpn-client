@@ -92,7 +92,7 @@ stay disabled. `main` requires its `validate`, `android` and `ios` jobs.
 | --- | --- |
 | `validate` | The checks of the upstream Validate workflow. |
 | `android` | `LaunchVPN-android-universal.apk` on the run page, and the Kotlin tests. It is an [APK build](../docs/app.md#launchvpn-entry-point), which offers newer GitHub releases. |
-| `ios` | An unsigned build that proves the app and extensions compile. It produces no IPA and no TestFlight upload. |
+| `ios` | A build that proves the app and extensions compile. On `main` it is signed and uploaded to [TestFlight](#testflight); elsewhere it is unsigned. |
 | `release` | Release tags only: a draft GitHub release with the APK and the pull requests merged since the latest release. |
 
 [build_core.py](build_core.py) runs only the native core and Geodata step, because
@@ -125,6 +125,25 @@ gh secret set ANDROID_KEY_ALIAS --repo "$REPO" --body launchvpn
 Pages when it changes on `main`. The repository's Pages source is GitHub Actions,
 and its custom domain `privacy.launch.tel` has a DNS `CNAME` record pointing to
 `launchvpn.github.io`.
+
+### TestFlight
+
+Until the organization's Apple account exists, `main` uploads to TestFlight from
+an individual test account with the temporary IDs `com.launchvpn.dev`, `.tun`,
+`.widget` and `group.com.launchvpn.dev`. The App can never be released from it,
+since only organizations may offer VPN apps. The `ios` job runs the two halves
+of the [deploy lane](../ios/fastlane/Fastfile): `signed_ipa` fetches the App
+Store profiles `LaunchVPNiOS`, `LaunchVPNiOSTun` and `LaunchVPNiOSWidget` by name
+and exports the IPA, and `upload_ipa` runs after the bundle checks. It needs the
+Apple secrets from the workflow header and the repository variable `APPLE_TEAM_ID`.
+Without them `main` builds unsigned with a warning. Each upload takes the run
+number as its build number. TestFlight accepts a build number only once, so
+re-running the job of an uploaded build fails at the upload.
+
+In the account, the App ID `com.launchvpn.dev` has App Groups, Network
+Extensions and Personal VPN; `.tun` has App Groups and Network Extensions;
+`.widget` has App Groups. All three use `group.com.launchvpn.dev`. The App
+Store Connect API key has the Admin role, so the lane can read the profiles.
 
 ### Versions
 
