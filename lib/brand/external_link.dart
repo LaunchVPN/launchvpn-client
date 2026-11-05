@@ -1,3 +1,5 @@
+import 'package:onexray/core/brand.dart';
+import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -11,3 +13,10 @@ Future<void> openExternalLink(Uri uri, String name) async {
     ygLogger('open $name link failed (${error.runtimeType})');
   }
 }
+
+/// Opens support for [subscription]: the panel's link, or the bot's when the
+/// panel sent none or there is no subscription.
+Future<void> openSupport(SubscriptionData? subscription) => openExternalLink(
+  Uri.parse(subscription?.supportUrl ?? Brand.supportUrl),
+  'support',
+);

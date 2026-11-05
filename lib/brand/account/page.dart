@@ -278,7 +278,6 @@ class _AccountPageState extends State<AccountPage> {
   /// account, «Привязать Telegram», «Выйти» and «Удалить аккаунт».
   List<Widget> _details(AppLocalizations l, AccountState state) {
     final details = state.details;
-    final support = state.subscription?.supportUrl ?? Brand.supportUrl;
     return [
       ?switch (details) {
         AccountDetails(:final email?, :final telegramLinked) => SettingsRow(
@@ -315,7 +314,7 @@ class _AccountPageState extends State<AccountPage> {
         icon: LucideIcons.messageCircle,
         title: l.accountSupport,
         value: null,
-        onTap: () => openExternalLink(Uri.parse(support), 'support'),
+        onTap: () => openSupport(state.subscription),
       ),
       if (state.signedIn)
         SettingsRow(

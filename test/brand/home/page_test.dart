@@ -918,7 +918,17 @@ void main() {
         find.widgetWithText(FilledButton, 'Обновить статус'),
         findsOneWidget,
       );
-      expect(find.text('Написать в поддержку'), findsNothing);
+    });
+
+    testWidgets('without a panel link, support is the bot\'s', (tester) async {
+      final launcher = useFakeUrlLauncher();
+      await pumpHome(tester, distribution: AppDistribution.store);
+      await addSubscription(tester, expire: past);
+
+      await tester.tap(find.text('Написать в поддержку'));
+      await tester.pump();
+
+      expect(launcher.opened, ['https://t.me/launchbotsupport']);
     });
 
     testWidgets('a subscription without expiry shows the toggle', (
@@ -1349,6 +1359,19 @@ void main() {
       expect(find.text('Написать в поддержку'), findsOneWidget);
       expect(find.text('Обновить'), findsNothing);
       expect(find.byIcon(LucideIcons.trash2), findsNothing);
+    });
+
+    testWidgets('without a panel link, support is the bot\'s', (tester) async {
+      final launcher = useFakeUrlLauncher();
+      await pumpHome(tester);
+      await addSubscription(tester);
+
+      deviceLimit.value = true;
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Написать в поддержку'));
+      await tester.pump();
+
+      expect(launcher.opened, ['https://t.me/launchbotsupport']);
     });
   });
 }

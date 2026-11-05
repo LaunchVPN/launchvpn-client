@@ -264,11 +264,11 @@ class _HomePageState extends State<HomePage> {
     actions,
   ];
 
-  /// Null when the panel sent no support link.
+  /// The error screen offers only the panel's support: null without its link.
   VoidCallback? _contactSupport(HomeState state) =>
       switch (state.subscription?.supportUrl) {
-        final url? => () => openExternalLink(Uri.parse(url), 'support'),
         null => null,
+        _ => () => openSupport(state.subscription),
       };
 
   List<Widget> _failureContent(HomeState state, HomeFailure failure) =>
@@ -298,7 +298,7 @@ class _HomePageState extends State<HomePage> {
             ? () => openExternalLink(Uri.parse(Brand.renewalUrl), 'renewal')
             : null,
         onRefresh: onRefresh,
-        onContactSupport: _contactSupport(state),
+        onContactSupport: () => openSupport(state.subscription),
       ),
     );
   }
@@ -307,10 +307,7 @@ class _HomePageState extends State<HomePage> {
     DeviceLimitHero(account: widget.account),
     DeviceLimitActions(
       account: widget.account,
-      support: switch (_contactSupport(state)) {
-        final open? => _SupportLink(onPressed: open),
-        null => null,
-      },
+      support: _SupportLink(onPressed: () => openSupport(state.subscription)),
     ),
   );
 
@@ -567,8 +564,8 @@ class _ExpiredActions extends StatelessWidget {
   /// Null while the subscription loads, which the button shows with a spinner.
   final VoidCallback? onRefresh;
 
-  /// Null when the panel sent no support link.
-  final VoidCallback? onContactSupport;
+  /// The panel's support, or the bot's when it sent no link.
+  final VoidCallback onContactSupport;
 
   @override
   Widget build(BuildContext context) {
@@ -601,7 +598,7 @@ class _ExpiredActions extends StatelessWidget {
             icon: refreshIcon,
             label: refreshLabel,
           ),
-        if (onContactSupport case final open?) _SupportLink(onPressed: open),
+        _SupportLink(onPressed: onContactSupport),
       ],
     );
   }

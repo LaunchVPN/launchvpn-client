@@ -55,8 +55,9 @@ upstream pages kept for merging. They are not reachable in this build.
   subscription the way the interval update does, with a spinner in the button. A failed load keeps
   the stored data and names the cause in a toast; a subscription still expired says it is not
   renewed yet. A renewal, found by the button or the interval update, returns Home and connects,
-  unless the VPN consent is missing, which only a tap may ask for. Contact support works as on the
-  error screen. An expiry within a day has a timer; a later one is checked when the subscription
+  unless the VPN consent is missing, which only a tap may ask for. Contact support opens the
+  panel's `support-url`, or `Brand.supportUrl` (the bot's support in Telegram) without one, as
+  Account does; `openSupport` resolves it for both. An expiry within a day has a timer; a later one is checked when the subscription
   refreshes.
 - When the panel refuses this device because the subscription already has all its devices
   (Remnawave answers the subscription request with `x-hwid-max-devices-reached: true`),
@@ -66,9 +67,9 @@ upstream pages kept for merging. They are not reachable in this build.
   the same removal sheet as Account, and Refresh loads the subscription again. When the device has
   none, the account's subscription goes to the link queue only once the list shows a free place,
   so neither Refresh nor opening Account repeats the add dialog and the limit toast while the
-  limit stands. From a link only, the screen
-  says a device can be removed in the bot or in the Cabinet, and offers support.
-  An ended subscription takes precedence.
+  limit stands. From a link only, the screen says a device can be removed in the bot or in the
+  Cabinet. Contact support works as on Subscription ended. An ended subscription takes
+  precedence.
 - If a command failed and the tunnel may still be up, the screen says so and a tap disconnects.
   Without a subscription the toggle is disabled.
 - No status or announcement moves the toggle. It sits as centered in the mockup, and higher only on
