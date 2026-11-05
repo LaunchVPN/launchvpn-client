@@ -38,12 +38,9 @@ import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-// ignore: depend_on_referenced_packages
-import 'package:url_launcher_platform_interface/link.dart';
-// ignore: depend_on_referenced_packages
-import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../support/fake_account_api.dart';
+import '../../support/fake_url_launcher.dart';
 
 const _largeScale = 3.0;
 
@@ -537,10 +534,7 @@ void main() {
     testWidgets(
       'an APK build offers the newer release, and a tap opens its page',
       (tester) async {
-        final launcher = _Launcher();
-        final previous = UrlLauncherPlatform.instance;
-        UrlLauncherPlatform.instance = launcher;
-        addTearDown(() => UrlLauncherPlatform.instance = previous);
+        final launcher = useFakeUrlLauncher();
         await pumpHome(tester, distribution: AppDistribution.apk);
 
         await announceUpdate(tester);
@@ -833,10 +827,7 @@ void main() {
     });
 
     testWidgets('«Написать в поддержку» opens the panel link', (tester) async {
-      final launcher = _Launcher();
-      final previous = UrlLauncherPlatform.instance;
-      UrlLauncherPlatform.instance = launcher;
-      addTearDown(() => UrlLauncherPlatform.instance = previous);
+      final launcher = useFakeUrlLauncher();
       await pumpHome(tester);
       await addSubscription(tester, supportUrl: support);
       await fail(tester, 'startFailed');
@@ -883,14 +874,6 @@ void main() {
         DateTime.now().add(const Duration(days: 30)).millisecondsSinceEpoch ~/
         1000;
 
-    _Launcher useLauncher() {
-      final launcher = _Launcher();
-      final previous = UrlLauncherPlatform.instance;
-      UrlLauncherPlatform.instance = launcher;
-      addTearDown(() => UrlLauncherPlatform.instance = previous);
-      return launcher;
-    }
-
     Future<void> tapRefresh(WidgetTester tester) async {
       await tester.tap(find.text('Обновить статус'));
       await tester.runAsync(() => pumpEventQueue(times: 20));
@@ -900,7 +883,7 @@ void main() {
     testWidgets(
       'an APK build offers renewal on the site instead of the toggle',
       (tester) async {
-        final launcher = useLauncher();
+        final launcher = useFakeUrlLauncher();
         await pumpHome(tester, distribution: AppDistribution.apk);
         await addSubscription(tester, expire: past, supportUrl: support);
 
@@ -1368,18 +1351,4 @@ void main() {
       expect(find.byIcon(LucideIcons.trash2), findsNothing);
     });
   });
-}
-
-/// Records the links the screen opens instead of leaving the test.
-final class _Launcher extends UrlLauncherPlatform {
-  final opened = <String>[];
-
-  @override
-  LinkDelegate? get linkDelegate => null;
-
-  @override
-  Future<bool> launchUrl(String url, LaunchOptions options) async {
-    opened.add(url);
-    return true;
-  }
 }
