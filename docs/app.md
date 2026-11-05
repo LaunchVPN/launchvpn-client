@@ -226,6 +226,7 @@ upstream pages kept for merging. They are not reachable in this build.
 - Sign out asks in a sheet («Войдите снова, чтобы подключиться»), then revokes this device's session (`/api/app/auth/logout`, best
   effort), removes the subscription the account brought, with a tunnel through it, and clears the
   tokens. A subscription added from a link stays, so only a device left without one shows «Вход».
+  A removal that fails is retried at the next launch, as long as the device stays signed out.
 - «Удалить аккаунт», a red row with no icon, asks in the sheet «Удалить аккаунт?», which warns that
   the subscription and its days go, those from the bot included. Confirmed, the row shows progress
   while `/api/app/account/delete` runs with the Bearer. Success cleans up as Sign out does, without

@@ -177,6 +177,32 @@ void main() {
     expect(api.refreshBodies, hasLength(1));
   });
 
+  test('a subscription that failed to leave with logout leaves at the next '
+      'launch', () async {
+    api.loginWith(access: 'a1', refresh: 'r1');
+    api.subscription(_configLink);
+    final removed = <String>[];
+    var failing = true;
+    AccountService device() => accountServiceFor(
+      api,
+      removeSubscription: (url) async {
+        if (failing) throw StateError('tunnel busy');
+        removed.add(url);
+      },
+    );
+    final service = device();
+    await service.email.login(email: 'ivan@proton.me', password: 'pw');
+
+    await service.data.logout();
+    expect(service.session.signedIn.value, isFalse);
+    failing = false;
+    final restarted = device();
+    await restarted.restore();
+
+    expect(removed, [_configLink]);
+    expect(await restarted.data.savedSubscriptionUrl(), isNull);
+  });
+
   test('logout revokes the session on the server and here', () async {
     await signIn(api, account);
     final service = account();

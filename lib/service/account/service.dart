@@ -87,9 +87,10 @@ final class AccountService {
   final TelegramAccount telegram;
 
   /// Picks up the Telegram attempt and the session saved by an earlier
-  /// launch, without a request.
+  /// launch, without a request, and finishes a sign-out it left undone.
   Future<void> restore() async {
     await telegram.browser.restore();
     await session.restore();
+    await data.finishSignOut();
   }
 }

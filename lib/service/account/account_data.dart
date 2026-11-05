@@ -169,6 +169,12 @@ final class AccountData {
     await _removeAccountSubscription();
   }
 
+  /// Retries a sign-out that could not remove the subscription the account
+  /// brought: signed out, its URL is still kept only then.
+  Future<void> finishSignOut() async {
+    if (!_session.signedIn.value) await _removeAccountSubscription();
+  }
+
   /// Why the device signed out on its own since the last sign-in, for «Вход»
   /// to say. Reading clears it.
   ForcedSignOut? takeForcedSignOut() {
