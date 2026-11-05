@@ -20,14 +20,17 @@ void main() {
   late FakeAccountApi api;
   late AccountService account;
   late List<String> removed;
+  late FakeBrowser browser;
 
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
     api = FakeAccountApi();
     removed = [];
+    browser = FakeBrowser();
     account = accountServiceFor(
       api,
       removeSubscription: (url) async => removed.add(url),
+      browser: browser,
     );
   });
 
@@ -135,6 +138,65 @@ void main() {
     expect(find.text('Pixel 8 удалён, место освободилось'), findsOneWidget);
     expect(find.text('УСТРОЙСТВА · 1 ИЗ 3'), findsOneWidget);
     expect(find.text('Pixel 8'), findsNothing);
+  });
+
+  group('«Привязать Telegram»', () {
+    /// Taps the row; the browser opens and comes back with a link code.
+    Future<void> linkAndReturn(WidgetTester tester) async {
+      api.linkStartWith('https://app.test/api/auth/telegram/start?ticket=t1');
+      api.refreshWith(access: 'a2', refresh: 'r2');
+      await tester.ensureVisible(find.text('Привязать Telegram'));
+      await tester.tap(find.text('Привязать Telegram'));
+      await settle(tester);
+      expect(browser.opened, hasLength(1));
+      account.telegram.handleReturn(
+        Uri.parse('launchvpn://auth?code=c1&mode=link'),
+      );
+      await settle(tester);
+    }
+
+    for (final (days, message) in [
+      (30, 'Telegram привязан, 30 дней добавлены'),
+      (0, 'Telegram привязан'),
+    ]) {
+      testWidgets('linking with $days days added says so and hides the row', (
+        tester,
+      ) async {
+        await pumpAccount(tester);
+        expect(find.text('Дни из бота добавятся к подписке'), findsOneWidget);
+        api.exchangeWith(access: 'a3', refresh: 'r3', addedDays: days);
+        api.me(email: 'ivan@proton.me', telegramLinked: true);
+
+        await linkAndReturn(tester);
+
+        // The email row's subtitle says it too.
+        expect(find.text(message), findsNWidgets(days == 0 ? 2 : 1));
+        expect(find.text('Telegram привязан'), findsWidgets);
+        expect(find.text('Привязать Telegram'), findsNothing);
+        expect(find.text('Вход по email'), findsNothing);
+      });
+    }
+
+    testWidgets('a Telegram taken by another email account explains it in a '
+        'sheet', (tester) async {
+      await pumpAccount(tester);
+      api.refuse('/api/app/auth/exchange', 409, 'telegram_taken');
+
+      await linkAndReturn(tester);
+
+      expect(find.text('Этот Telegram уже занят'), findsOneWidget);
+      expect(
+        find.text(
+          'Он привязан к другому аккаунту с email. Чтобы увидеть его '
+          'подписку, выйдите и войдите по тому email.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Понятно'));
+      await settle(tester);
+      expect(find.text('Этот Telegram уже занят'), findsNothing);
+      expect(find.text('Привязать Telegram'), findsOneWidget);
+    });
   });
 
   testWidgets('«Выйти» confirmed in its sheet leads to «Вход»', (tester) async {

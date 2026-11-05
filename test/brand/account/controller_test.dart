@@ -21,6 +21,7 @@ void main() {
   late List<Uri> opened;
   late List<String> refreshed;
   late List<String> removed;
+  late FakeBrowser browser;
 
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
@@ -30,11 +31,13 @@ void main() {
     opened = [];
     refreshed = [];
     removed = [];
+    browser = FakeBrowser();
   });
 
   AccountService account() => accountServiceFor(
     api,
     removeSubscription: (url) async => removed.add(url),
+    browser: browser,
   );
 
   AccountController controllerFor(AccountService account) {
@@ -202,6 +205,38 @@ void main() {
       isFalse,
     );
     expect(controller.state.devices!.items, hasLength(2));
+  });
+
+  test('linking Telegram swaps in the merged account\'s subscription and '
+      'profile', () async {
+    final service = await signedIn();
+    await addRow(_configLink);
+    const telegramLink = 'https://sub.launch.tel/telegram';
+    api.linkStartWith('https://app.test/api/auth/telegram/start?ticket=t1');
+    api.refreshWith(access: 'a2', refresh: 'r2');
+    api.exchangeWith(access: 'a3', refresh: 'r3', addedDays: 30);
+    api.subscription(telegramLink);
+    api.me(email: 'ivan@proton.me', telegramLinked: true);
+    final controller = controllerFor(service);
+
+    final outcome = controller.linkTelegram();
+    await pumpEventQueue();
+    service.telegram.handleReturn(
+      Uri.parse('launchvpn://auth?code=c1&mode=link'),
+    );
+
+    expect(
+      await outcome,
+      isA<TelegramLinked>().having((o) => o.addedDays, 'addedDays', 30),
+    );
+    expect(removed, [_configLink]);
+    expect(opened, [
+      Uri.parse(
+        'launchvpn://sub/add?url=${Uri.encodeQueryComponent(telegramLink)}',
+      ),
+    ]);
+    expect(controller.state.profile?.telegramLinked, isTrue);
+    expect(controller.state.linkingTelegram, isFalse);
   });
 
   test(

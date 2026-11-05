@@ -17,6 +17,9 @@ import 'package:onexray/brand/theme.dart';
 import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/distribution.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
+import 'package:onexray/pages/shared/alert.dart';
+import 'package:onexray/pages/shared/widgets/button_progress.dart';
+import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/service.dart';
 
 /// «Аккаунт»: days and traffic for everyone; the devices, the account and
@@ -91,6 +94,34 @@ class _AccountPageState extends State<AccountPage> {
       action: l.accountLogout,
     );
     if (confirmed) await _controller.logout();
+  }
+
+  /// Tells how «Привязать Telegram» ended; turning Telegram down says nothing.
+  Future<void> _linkTelegram() async {
+    final outcome = await _controller.linkTelegram();
+    if (!mounted) return;
+    final l = AppLocalizations.of(context)!;
+    switch (outcome) {
+      case TelegramLinked(:final addedDays):
+        ContextAlert.showToast(
+          context,
+          addedDays > 0
+              ? l.accountTelegramLinkedDays(addedDays)
+              : l.accountTelegramLinked,
+          duration: const Duration(seconds: 3),
+        );
+      case TelegramLinkFailed(error: AccountError.cancelled):
+        break;
+      case TelegramLinkFailed(error: AccountError.telegramTaken):
+        await NoticeSheet.show(
+          context,
+          title: l.accountTelegramTakenTitle,
+          body: l.accountTelegramTakenBody,
+          action: l.accountTelegramTakenOk,
+        );
+      case TelegramLinkFailed():
+        ContextAlert.showToast(context, l.accountLinkTelegramFailed);
+    }
   }
 
   @override
@@ -217,7 +248,8 @@ class _AccountPageState extends State<AccountPage> {
     ];
   }
 
-  /// The account, support and «Выйти», each when there is one.
+  /// The account, «Привязать Telegram», support and «Выйти», each when there
+  /// is one.
   List<Widget> _details(AppLocalizations l, AccountState state) {
     final profile = state.profile;
     final support = state.subscription?.supportUrl;
@@ -230,6 +262,20 @@ class _AccountPageState extends State<AccountPage> {
               ? l.accountTelegramLinked
               : l.accountEmailSignIn,
           onTap: null,
+        ),
+      if (state.signedIn && profile != null && !profile.telegramLinked)
+        SettingsRow(
+          icon: LucideIcons.send,
+          title: l.accountLinkTelegram,
+          subtitle: l.accountLinkTelegramHint,
+          onTap: state.linkingTelegram ? null : _linkTelegram,
+          trailing: state.linkingTelegram
+              ? const ButtonProgressIndicator(size: 20)
+              : const Icon(
+                  LucideIcons.chevronRight,
+                  size: 18,
+                  color: BrandColors.muted,
+                ),
         ),
       if (support != null)
         SettingsLinkRow(

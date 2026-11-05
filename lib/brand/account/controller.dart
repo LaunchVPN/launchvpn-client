@@ -19,6 +19,7 @@ final class AccountState {
     this.devices,
     this.inactive = false,
     this.refreshing = false,
+    this.linkingTelegram = false,
   });
 
   final bool signedIn;
@@ -38,6 +39,9 @@ final class AccountState {
   /// [AccountController.refresh] is running.
   final bool refreshing;
 
+  /// Back from Telegram, the App is linking it with the code it brought.
+  final bool linkingTelegram;
+
   /// Days and traffic as the panel last reported them.
   SubscriptionUserInfo? get usage => switch (subscription) {
     final row? => SubscriptionUserInfo.fromSubscription(row),
@@ -51,6 +55,7 @@ final class AccountState {
     AccountDevices? devices,
     bool? inactive,
     bool? refreshing,
+    bool? linkingTelegram,
   }) => AccountState(
     signedIn: signedIn ?? this.signedIn,
     subscription: subscription == null ? this.subscription : subscription(),
@@ -58,7 +63,28 @@ final class AccountState {
     devices: devices ?? this.devices,
     inactive: inactive ?? this.inactive,
     refreshing: refreshing ?? this.refreshing,
+    linkingTelegram: linkingTelegram ?? this.linkingTelegram,
   );
+}
+
+/// How «Привязать Telegram» ended, for the tab to tell.
+sealed class TelegramLinkOutcome {
+  const TelegramLinkOutcome();
+}
+
+final class TelegramLinked extends TelegramLinkOutcome {
+  const TelegramLinked(this.addedDays);
+
+  /// What the Telegram side added to the subscription; 0 when nothing.
+  final int addedDays;
+}
+
+final class TelegramLinkFailed extends TelegramLinkOutcome {
+  const TelegramLinkFailed(this.error);
+
+  /// [AccountError.cancelled] when the person turned Telegram down or tapped
+  /// again.
+  final AccountError error;
 }
 
 /// «Аккаунт»: the subscription, and for a signed-in person the account, its
@@ -135,7 +161,7 @@ final class AccountController extends PageCubit<AccountState> {
       return;
     }
     await Future.wait([
-      _load(_account.profile, (profile) => state.copyWith(profile: profile)),
+      _loadProfile(),
       loadDevices(),
       _load(_account.accountSubscription, (link) {
         // The stream keeps the row current, unlike [row] read before.
@@ -145,6 +171,9 @@ final class AccountController extends PageCubit<AccountState> {
       if (row != null) _refreshQuietly(row),
     ]);
   }
+
+  Future<void> _loadProfile() =>
+      _load(_account.profile, (profile) => state.copyWith(profile: profile));
 
   /// The account's devices alone, as «Лимит устройств» lists them.
   Future<void> loadDevices() => state.signedIn
@@ -163,6 +192,51 @@ final class AccountController extends PageCubit<AccountState> {
       emit(state.copyWith(devices: devices.without(device.hwid)));
     }
     return true;
+  }
+
+  /// «Привязать Telegram»: Telegram's page opens in the browser, and the tab
+  /// stays usable until the person comes back with its code. The merged
+  /// account then replaces the session, and its subscription the one here
+  /// when it changed.
+  Future<TelegramLinkOutcome> linkTelegram() async {
+    if (state.linkingTelegram) {
+      return const TelegramLinkFailed(AccountError.cancelled);
+    }
+    try {
+      final code = await _account.openTelegramLink();
+      emit(state.copyWith(linkingTelegram: true));
+      try {
+        final linked = await _account.exchangeTelegramLink(code);
+        await _reloadLinked(linked);
+        return TelegramLinked(linked.addedDays);
+      } finally {
+        if (!isClosed) emit(state.copyWith(linkingTelegram: false));
+      }
+    } on AccountException catch (error) {
+      if (error.error != AccountError.alreadyLinked) {
+        return TelegramLinkFailed(error.error);
+      }
+      // Linked meanwhile, on the site or in another attempt.
+      await _loadProfile();
+      return const TelegramLinked(0);
+    } catch (error) {
+      ygLogger('link Telegram failed (${error.runtimeType})');
+      return const TelegramLinkFailed(AccountError.unexpected);
+    }
+  }
+
+  /// What linking changed: the subscription, which got the days, and the
+  /// profile, which now has Telegram.
+  Future<void> _reloadLinked(TelegramLink linked) async {
+    if (linked.subscription case final link?) {
+      _openLink(link);
+    } else if (state.subscription case final row?) {
+      await _refreshQuietly(row);
+    }
+    await Future.wait([_loadProfile(), loadDevices()]);
+    if (!isClosed) {
+      emit(state.copyWith(inactive: _account.subscriptionMissing));
+    }
   }
 
   /// Signs out. The gate then shows «Вход» unless a subscription from a link
