@@ -65,7 +65,7 @@ void main() {
     ], max: 3);
     if (signedIn) {
       await tester.runAsync(
-        () => account.login(email: 'ivan@proton.me', password: 'pw'),
+        () => account.email.login(email: 'ivan@proton.me', password: 'pw'),
       );
     }
     final db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -206,7 +206,7 @@ void main() {
       await tester.tap(find.text('Привязать Telegram'));
       await settle(tester);
       expect(browser.opened, hasLength(1));
-      account.telegram.handleReturn(
+      account.telegram.browser.handleReturn(
         Uri.parse('launchvpn://auth?code=c1&mode=link'),
       );
       await settle(tester);

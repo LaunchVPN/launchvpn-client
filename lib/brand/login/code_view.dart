@@ -36,7 +36,7 @@ class EmailCodeView extends StatefulWidget {
 
 class _EmailCodeViewState extends State<EmailCodeView> {
   late final _controller = EmailCodeController(
-    account: widget.account,
+    email: widget.account.email,
     signup: widget.signup,
   );
   final _code = TextEditingController();

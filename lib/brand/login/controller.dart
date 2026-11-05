@@ -49,13 +49,14 @@ final class LoginState {
 final class LoginController extends PageCubit<LoginState> {
   LoginController({required this._account, LoginMode mode = LoginMode.create})
     : super(LoginState(mode: mode)) {
-    if (_account.takeUnfinishedDeletion()) {
+    if (_account.data.takeUnfinishedDeletion()) {
       emit(
         const LoginState(mode: LoginMode.signIn, error: AccountError.signedOut),
       );
     }
     // A Telegram sign-in the system closed the App during.
-    if (_account.telegram.resume(TelegramAuthPurpose.login) case final code?) {
+    if (_account.telegram.browser.resume(TelegramAuthPurpose.login)
+        case final code?) {
       unawaited(_redeemTelegram(code));
     }
   }
@@ -80,13 +81,13 @@ final class LoginController extends PageCubit<LoginState> {
     try {
       switch (mode) {
         case LoginMode.create:
-          final signup = await _account.signup(
+          final signup = await _account.email.signup(
             email: email.trim(),
             password: password,
           );
           emit(LoginState(mode: mode, signup: signup));
         case LoginMode.signIn:
-          await _account.login(email: email.trim(), password: password);
+          await _account.email.login(email: email.trim(), password: password);
           emit(LoginState(mode: mode));
       }
     } on AccountException catch (error) {
@@ -107,7 +108,7 @@ final class LoginController extends PageCubit<LoginState> {
   Future<void> signInWithTelegram() async {
     if (state.busy) return;
     emit(LoginState(mode: state.mode));
-    await _redeemTelegram(_account.openTelegramLogin());
+    await _redeemTelegram(_account.telegram.openLogin());
   }
 
   /// Signs in with the code [pending] brings back from Telegram.
@@ -115,7 +116,7 @@ final class LoginController extends PageCubit<LoginState> {
     try {
       final code = await pending;
       emit(LoginState(mode: state.mode, redeemingTelegram: true));
-      await _account.exchangeTelegramLogin(code);
+      await _account.telegram.exchangeLogin(code);
       emit(LoginState(mode: state.mode));
     } on AccountException catch (error) {
       if (error.error == AccountError.cancelled) return;

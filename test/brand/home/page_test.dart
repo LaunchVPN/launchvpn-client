@@ -1284,7 +1284,7 @@ void main() {
           ], max: 2);
         final account = accountServiceFor(api);
         await tester.runAsync(
-          () => account.login(email: 'ivan@proton.me', password: 'pw'),
+          () => account.email.login(email: 'ivan@proton.me', password: 'pw'),
         );
         await pumpHome(tester, account: account);
         await addSubscription(tester, supportUrl: 'https://t.me/support');

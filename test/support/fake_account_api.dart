@@ -239,7 +239,7 @@ AccountService accountServiceFor(
   removeSubscription: removeSubscription ?? (_) async {},
   addSubscription: addSubscription ?? (_) {},
   language: () => 'ru',
-  telegram: TelegramBrowserAuth(
+  browser: TelegramBrowserAuth(
     openBrowser: (browser ?? FakeBrowser()).open,
     random: random,
     now: now,

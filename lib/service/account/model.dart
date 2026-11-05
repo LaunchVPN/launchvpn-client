@@ -24,6 +24,16 @@ final class PendingSignup {
   /// whether the trial waits.
   static bool trialIn(Map<Object?, Object?> data) =>
       data['trialAvailable'] != false;
+
+  /// The wait before another code when the backend names none.
+  static const resendGap = Duration(seconds: 60);
+
+  /// How long the backend asks to wait before another code.
+  static Duration waitIn(Map<Object?, Object?> data) =>
+      switch (data['resendIn'] ?? data['retryAfter']) {
+        final int seconds when seconds >= 0 => Duration(seconds: seconds),
+        _ => resendGap,
+      };
 }
 
 /// Telegram linked to the signed-in account, which may now be another one:

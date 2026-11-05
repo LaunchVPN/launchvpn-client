@@ -4,7 +4,7 @@ import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/model.dart';
-import 'package:onexray/service/account/service.dart';
+import 'package:onexray/service/account/email_auth.dart';
 
 /// What went wrong on «Проверьте почту», shown under the code field.
 enum EmailCodeError {
@@ -64,12 +64,12 @@ final class EmailCodeState {
 /// account's subscription as a sign-in does, and counts down to the next
 /// resend.
 final class EmailCodeController extends PageCubit<EmailCodeState> {
-  EmailCodeController({required this._account, required this._signup})
+  EmailCodeController({required this._email, required this._signup})
     : super(EmailCodeState(resendIn: _signup.resendIn)) {
     _countFrom(_signup.resendIn);
   }
 
-  final AccountService _account;
+  final EmailAuth _email;
   final PendingSignup _signup;
   Timer? _countdown;
 
@@ -79,7 +79,7 @@ final class EmailCodeController extends PageCubit<EmailCodeState> {
     if (state.verifying) return;
     emit(EmailCodeState(resendIn: state.resendIn, verifying: true));
     try {
-      await _account.verifyCode(_signup, code.trim());
+      await _email.verifyCode(_signup, code.trim());
       emit(state.settled());
     } on AccountException catch (error) {
       emit(
@@ -102,7 +102,7 @@ final class EmailCodeController extends PageCubit<EmailCodeState> {
     if (!state.canResend) return;
     emit(EmailCodeState(resendIn: state.resendIn, resending: true));
     try {
-      _countFrom(await _account.resendCode(_signup));
+      _countFrom(await _email.resendCode(_signup));
       emit(state.settled());
     } on AccountException catch (error) {
       // Too early: the backend's wait replaces the countdown.

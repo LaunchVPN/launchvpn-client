@@ -161,7 +161,7 @@ void main() {
     final account = accountServiceFor(FakeAccountApi());
     await pumpApp(tester, router(account: account));
     TelegramCode? code;
-    unawaited(account.openTelegramLogin().then((value) => code = value));
+    unawaited(account.telegram.openLogin().then((value) => code = value));
     await tester.pumpAndSettle();
 
     links.add(Uri.parse('launchvpn://auth?code=c1'));

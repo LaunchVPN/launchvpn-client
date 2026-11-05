@@ -68,7 +68,7 @@ void main() {
     api.loginWith(access: 'a1', refresh: 'r1');
     api.subscription(configLink);
     final service = account();
-    await service.login(email: 'ivan@proton.me', password: 'pw');
+    await service.email.login(email: 'ivan@proton.me', password: 'pw');
     api.requests.clear();
     opened.clear();
     return service;
@@ -273,7 +273,7 @@ void main() {
 
     final outcome = controller.linkTelegram();
     await pumpEventQueue();
-    service.telegram.handleReturn(
+    service.telegram.browser.handleReturn(
       Uri.parse('launchvpn://auth?code=c1&mode=link'),
     );
 
@@ -301,13 +301,13 @@ void main() {
     api.exchangeWith(access: 'a3', refresh: 'r3', addedDays: 30);
     api.subscription(telegramLink);
     api.me(email: 'ivan@proton.me', telegramLinked: true);
-    unawaited(service.openTelegramLink());
+    unawaited(service.telegram.openLink());
     await pumpEventQueue();
     final restarted = account();
     await restarted.restore();
     final controller = controllerFor(restarted);
 
-    restarted.telegram.handleReturn(
+    restarted.telegram.browser.handleReturn(
       Uri.parse('launchvpn://auth?code=c1&mode=link'),
     );
     await pumpEventQueue(times: 50);
@@ -333,13 +333,13 @@ void main() {
 
       await controller.logout();
 
-      expect(service.signedIn.value, isFalse);
+      expect(service.session.signedIn.value, isFalse);
       expect(controller.state.signedIn, isFalse);
       expect(api.authorizations('/api/app/auth/logout'), ['Bearer a1']);
       expect(removed, [_configLink]);
       final restarted = account();
       await restarted.restore();
-      expect(restarted.signedIn.value, isFalse);
+      expect(restarted.session.signedIn.value, isFalse);
     },
   );
 

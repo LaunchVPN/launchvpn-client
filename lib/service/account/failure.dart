@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:onexray/service/account/model.dart';
 
 /// Why an account request failed. Backend errors come from the `code` of its
@@ -85,6 +86,40 @@ final class AccountException implements Exception {
   /// With [AccountError.emailNotVerified] on login: the backend mailed a code
   /// for this attempt.
   final PendingSignup? signup;
+
+  /// What a failed request stands for. A sign-in names its [email] so an
+  /// unconfirmed one can continue to the code.
+  static AccountException fromDio(DioException error, {String? email}) {
+    final cause = error.error;
+    if (cause is AccountException) return cause;
+    final response = error.response;
+    if (response == null) {
+      return error.type == DioExceptionType.cancel
+          ? const AccountException(AccountError.unexpected)
+          : const AccountException(AccountError.network);
+    }
+    final data = response.data;
+    if (data is! Map) return const AccountException(AccountError.unexpected);
+    final token = data['signupToken'];
+    return AccountException(
+      AccountError.fromCode(data['code']),
+      attemptsLeft: switch (data['attemptsLeft']) {
+        final int left => left,
+        _ => null,
+      },
+      retryAfter: data.containsKey('retryAfter')
+          ? PendingSignup.waitIn(data)
+          : null,
+      signup: email != null && token is String && token.isNotEmpty
+          ? PendingSignup(
+              email: email,
+              token: token,
+              resendIn: PendingSignup.resendGap,
+              trialAvailable: PendingSignup.trialIn(data),
+            )
+          : null,
+    );
+  }
 
   @override
   String toString() => 'AccountException(${error.name})';

@@ -116,7 +116,9 @@ class _BrandShellState extends State<BrandShell> {
       if (TelegramBrowserAuth.isReturn(uri)) {
         // Whoever started the attempt shows its outcome; a stray return is
         // dropped.
-        if (_account.telegram.handleReturn(uri)) _showTelegramOutcome(uri);
+        if (_account.telegram.browser.handleReturn(uri)) {
+          _showTelegramOutcome(uri);
+        }
       } else {
         await (widget.openLink ?? openSubscriptionLink)(context, uri);
       }
@@ -130,12 +132,12 @@ class _BrandShellState extends State<BrandShell> {
   }
 
   void _showTelegramOutcome(Uri uri) {
-    final telegram = _account.telegram;
+    final telegram = _account.telegram.browser;
     switch (TelegramBrowserAuth.purposeOf(uri)) {
       case TelegramAuthPurpose.link:
         widget.navigationShell.goBranch(BrandRoutes.accountBranch);
       case TelegramAuthPurpose.login
-          when !_account.signedIn.value &&
+          when !_account.session.signedIn.value &&
               telegram.awaitsResume(TelegramAuthPurpose.login):
         unawaited(
           LoginPage.showOverTabs(
@@ -150,9 +152,9 @@ class _BrandShellState extends State<BrandShell> {
     }
   }
 
-  /// The session's [AccountService.signedIn] as a stream, from the listen on.
+  /// The session's [AccountSession.signedIn] as a stream, from the listen on.
   Stream<bool> _signedInChanges() {
-    final signedIn = _account.signedIn;
+    final signedIn = _account.session.signedIn;
     late final StreamController<bool> changes;
     void tell() => changes.add(signedIn.value);
     changes = StreamController<bool>(
@@ -225,7 +227,7 @@ class _BrandShellState extends State<BrandShell> {
       _attach();
       // The subscription table is readable only once the services are up.
       final gate = _gate ??= AccessGateController(
-        signedIn: _account.signedIn,
+        signedIn: _account.session.signedIn,
         hasSubscription: widget.watchSubscription?.call(),
       );
       _gateSubscription ??= gate.stream.listen((_) => _scheduleDrain());

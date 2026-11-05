@@ -32,9 +32,9 @@ void main() {
       api.subscription(_configLink);
       final service = account();
 
-      await service.login(email: 'ivan@proton.me', password: 'pw');
+      await service.email.login(email: 'ivan@proton.me', password: 'pw');
 
-      expect(service.signedIn.value, isTrue);
+      expect(service.session.signedIn.value, isTrue);
       expect(added, [
         Uri.parse(
           'launchvpn://sub/add?url=${Uri.encodeQueryComponent(_configLink)}',
@@ -51,7 +51,7 @@ void main() {
 
       final restarted = account();
       await restarted.restore();
-      expect(restarted.signedIn.value, isTrue);
+      expect(restarted.session.signedIn.value, isTrue);
     },
   );
 
@@ -65,7 +65,7 @@ void main() {
       final service = account();
       await service.restore();
 
-      expect((await service.accountSubscription()).link, isNotNull);
+      expect((await service.data.subscription()).link, isNotNull);
 
       expect(api.refreshBodies, [
         {'refreshToken': 'r1'},
@@ -74,7 +74,7 @@ void main() {
         'Bearer a1',
         'Bearer a2',
       ]);
-      expect(service.signedIn.value, isTrue);
+      expect(service.session.signedIn.value, isTrue);
     },
   );
 
@@ -86,7 +86,7 @@ void main() {
     await service.restore();
 
     await expectLater(
-      service.accountSubscription(),
+      service.data.subscription(),
       throwsA(
         isA<AccountException>().having(
           (e) => e.error,
@@ -96,10 +96,10 @@ void main() {
       ),
     );
 
-    expect(service.signedIn.value, isFalse);
+    expect(service.session.signedIn.value, isFalse);
     final restarted = account();
     await restarted.restore();
-    expect(restarted.signedIn.value, isFalse);
+    expect(restarted.session.signedIn.value, isFalse);
   });
 
   test('requests rejected together share one refresh', () async {
@@ -111,8 +111,8 @@ void main() {
     final service = account();
     await service.restore();
 
-    final first = service.accountSubscription();
-    final second = service.accountSubscription();
+    final first = service.data.subscription();
+    final second = service.data.subscription();
     await pumpEventQueue();
     refresh.complete();
 
@@ -125,13 +125,13 @@ void main() {
     final service = account();
     await service.restore();
 
-    await service.logout();
+    await service.data.logout();
 
     expect(api.authorizations('/api/app/auth/logout'), ['Bearer a1']);
-    expect(service.signedIn.value, isFalse);
+    expect(service.session.signedIn.value, isFalse);
     final restarted = account();
     await restarted.restore();
-    expect(restarted.signedIn.value, isFalse);
+    expect(restarted.session.signedIn.value, isFalse);
   });
 
   group('account deletion', () {
@@ -147,23 +147,23 @@ void main() {
         addSubscription: added.add,
         removeSubscription: (url) async => removed.add(url),
       );
-      await service.login(email: 'ivan@proton.me', password: 'pw');
+      await service.email.login(email: 'ivan@proton.me', password: 'pw');
       api.requests.clear();
       return service;
     }
 
     Future<void> expectSignedOut(AccountService service) async {
-      expect(service.signedIn.value, isFalse);
+      expect(service.session.signedIn.value, isFalse);
       expect(removed, [_configLink]);
       final restarted = account();
       await restarted.restore();
-      expect(restarted.signedIn.value, isFalse);
+      expect(restarted.session.signedIn.value, isFalse);
     }
 
     test('deletes the account on the server, then forgets it here', () async {
       final service = await signedIn();
 
-      await service.deleteAccount();
+      await service.data.deleteAccount();
 
       expect(api.bodies('/api/app/account/delete'), [<String, Object?>{}]);
       expect(api.authorizations('/api/app/account/delete'), ['Bearer a1']);
@@ -177,13 +177,13 @@ void main() {
       api.refuseRefresh();
 
       await expectLater(
-        service.deleteAccount(),
+        service.data.deleteAccount(),
         throwsA(_error(AccountError.signedOut)),
       );
 
       await expectSignedOut(service);
-      expect(service.takeUnfinishedDeletion(), isTrue);
-      expect(service.takeUnfinishedDeletion(), isFalse);
+      expect(service.data.takeUnfinishedDeletion(), isTrue);
+      expect(service.data.takeUnfinishedDeletion(), isFalse);
     });
 
     test(
@@ -192,11 +192,11 @@ void main() {
         final service = await signedIn();
         api.rejectAccess('a1');
         api.refuseRefresh();
-        await expectLater(service.deleteAccount(), throwsA(anything));
+        await expectLater(service.data.deleteAccount(), throwsA(anything));
 
-        await service.login(email: 'ivan@proton.me', password: 'pw');
+        await service.email.login(email: 'ivan@proton.me', password: 'pw');
 
-        expect(service.takeUnfinishedDeletion(), isFalse);
+        expect(service.data.takeUnfinishedDeletion(), isFalse);
       },
     );
 
@@ -217,11 +217,14 @@ void main() {
         final service = await signedIn();
         fail(api);
 
-        await expectLater(service.deleteAccount(), throwsA(_error(expected)));
+        await expectLater(
+          service.data.deleteAccount(),
+          throwsA(_error(expected)),
+        );
 
-        expect(service.signedIn.value, isTrue);
+        expect(service.session.signedIn.value, isTrue);
         expect(removed, isEmpty);
-        await service.details();
+        await service.data.details();
         expect(api.authorizations('/api/me'), ['Bearer a1']);
       });
     }
@@ -239,7 +242,7 @@ void main() {
       api.signupWith(token: 'st1', resendIn: 42);
       final service = account();
 
-      final pending = await service.signup(
+      final pending = await service.email.signup(
         email: 'ivan@proton.me',
         password: 'long-secret',
       );
@@ -256,7 +259,7 @@ void main() {
           'language': 'ru',
         },
       ]);
-      expect(service.signedIn.value, isFalse);
+      expect(service.session.signedIn.value, isFalse);
     });
 
     for (final (answer, expected) in [
@@ -273,11 +276,11 @@ void main() {
         });
         final service = account();
 
-        final created = await service.signup(
+        final created = await service.email.signup(
           email: 'ivan@proton.me',
           password: 'long-secret',
         );
-        final unconfirmed = await service
+        final unconfirmed = await service.email
             .login(email: 'ivan@proton.me', password: 'pw')
             .then<PendingSignup?>(
               (_) => null,
@@ -293,7 +296,10 @@ void main() {
       api.refuse('/api/app/auth/signup', 409, 'email_taken');
 
       await expectLater(
-        account().signup(email: 'ivan@proton.me', password: 'long-secret'),
+        account().email.signup(
+          email: 'ivan@proton.me',
+          password: 'long-secret',
+        ),
         throwsA(_error(AccountError.emailTaken)),
       );
     });
@@ -305,10 +311,10 @@ void main() {
         api.subscription(_configLink);
         final service = account();
 
-        await service.verifyCode(signup, '123456');
+        await service.email.verifyCode(signup, '123456');
 
         expect(added, [_subscriptionLink]);
-        expect(service.signedIn.value, isTrue);
+        expect(service.session.signedIn.value, isTrue);
         expect(api.bodies(verifyPath), [
           {
             'email': 'ivan@proton.me',
@@ -321,7 +327,7 @@ void main() {
         expect(api.bodies('/api/app/trial'), isEmpty);
         final restarted = account();
         await restarted.restore();
-        expect(restarted.signedIn.value, isTrue);
+        expect(restarted.session.signedIn.value, isTrue);
       },
     );
 
@@ -329,7 +335,7 @@ void main() {
       api.refuse(verifyPath, 400, 'invalid_code', {'attemptsLeft': 3});
 
       await expectLater(
-        account().verifyCode(signup, '000000'),
+        account().email.verifyCode(signup, '000000'),
         throwsA(
           _error(AccountError.invalidCode)
               .having((e) => e.attemptsLeft, 'attemptsLeft', 3),
@@ -342,16 +348,19 @@ void main() {
       final service = account();
 
       await expectLater(
-        service.verifyCode(signup, '123456'),
+        service.email.verifyCode(signup, '123456'),
         throwsA(_error(AccountError.codeExpired)),
       );
-      expect(service.signedIn.value, isFalse);
+      expect(service.session.signedIn.value, isFalse);
     });
 
     test('resending sends the attempt token and restarts the wait', () async {
       api.resendWith(resendIn: 60);
 
-      expect(await account().resendCode(signup), const Duration(seconds: 60));
+      expect(
+        await account().email.resendCode(signup),
+        const Duration(seconds: 60),
+      );
       expect(api.bodies('/api/app/auth/resend-code'), [
         {'signupToken': 'st1', 'language': 'ru'},
       ]);
@@ -363,7 +372,7 @@ void main() {
       });
 
       await expectLater(
-        account().resendCode(signup),
+        account().email.resendCode(signup),
         throwsA(
           _error(AccountError.rateLimited).having(
             (e) => e.retryAfter,
@@ -380,7 +389,7 @@ void main() {
       });
 
       await expectLater(
-        account().login(email: 'ivan@proton.me', password: 'pw'),
+        account().email.login(email: 'ivan@proton.me', password: 'pw'),
         throwsA(
           _error(AccountError.emailNotVerified).having(
             (e) => (e.signup?.email, e.signup?.token),
@@ -410,7 +419,7 @@ void main() {
       api.subscription(_configLink);
       final service = telegramAccount();
 
-      final attempt = service.openTelegramLogin();
+      final attempt = service.telegram.openLogin();
       await pumpEventQueue();
       // RFC 7636 S256 of the verifier the bytes 0..31 make, by Python.
       expect(browser.opened, [
@@ -420,13 +429,15 @@ void main() {
         ),
       ]);
       expect(
-        service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1')),
+        service.telegram.browser.handleReturn(
+          Uri.parse('launchvpn://auth?code=c1'),
+        ),
         isTrue,
       );
-      await service.exchangeTelegramLogin(await attempt);
+      await service.telegram.exchangeLogin(await attempt);
 
       expect(added, [_subscriptionLink]);
-      expect(service.signedIn.value, isTrue);
+      expect(service.session.signedIn.value, isTrue);
       expect(api.bodies('/api/app/auth/exchange'), [
         {
           'code': 'c1',
@@ -445,10 +456,10 @@ void main() {
     ]) {
       test('a return with error=$error fails as ${expected.name}', () async {
         final service = telegramAccount();
-        final attempt = service.openTelegramLogin();
+        final attempt = service.telegram.openLogin();
         await pumpEventQueue();
 
-        service.telegram.handleReturn(
+        service.telegram.browser.handleReturn(
           Uri.parse('launchvpn://auth?error=$error'),
         );
 
@@ -460,15 +471,17 @@ void main() {
     test('a refused code does not sign in', () async {
       api.refuse('/api/app/auth/exchange', 401, 'invalid_code');
       final service = telegramAccount();
-      final attempt = service.openTelegramLogin();
+      final attempt = service.telegram.openLogin();
       await pumpEventQueue();
-      service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1'));
+      service.telegram.browser.handleReturn(
+        Uri.parse('launchvpn://auth?code=c1'),
+      );
 
       await expectLater(
-        service.exchangeTelegramLogin(await attempt),
+        service.telegram.exchangeLogin(await attempt),
         throwsA(_error(AccountError.invalidCode)),
       );
-      expect(service.signedIn.value, isFalse);
+      expect(service.session.signedIn.value, isFalse);
     });
 
     test('a device without a browser fails at once', () async {
@@ -476,11 +489,13 @@ void main() {
       final service = telegramAccount();
 
       await expectLater(
-        service.openTelegramLogin(),
+        service.telegram.openLogin(),
         throwsA(_error(AccountError.unexpected)),
       );
       expect(
-        service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1')),
+        service.telegram.browser.handleReturn(
+          Uri.parse('launchvpn://auth?code=c1'),
+        ),
         isFalse,
       );
     });
@@ -489,19 +504,19 @@ void main() {
       final service = telegramAccount();
       final code = Uri.parse('launchvpn://auth?code=c1');
 
-      expect(service.telegram.handleReturn(code), isFalse);
+      expect(service.telegram.browser.handleReturn(code), isFalse);
 
-      final attempt = service.openTelegramLogin();
+      final attempt = service.telegram.openLogin();
       await pumpEventQueue();
       expect(
-        service.telegram.handleReturn(
+        service.telegram.browser.handleReturn(
           Uri.parse('launchvpn://auth?code=c0&mode=link'),
         ),
         isFalse,
       );
-      expect(service.telegram.handleReturn(code), isTrue);
+      expect(service.telegram.browser.handleReturn(code), isTrue);
       expect((await attempt).code, 'c1');
-      expect(service.telegram.handleReturn(code), isFalse);
+      expect(service.telegram.browser.handleReturn(code), isFalse);
     });
 
     group('after the App was closed', () {
@@ -528,7 +543,7 @@ void main() {
           random: _CountingRandom(),
           now: () => now,
         );
-        unawaited(first.openTelegramLogin());
+        unawaited(first.telegram.openLogin());
         await pumpEventQueue();
       }
 
@@ -540,13 +555,18 @@ void main() {
         final service = restartedAfter(const Duration(minutes: 9));
         await service.restore();
 
-        final code = service.telegram.resume(TelegramAuthPurpose.login);
-        expect(service.telegram.resume(TelegramAuthPurpose.link), isNull);
+        final code = service.telegram.browser.resume(TelegramAuthPurpose.login);
         expect(
-          service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1')),
+          service.telegram.browser.resume(TelegramAuthPurpose.link),
+          isNull,
+        );
+        expect(
+          service.telegram.browser.handleReturn(
+            Uri.parse('launchvpn://auth?code=c1'),
+          ),
           isTrue,
         );
-        await service.exchangeTelegramLogin(await code!);
+        await service.telegram.exchangeLogin(await code!);
         expect(added, hasLength(1));
 
         expect(api.bodies('/api/app/auth/exchange').single, {
@@ -556,7 +576,10 @@ void main() {
           'platform': 'android',
         });
         // Claimed once.
-        expect(service.telegram.resume(TelegramAuthPurpose.login), isNull);
+        expect(
+          service.telegram.browser.resume(TelegramAuthPurpose.login),
+          isNull,
+        );
       });
 
       test('an older attempt is forgotten', () async {
@@ -564,9 +587,14 @@ void main() {
         final service = restartedAfter(const Duration(minutes: 11));
         await service.restore();
 
-        expect(service.telegram.resume(TelegramAuthPurpose.login), isNull);
         expect(
-          service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1')),
+          service.telegram.browser.resume(TelegramAuthPurpose.login),
+          isNull,
+        );
+        expect(
+          service.telegram.browser.handleReturn(
+            Uri.parse('launchvpn://auth?code=c1'),
+          ),
           isFalse,
         );
       });
@@ -578,30 +606,37 @@ void main() {
           browser: browser,
           now: () => now,
         );
-        final attempt = first.openTelegramLogin();
+        final attempt = first.telegram.openLogin();
         await pumpEventQueue();
-        first.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c1'));
+        first.telegram.browser.handleReturn(
+          Uri.parse('launchvpn://auth?code=c1'),
+        );
         await attempt;
         await pumpEventQueue();
 
         final service = restartedAfter(const Duration(minutes: 1));
         await service.restore();
 
-        expect(service.telegram.resume(TelegramAuthPurpose.login), isNull);
+        expect(
+          service.telegram.browser.resume(TelegramAuthPurpose.login),
+          isNull,
+        );
       });
     });
 
     test('a new attempt quietly replaces the waiting one', () async {
       final service = telegramAccount();
       final first = expectLater(
-        service.openTelegramLogin(),
+        service.telegram.openLogin(),
         throwsA(_error(AccountError.cancelled)),
       );
       await pumpEventQueue();
 
-      final second = service.openTelegramLogin();
+      final second = service.telegram.openLogin();
       await pumpEventQueue();
-      service.telegram.handleReturn(Uri.parse('launchvpn://auth?code=c2'));
+      service.telegram.browser.handleReturn(
+        Uri.parse('launchvpn://auth?code=c2'),
+      );
 
       await first;
       expect((await second).code, 'c2');
@@ -636,7 +671,7 @@ void main() {
         random: _CountingRandom(),
         removeSubscription: (url) async => removed.add(url),
       );
-      await service.login(email: 'ivan@proton.me', password: 'pw');
+      await service.email.login(email: 'ivan@proton.me', password: 'pw');
       api.requests.clear();
       api.linkStartWith(startUrl);
       api.refreshWith(access: 'a2', refresh: 'r2');
@@ -647,9 +682,9 @@ void main() {
 
     /// Starts linking and comes back from the browser with [ret].
     Future<TelegramCode> linkAndReturn(AccountService service, String ret) {
-      final attempt = service.openTelegramLink();
+      final attempt = service.telegram.openLink();
       return pumpEventQueue().then((_) {
-        service.telegram.handleReturn(Uri.parse(ret));
+        service.telegram.browser.handleReturn(Uri.parse(ret));
         return attempt;
       });
     }
@@ -662,7 +697,7 @@ void main() {
         service,
         'launchvpn://auth?code=c1&mode=link',
       );
-      final linked = await service.exchangeTelegramLink(code);
+      final linked = await service.telegram.exchangeLink(code);
 
       expect(browser.opened, [Uri.parse(startUrl)]);
       expect(api.bodies('/api/app/link/telegram/start'), [
@@ -696,7 +731,7 @@ void main() {
 
       final restarted = account();
       await restarted.restore();
-      await restarted.details();
+      await restarted.data.details();
       expect(api.authorizations('/api/me'), ['Bearer a3']);
     });
 
@@ -705,7 +740,7 @@ void main() {
       api.exchangeWith(access: 'a3', refresh: 'r3');
       api.subscription(_configLink);
 
-      final linked = await service.exchangeTelegramLink(
+      final linked = await service.telegram.exchangeLink(
         await linkAndReturn(service, 'launchvpn://auth?code=c1&mode=link'),
       );
 
@@ -720,16 +755,16 @@ void main() {
       api.refuse('/api/app/auth/exchange', 409, 'telegram_taken');
 
       await expectLater(
-        service.exchangeTelegramLink(
+        service.telegram.exchangeLink(
           await linkAndReturn(service, 'launchvpn://auth?code=c1&mode=link'),
         ),
         throwsA(_error(AccountError.telegramTaken)),
       );
 
       expect(removed, isEmpty);
-      expect(service.signedIn.value, isTrue);
+      expect(service.session.signedIn.value, isTrue);
       expect(api.bodies('/api/app/auth/exchange'), hasLength(1));
-      await service.details();
+      await service.data.details();
       expect(api.authorizations('/api/me'), ['Bearer a2']);
     });
 
@@ -740,7 +775,7 @@ void main() {
         api.refuse('/api/app/link/telegram/start', 409, 'already_linked');
 
         await expectLater(
-          service.openTelegramLink(),
+          service.telegram.openLink(),
           throwsA(_error(AccountError.alreadyLinked)),
         );
         expect(browser.opened, isEmpty);
@@ -764,7 +799,7 @@ void main() {
       api.subscription(null);
       api.trialGrants(_configLink);
 
-      await account().login(email: 'ivan@proton.me', password: 'pw');
+      await account().email.login(email: 'ivan@proton.me', password: 'pw');
 
       expect(added, [_subscriptionLink]);
       expect(api.bodies('/api/app/trial'), [
@@ -784,7 +819,7 @@ void main() {
       api.subscription(null);
       api.trialGrants(_configLink);
 
-      await account().verifyCode(signup, '123456');
+      await account().email.verifyCode(signup, '123456');
       expect(added, isEmpty);
       expect(api.bodies('/api/app/trial'), isEmpty);
     });
@@ -797,7 +832,7 @@ void main() {
           api.subscription(null);
           api.trialGrants(_configLink);
 
-          await account().verifyCode(signup, '123456');
+          await account().email.verifyCode(signup, '123456');
           expect(added, [_subscriptionLink]);
           expect(api.bodies('/api/app/trial'), hasLength(1));
         },
@@ -810,11 +845,11 @@ void main() {
       api.refuse('/api/app/trial', 403, 'trial_used');
       final service = account();
 
-      await service.verifyCode(signup, '123456');
+      await service.email.verifyCode(signup, '123456');
 
       expect(added, isEmpty);
-      expect(service.signedIn.value, isTrue);
-      expect(service.subscriptionMissing, isTrue);
+      expect(service.session.signedIn.value, isTrue);
+      expect(service.data.subscriptionMissing, isTrue);
       expect(api.bodies('/api/app/trial'), hasLength(1));
     });
   });
@@ -848,6 +883,6 @@ Future<void> signIn(
 ) async {
   api.loginWith(access: 'a1', refresh: 'r1');
   api.subscription(null);
-  await account().login(email: 'ivan@proton.me', password: 'pw');
+  await account().email.login(email: 'ivan@proton.me', password: 'pw');
   api.requests.clear();
 }

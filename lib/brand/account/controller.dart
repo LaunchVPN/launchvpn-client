@@ -139,12 +139,13 @@ final class AccountController extends PageCubit<AccountState> {
        _deviceLimit = deviceLimit ?? SubscriptionService().deviceLimitReached,
        super(
          AccountState(
-           signedIn: _account.signedIn.value,
-           inactive: _account.subscriptionMissing,
+           signedIn: _account.session.signedIn.value,
+           inactive: _account.data.subscriptionMissing,
          ),
        ) {
-    _account.signedIn.addListener(_sessionChanged);
-    if (_account.telegram.resume(TelegramAuthPurpose.link) case final code?) {
+    _account.session.signedIn.addListener(_sessionChanged);
+    if (_account.telegram.browser.resume(TelegramAuthPurpose.link)
+        case final code?) {
       unawaited(_resumeLink(code));
     }
   }
@@ -161,14 +162,14 @@ final class AccountController extends PageCubit<AccountState> {
   StreamSubscription<SubscriptionData?>? _rows;
 
   void _sessionChanged() {
-    final signedIn = _account.signedIn.value;
+    final signedIn = _account.session.signedIn.value;
     if (signedIn == state.signedIn) return;
     // A new session loads its own data; an ended one keeps none.
     emit(
       AccountState(
         signedIn: signedIn,
         subscription: state.subscription,
-        inactive: _account.subscriptionMissing,
+        inactive: _account.data.subscriptionMissing,
       ),
     );
     if (signedIn) unawaited(refresh());
@@ -203,7 +204,7 @@ final class AccountController extends PageCubit<AccountState> {
     await Future.wait([
       _loadDetails(),
       loadDevices(),
-      _load(_account.accountSubscription, (subscription) {
+      _load(_account.data.subscription, (subscription) {
         link = subscription.link;
         return state.copyWith(
           inactive: link == null,
@@ -215,7 +216,7 @@ final class AccountController extends PageCubit<AccountState> {
     // The stream keeps the row current, unlike [row] read before.
     if (link case final missing?
         when state.subscription == null && _placeFree) {
-      _account.addSubscription(missing);
+      _account.data.addSubscription(missing);
     }
   }
 
@@ -228,18 +229,23 @@ final class AccountController extends PageCubit<AccountState> {
     return devices != null && (limit == null || devices.items.length < limit);
   }
 
-  Future<void> _loadDetails() =>
-      _load(_account.details, (details) => state.copyWith(details: details));
+  Future<void> _loadDetails() => _load(
+    _account.data.details,
+    (details) => state.copyWith(details: details),
+  );
 
   /// The account's devices alone, as «Лимит устройств» lists them.
   Future<void> loadDevices() => state.signedIn
-      ? _load(_account.devices, (devices) => state.copyWith(devices: devices))
+      ? _load(
+          _account.data.devices,
+          (devices) => state.copyWith(devices: devices),
+        )
       : Future.value();
 
   /// Takes [device] off the subscription. False when the backend refused.
   Future<bool> removeDevice(AccountDevice device) async {
     try {
-      await _account.removeDevice(device.hwid);
+      await _account.data.removeDevice(device.hwid);
     } on AccountException catch (error) {
       ygLogger('remove device failed (${error.error.name})');
       return false;
@@ -258,7 +264,7 @@ final class AccountController extends PageCubit<AccountState> {
     if (state.linkingTelegram) {
       return const TelegramLinkFailed(AccountError.cancelled);
     }
-    return _finishLink(_account.openTelegramLink());
+    return _finishLink(_account.telegram.openLink());
   }
 
   /// A link the system closed the App during, finished with the code
@@ -280,7 +286,7 @@ final class AccountController extends PageCubit<AccountState> {
       final code = await pending;
       emit(state.copyWith(linkingTelegram: true));
       try {
-        final linked = await _account.exchangeTelegramLink(code);
+        final linked = await _account.telegram.exchangeLink(code);
         await _reloadLinked(linked);
         return TelegramLinked(linked.addedDays);
       } finally {
@@ -307,13 +313,13 @@ final class AccountController extends PageCubit<AccountState> {
     }
     await Future.wait([_loadDetails(), loadDevices()]);
     if (!isClosed) {
-      emit(state.copyWith(inactive: _account.subscriptionMissing));
+      emit(state.copyWith(inactive: _account.data.subscriptionMissing));
     }
   }
 
   /// Signs out. The gate then shows «Вход» unless a subscription from a link
   /// remains.
-  Future<void> logout() => _account.logout();
+  Future<void> logout() => _account.data.logout();
 
   /// «Удалить аккаунт». Once deleted the gate shows «Вход» as after
   /// [logout]. A session already gone signs out the same way and asks to
@@ -322,7 +328,7 @@ final class AccountController extends PageCubit<AccountState> {
   Future<AccountDeletion> deleteAccount() async {
     emit(state.copyWith(deletingAccount: true));
     try {
-      await _account.deleteAccount();
+      await _account.data.deleteAccount();
       return AccountDeletion.deleted;
     } on AccountException catch (error) {
       ygLogger('delete account failed (${error.error.name})');
@@ -359,7 +365,7 @@ final class AccountController extends PageCubit<AccountState> {
 
   @override
   Future<void> disposePageResources() async {
-    _account.signedIn.removeListener(_sessionChanged);
+    _account.session.signedIn.removeListener(_sessionChanged);
     await _rows?.cancel();
   }
 }

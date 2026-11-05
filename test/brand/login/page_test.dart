@@ -143,7 +143,7 @@ void main() {
       api.loginWith(access: 'a1', refresh: 'r1');
       api.subscription(null);
       await tester.runAsync(
-        () => account.login(email: 'ivan@proton.me', password: 'pw'),
+        () => account.email.login(email: 'ivan@proton.me', password: 'pw'),
       );
 
       await pumpApp(tester, hasSubscription: false);
@@ -280,7 +280,7 @@ void main() {
             api,
             browser: browser,
             addSubscription: (link) => share.addAppLink(link),
-          ).openTelegramLogin(),
+          ).telegram.openLogin(),
         );
         await tester.pump();
         account = accountServiceFor(
@@ -302,7 +302,7 @@ void main() {
           links.add(Uri.parse('launchvpn://auth?code=c1'));
           await tester.pumpAndSettle();
 
-          expect(account.signedIn.value, isTrue);
+          expect(account.session.signedIn.value, isTrue);
           expect(find.text('home-body'), findsOneWidget);
           expect(find.text('Интернет\nбез границ'), findsNothing);
           expect(opened, [

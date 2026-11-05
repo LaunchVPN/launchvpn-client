@@ -122,9 +122,12 @@ upstream pages kept for merging. They are not reachable in this build.
 - Language, under App, opens a screen above the tabs with «Как в системе», «Русский» and
   «English». A tap applies at once on every screen, including the open one, and is saved. Pending
   reminders are set again in the new language.
-- «Вход» talks to the account API at `Brand.apiUrl` through `AccountService`;
-  `--dart-define=LAUNCHVPN_API_URL` points a local run at another backend. It opens in create mode,
-  with the 3-day trial in its subtitle and Create account, and its footer switches to sign-in mode
+- «Вход» talks to the account API at `Brand.apiUrl` through `AccountService`, which wires its
+  parts: `AccountSession` (tokens, the Bearer header and the refresh), `EmailAuth`,
+  `TelegramAccount` (sign-in and linking) and `AccountData` (the account's subscription, details,
+  devices, trial, sign-out and deletion). `--dart-define=LAUNCHVPN_API_URL` points a local run at
+  another backend. It opens in create mode, with the 3-day trial in its subtitle and Create
+  account, and its footer switches to sign-in mode
   (Sign in, «Нет аккаунта? Создать») and back. The button waits for both fields. A refusal shows its
   text under the fields: wrong email or password, email already registered, invalid email or a
   password under 8 characters, a blocked account (write to support), sign-in in the App not open
