@@ -30,6 +30,13 @@ abstract final class Brand {
   /// payment.
   static const renewalUrl = 'https://app.$subscriptionDomain';
 
+  /// The account API. Local runs point it at another backend with
+  /// `--dart-define=LAUNCHVPN_API_URL=http://10.0.2.2:8080`.
+  static const apiUrl = String.fromEnvironment(
+    'LAUNCHVPN_API_URL',
+    defaultValue: 'https://app.$subscriptionDomain',
+  );
+
   /// Leading User-Agent product. Panels pick the Xray JSON template by it.
   static const subscriptionClient = 'v2rayN';
 

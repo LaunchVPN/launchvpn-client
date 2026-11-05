@@ -25,7 +25,13 @@ final class SubscriptionDeepLink {
     }
     final values = uri.queryParametersAll['url'];
     if (values == null || values.length != 1) return null;
-    final url = Uri.tryParse(SubscriptionUrl.normalize(values.single));
+    return fromUrl(values.single);
+  }
+
+  /// The link for a subscription URL, such as the one the account API returns.
+  /// Null unless it is https on our own domain.
+  static SubscriptionDeepLink? fromUrl(String value) {
+    final url = Uri.tryParse(SubscriptionUrl.normalize(value));
     if (url == null ||
         !NetClient.isHttpsDownloadUri(url) ||
         !SubscriptionUrl.isOwn(url)) {
@@ -33,6 +39,14 @@ final class SubscriptionDeepLink {
     }
     return SubscriptionDeepLink._(url.toString());
   }
+
+  /// The `launchvpn://sub/add` form, which [parse] reads back.
+  Uri get uri => Uri(
+    scheme: Brand.scheme,
+    host: Brand.subscriptionLinkHost,
+    path: '/add',
+    queryParameters: {'url': url},
+  );
 }
 
 /// Keeps a user on the one subscription their latest deep link names.

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:onexray/core/distribution.dart';
 import 'package:onexray/core/network/client.dart';
 import 'package:onexray/core/tools/logger.dart';
+import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
 import 'package:onexray/service/settings/app_update/service.dart';
@@ -79,6 +80,7 @@ abstract final class ServiceManager {
       () => NotificationService().asyncInit(),
     );
     await _runInit('RenewalReminders', RenewalReminders.instance.start);
+    await _runInit('AccountService', AccountService.instance.restore);
     await _runInit("TrayService", () => TrayService().init());
     await _runInit("WindowService", () => WindowService().asyncInit());
     await _runInit("ShareService", () => ShareService().init());
