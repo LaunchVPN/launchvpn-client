@@ -12,7 +12,7 @@ class SettingsState {
     this.connectOnLaunch,
     this.renewalReminders,
     this.crashReports,
-    this.app,
+    this.packageInfo,
   });
 
   /// Null until the saved value is read.
@@ -26,18 +26,18 @@ class SettingsState {
   final bool? crashReports;
 
   /// The installed version and build. Null until read.
-  final PackageInfo? app;
+  final PackageInfo? packageInfo;
 
   SettingsState copyWith({
     bool? connectOnLaunch,
     bool? renewalReminders,
     bool? crashReports,
-    PackageInfo? app,
+    PackageInfo? packageInfo,
   }) => SettingsState(
     connectOnLaunch: connectOnLaunch ?? this.connectOnLaunch,
     renewalReminders: renewalReminders ?? this.renewalReminders,
     crashReports: crashReports ?? this.crashReports,
-    app: app ?? this.app,
+    packageInfo: packageInfo ?? this.packageInfo,
   );
 }
 
@@ -56,7 +56,7 @@ class SettingsController extends PageCubit<SettingsState> {
 
   Future<void> initialize() async {
     try {
-      emit(state.copyWith(app: await PackageInfo.fromPlatform()));
+      emit(state.copyWith(packageInfo: await PackageInfo.fromPlatform()));
     } catch (error) {
       ygLogger('read app version failed (${error.runtimeType})');
     }

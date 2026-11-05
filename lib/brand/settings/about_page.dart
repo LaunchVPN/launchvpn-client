@@ -62,7 +62,7 @@ class AboutPage extends StatelessWidget {
                         SettingsLinkRow(
                           icon: LucideIcons.link,
                           title: l.aboutBasedOn('OneXray'),
-                          subtitle: _label(_oneXray),
+                          subtitle: linkLabel(_oneXray),
                           value: null,
                           onTap: () => openExternalLink(_oneXray, 'OneXray'),
                         ),
@@ -86,7 +86,7 @@ class AboutPage extends StatelessWidget {
                           builder: (context, state) => SettingsLinkRow(
                             icon: LucideIcons.messageCircle,
                             title: l.aboutSupport,
-                            subtitle: _label(supportUri(state.subscription)),
+                            subtitle: linkLabel(supportUri(state.subscription)),
                             value: null,
                             onTap: () => openSupport(state.subscription),
                           ),
@@ -103,18 +103,9 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  /// The policy in the language the App shows; any but Russian reads English.
-  static Uri _privacy(BuildContext context) => Uri.parse(
-    Localizations.localeOf(context).languageCode == 'ru'
-        ? '${Brand.privacyUrl}ru/'
-        : Brand.privacyUrl,
-  );
-
-  /// «@name» for a Telegram link, the host and path for any other.
-  static String _label(Uri uri) => switch (uri) {
-    Uri(host: 't.me', pathSegments: [final name, ...]) => '@$name',
-    _ => '${uri.host}${uri.path}',
-  };
+  /// The policy in the language the App shows.
+  static Uri _privacy(BuildContext context) =>
+      Uri.parse(Brand.privacyUrl(Localizations.localeOf(context).languageCode));
 }
 
 /// The logo, the name, and the version with its build.
@@ -136,8 +127,8 @@ class _Identity extends StatelessWidget {
           const SizedBox(height: 10),
           BlocBuilder<SettingsController, SettingsState>(
             bloc: settings,
-            buildWhen: (a, b) => a.app != b.app,
-            builder: (context, state) => Text(switch (state.app) {
+            buildWhen: (a, b) => a.packageInfo != b.packageInfo,
+            builder: (context, state) => Text(switch (state.packageInfo) {
               final app? => l.aboutVersion(app.version, app.buildNumber),
               null => '',
             }, style: BrandText.caption),

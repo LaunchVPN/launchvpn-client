@@ -225,11 +225,11 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
                 children: [
                   BlocBuilder<SettingsController, SettingsState>(
                     bloc: _settings,
-                    buildWhen: (a, b) => a.app != b.app,
+                    buildWhen: (a, b) => a.packageInfo != b.packageInfo,
                     builder: (context, state) => SettingsLinkRow(
                       icon: LucideIcons.info,
                       title: l.settingsAbout,
-                      subtitle: switch (state.app) {
+                      subtitle: switch (state.packageInfo) {
                         final app? => l.settingsVersion(app.version),
                         null => null,
                       },

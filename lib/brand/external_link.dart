@@ -22,3 +22,10 @@ Uri supportUri(SubscriptionData? subscription) =>
 /// Opens [supportUri] for [subscription].
 Future<void> openSupport(SubscriptionData? subscription) =>
     openExternalLink(supportUri(subscription), 'support');
+
+/// How a row names [uri]: «@name» for a Telegram link, the host and path for
+/// any other.
+String linkLabel(Uri uri) => switch (uri) {
+  Uri(host: 't.me', pathSegments: [final name, ...]) => '@$name',
+  _ => '${uri.host}${uri.path}'.replaceFirst(RegExp(r'/$'), ''),
+};

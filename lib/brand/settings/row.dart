@@ -72,8 +72,8 @@ class SettingsSwitchRow extends StatelessWidget {
   }
 }
 
-/// A row that opens another screen, with the current [value] before the
-/// chevron.
+/// A row that opens another screen or a link, with the current [value]
+/// before the chevron.
 class SettingsLinkRow extends StatelessWidget {
   const SettingsLinkRow({
     super.key,
