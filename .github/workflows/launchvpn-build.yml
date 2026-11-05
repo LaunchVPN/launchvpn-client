@@ -1,7 +1,7 @@
 #
 # Checks and builds LaunchVPN for Android and iOS. The upstream workflows stay
 # disabled, and main requires the validate, android and ios jobs by name.
-# A release tag (v26.11.2) on a commit from main builds the APK with the tag's
+# A release tag (v1.0.0) on a commit from main builds the APK with the tag's
 # version and drafts a GitHub release with it.
 #
 # Repository secrets, used on main and release tags. Main signs with a debug
@@ -124,7 +124,7 @@ jobs:
         run: |
           semver='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
           if [[ ! "$GITHUB_REF_NAME" =~ $semver ]]; then
-            echo "::error::Release tags look like v26.11.2, got $GITHUB_REF_NAME"
+            echo "::error::Release tags look like v1.0.0, got $GITHUB_REF_NAME"
             exit 1
           fi
           # identical or behind: main contains the tagged commit.

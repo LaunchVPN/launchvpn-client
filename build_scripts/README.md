@@ -121,6 +121,24 @@ gh secret set ANDROID_KEY_PASSWORD --repo "$REPO"
 gh secret set ANDROID_KEY_ALIAS --repo "$REPO" --body launchvpn
 ```
 
+### Versions
+
+LaunchVPN numbers its releases `MAJOR.MINOR.PATCH` from 1.0.0, independently of
+OneXray. Store builds ship the version in `pubspec.yaml`, and `MARKETING_VERSION`
+of the iOS widget and tunnel extensions must match it; an APK release takes its
+version from the tag. An upstream merge that bumps these versions keeps ours.
+Every CI run passes its run number as the build number, so each build gets a
+higher one than the last, as Google Play requires.
+
+Our tags would clash with upstream's, which name other commits, so the upstream
+remote fetches no tags:
+
+```shell
+git remote add --no-tags upstream https://github.com/YuanDevTeam/OneXray.git
+# or, for an existing remote:
+git config remote.upstream.tagopt --no-tags
+```
+
 ### Release the APK
 
 APK builds offer the latest published GitHub release when its tag is a newer
@@ -131,8 +149,8 @@ version.
 
    ```shell
    git fetch origin main
-   git tag v26.11.2 origin/main
-   git push origin v26.11.2
+   git tag v1.0.1 origin/main
+   git push origin v1.0.1
    ```
 
 2. The workflow checks that the tag looks like `vMAJOR.MINOR.PATCH` and that
@@ -151,7 +169,7 @@ refuses to install it over them; uninstall such a build first.
 To drop a release, delete the draft and the tag:
 
 ```shell
-gh release delete v26.11.2 --repo LaunchVPN/launchvpn-client --cleanup-tag --yes
+gh release delete v1.0.1 --repo LaunchVPN/launchvpn-client --cleanup-tag --yes
 ```
 
 A rerun of the `release` job fails while its draft exists; delete the draft alone,
