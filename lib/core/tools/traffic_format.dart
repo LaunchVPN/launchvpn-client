@@ -26,7 +26,12 @@ enum TrafficUnit { b, kb, mb, gb, tb }
 /// number written for [locale]: whole bytes, one decimal place above. The
 /// caller words the unit in the language of the screen.
 ({String number, TrafficUnit unit}) localizedTraffic(int bytes, String locale) {
-  final (value, unit) = _scale(bytes);
+  var (value, unit) = _scale(bytes);
+  // One decimal place may round up to 1024, which the next unit writes as 1.
+  if ((value * 10).round() >= 10240 && unit < TrafficUnit.values.length - 1) {
+    value /= 1024;
+    unit++;
+  }
   return (
     number: NumberFormat(unit == 0 ? '0' : '0.#', locale).format(value),
     unit: TrafficUnit.values[unit],

@@ -11,6 +11,13 @@ void main() {
     ));
   });
 
+  test('localized traffic that rounds to 1024 reads as the next unit', () {
+    expect(localizedTraffic(1024 * 1024 - 1, 'en'), (
+      number: '1',
+      unit: TrafficUnit.mb,
+    ));
+  });
+
   test('localized traffic stops at terabytes', () {
     expect(
       localizedTraffic(2048 * 1024 * 1024 * 1024 * 1024, 'en').unit,
