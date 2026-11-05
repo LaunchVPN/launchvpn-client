@@ -9,7 +9,7 @@ final class FileExportApi: NSObject, @preconcurrency FileExportHostApi,
 
     func saveFile(path: String, name: String, completion: @escaping (Result<Bool, Error>) -> Void) {
         guard self.completion == nil else {
-            completion(.failure(NSError(domain: "OneXray.FileExport", code: 1,
+            completion(.failure(NSError(domain: "LaunchVPN.FileExport", code: 1,
                                         userInfo: [NSLocalizedDescriptionKey: "A document picker is already open."])))
             return
         }
@@ -17,7 +17,7 @@ final class FileExportApi: NSObject, @preconcurrency FileExportHostApi,
         var presenter = scenes.flatMap(\.windows).first(where: \.isKeyWindow)?.rootViewController
         while let presented = presenter?.presentedViewController { presenter = presented }
         guard let presenter else {
-            completion(.failure(NSError(domain: "OneXray.FileExport", code: 1,
+            completion(.failure(NSError(domain: "LaunchVPN.FileExport", code: 1,
                                         userInfo: [NSLocalizedDescriptionKey: "No window is available."])))
             return
         }
