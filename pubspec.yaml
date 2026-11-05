@@ -127,6 +127,10 @@ flutter:
   uses-material-design: true
   generate: true
 
+  # The animated backdrop of «Вход», ported from the site.
+  shaders:
+    - shaders/dark_veil.frag
+
   # Upstream's artwork stays for its desktop code and merges, but no phone
   # build carries it.
   assets:

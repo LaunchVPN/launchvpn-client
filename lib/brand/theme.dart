@@ -29,6 +29,18 @@ abstract final class BrandColors {
   static const success = Color(0xFF4BCB71);
 }
 
+/// The colors of `.shader-backdrop` on app.launch.tel, which `ShaderBackdrop`
+/// lays over its veil: a glow on the page background, a tint from the top
+/// left to the bottom right, and two lights.
+abstract final class BrandBackdrop {
+  static const base = BrandColors.bg;
+  static const glow = Color(0x6B42007B);
+  static const tintFrom = Color(0x8C6C00BF);
+  static const tintTo = Color(0xB81B0058);
+  static const highlight = Color(0x479C5EEF);
+  static const lowlight = Color(0x2E4A3CC2);
+}
+
 abstract final class BrandRadii {
   static const segment = 10.0;
   static const iconButton = 12.0;
