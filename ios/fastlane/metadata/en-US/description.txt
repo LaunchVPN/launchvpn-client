@@ -2,7 +2,7 @@ LaunchVPN connects you in one tap. The app picks the server with the lowest late
 
 In Smart mode only the sites that need VPN go through it, and the rest open directly at full speed. When you want all traffic in the tunnel, switch the mode right on the main screen.
 
-VPN can turn itself back on after your iPhone restarts or changes networks. The Home Screen widget shows whether VPN is on and turns it on without opening the app.
+On iPhone, VPN can turn itself back on after a restart or a network change. The Home Screen widget shows whether VPN is on and turns it on without opening the app.
 
 The Account screen shows how many days your plan has left and which devices use it, and you can remove a device right there. Before the plan ends, the app reminds you to renew.
 

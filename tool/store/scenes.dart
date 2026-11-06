@@ -22,13 +22,14 @@ import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
+import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
-import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/servers/subscription/model.dart';
+import 'package:onexray/service/servers/subscription/renewal_reminders.dart';
 import 'package:onexray/service/shared/share/service.dart';
 // ignore: depend_on_referenced_packages
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -36,6 +37,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import '../../test/support/fake_account_api.dart';
+import '../../test/support/fake_notifications.dart';
 import 'store.dart';
 
 /// What each screenshot shows, in the stores' order.
@@ -64,6 +66,9 @@ enum Shot {
     StoreLanguage.en => en,
   };
 }
+
+/// Never shown: the screens name no link.
+const _subscriptionUrl = 'https://sub.launch.tel/store';
 
 /// The panel's groups as a subscription delivers them, with their last ping.
 const _groups = {
@@ -113,7 +118,8 @@ class Scene {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     final groups = _groups[language]!;
-    final connected = shot != Shot.login;
+    // Signed in and connected, except on «Вход».
+    final signedIn = shot != Shot.login;
     final statusEvents = StreamController<VpnStatus>.broadcast(sync: true);
     addTearDown(statusEvents.close);
     final runtime = ConnectionRuntime.create(
@@ -130,7 +136,7 @@ class Scene {
           config: const {},
         ),
       ),
-      platform: _platform(device),
+      platform: device.platform.connection,
       request: StartVpnRequest(null, null, '18003', '{}'),
       startedAt: DateTime.now().subtract(
         const Duration(minutes: 24, seconds: 17),
@@ -144,9 +150,9 @@ class Scene {
         statusEvents: statusEvents.stream,
         observeStatus: () async {},
         disposeStatus: () {},
-        readRuntime: () async => connected ? runtime : null,
+        readRuntime: () async => signedIn ? runtime : null,
         inspect: (current, {observedStatus}) async => HostConnection(
-          connected ? VpnStatus.connected : VpnStatus.disconnected,
+          signedIn ? VpnStatus.connected : VpnStatus.disconnected,
           runtime: current,
         ),
         prepare: (_, _) async => runtime,
@@ -160,15 +166,13 @@ class Scene {
 
     final api = FakeAccountApi()
       ..loginWith(access: 'a1', refresh: 'r1')
-      ..subscription('https://sub.launch.tel/store', maxDevices: 5)
+      ..subscription(_subscriptionUrl, maxDevices: 5)
       ..me(email: 'anna@example.com', telegramLinked: true)
       ..devices([
         {
           'hwid': 'device-hwid',
-          'deviceModel': device.platform == StorePlatform.ios
-              ? 'iPhone 16 Pro'
-              : 'Pixel 9',
-          'platform': device.platform == StorePlatform.ios ? 'iOS' : 'Android',
+          'deviceModel': device.platform.model,
+          'platform': device.platform.system,
         },
         {
           'hwid': 'laptop',
@@ -178,7 +182,6 @@ class Scene {
         },
       ], max: 5);
     final account = accountServiceFor(api);
-    final signedIn = shot != Shot.login;
     if (signedIn) {
       await tester.runAsync(
         () => account.email.login(email: 'anna@example.com', password: 'pw'),
@@ -196,7 +199,7 @@ class Scene {
       pingLocations: (_, {isCancelled}) async {},
       dismissAnnounce: db.subscriptionDao.dismissAnnounce,
       refreshSubscription: refresh,
-      platform: _platform(device),
+      platform: device.platform.connection,
       installedApps: () async => const [],
       deviceLimit: deviceLimit,
       widgetContext: ({location, preset, expiresAt}) async {},
@@ -217,7 +220,13 @@ class Scene {
       controller: home,
       home: HomePage(controller: home, account: accountController),
       accountTab: AccountPage(controller: accountController, account: account),
-      settings: BrandSettingsPage(controller: home),
+      settings: BrandSettingsPage(
+        controller: home,
+        reminders: RenewalReminders(
+          database: db,
+          notifications: FakeNotifications(),
+        ),
+      ),
       account: account,
       shareService: share,
       watchSubscription: () => Stream.value(signedIn),
@@ -227,17 +236,11 @@ class Scene {
     return Scene._(BrandApp(routerConfig: router), router, shot, home);
   }
 
-  static ConnectionPlatform _platform(StoreDevice device) =>
-      switch (device.platform) {
-        StorePlatform.ios => ConnectionPlatform.ios,
-        StorePlatform.android => ConnectionPlatform.android,
-      };
-
   static Future<void> _seed(AppDatabase db, List<(String, int)> groups) async {
     await db.subscriptionDao.insertRow(
       SubscriptionCompanion.insert(
         name: 'LaunchVPN',
-        url: 'https://sub.launch.tel/store',
+        url: _subscriptionUrl,
         timestamp: DateTime(2026),
         mode: Value(SubscriptionMode.providerManaged.name),
         expireTimestamp: Value(
@@ -292,14 +295,19 @@ class Scene {
         _router.go(BrandRoutes.account);
       case Shot.settings:
         _router.go(BrandRoutes.settings);
+        await idle();
+        final page = tester.element(find.byType(BrandSettingsPage));
+        await tester.tap(
+          find.text(AppLocalizations.of(page)!.settingsConnectOnLaunch),
+        );
       case Shot.login:
-        await _signUp(tester);
+        await _fillLogin(tester);
     }
     await idle();
   }
 
   /// Fills «Вход», so its button shows ready.
-  static Future<void> _signUp(WidgetTester tester) async {
+  static Future<void> _fillLogin(WidgetTester tester) async {
     final fields = find.descendant(
       of: find.byType(BrandTextField),
       matching: find.byType(EditableText),

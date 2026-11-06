@@ -1,14 +1,36 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/shader_backdrop.dart';
 import 'package:onexray/brand/theme.dart';
+import 'package:onexray/core/brand.dart';
+import 'package:onexray/service/connect/settings.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 enum StorePlatform {
-  ios(TargetPlatform.iOS),
-  android(TargetPlatform.android);
+  ios(
+    target: TargetPlatform.iOS,
+    connection: ConnectionPlatform.ios,
+    model: 'iPhone 16 Pro',
+    system: 'iOS',
+  ),
+  android(
+    target: TargetPlatform.android,
+    connection: ConnectionPlatform.android,
+    model: 'Pixel 9',
+    system: 'Android',
+  );
 
-  const StorePlatform(this.target);
+  const StorePlatform({
+    required this.target,
+    required this.connection,
+    required this.model,
+    required this.system,
+  });
   final TargetPlatform target;
+  final ConnectionPlatform connection;
+
+  /// This device on «Аккаунт».
+  final String model;
+  final String system;
 }
 
 /// A store listing language: App Store Connect's folder and Google Play's.
@@ -189,7 +211,9 @@ class StoreFrame extends StatelessWidget {
   }
 }
 
-/// The time and the signal, Wi-Fi and battery icons.
+/// The time and the signal, Wi-Fi and battery icons, beside the camera: the
+/// iPhone's Dynamic Island or the Pixel's punch hole. The iPad's camera sits in
+/// the bezel.
 class _StatusBar extends StatelessWidget {
   const _StatusBar(this.device);
 
@@ -197,32 +221,55 @@ class _StatusBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final top = device.insets.top;
     final ios = device.platform == StorePlatform.ios;
+    // The camera's box; the bar's items center on it.
+    final camera = switch (device) {
+      StoreDevice.iphone => const Rect.fromLTWH(0, 11, 126, 37),
+      StoreDevice.android => const Rect.fromLTWH(0, 9, 22, 22),
+      StoreDevice.ipad => null,
+    };
+    final band = camera ?? Rect.fromLTWH(0, 0, 0, device.insets.top);
     return Positioned(
-      left: ios ? 40 : 24,
-      right: ios ? 36 : 24,
-      top: 0,
-      height: device == StoreDevice.iphone ? top - 8 : top,
-      child: Row(
+      left: 0,
+      right: 0,
+      top: band.top,
+      height: band.height,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Text(
-            ios ? '9:41' : '12:30',
-            style: BrandText.cardTitle.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
+          if (camera != null)
+            Container(
+              width: camera.width,
+              height: camera.height,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(camera.height / 2),
+              ),
+            ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: ios ? 36 : 24),
+            child: Row(
+              children: [
+                Text(
+                  ios ? '9:41' : '12:30',
+                  style: BrandText.cardTitle.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                const Spacer(),
+                for (final icon in [
+                  LucideIcons.signal,
+                  LucideIcons.wifi,
+                  LucideIcons.batteryFull,
+                ])
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: Icon(icon, size: 17, color: BrandColors.ink),
+                  ),
+              ],
             ),
           ),
-          const Spacer(),
-          for (final icon in [
-            LucideIcons.signal,
-            LucideIcons.wifi,
-            LucideIcons.batteryFull,
-          ])
-            Padding(
-              padding: const EdgeInsets.only(left: 6),
-              child: Icon(icon, size: 17, color: BrandColors.ink),
-            ),
         ],
       ),
     );
@@ -284,7 +331,7 @@ class StoreBanner extends StatelessWidget {
             ),
             const SizedBox(width: 40),
             Text(
-              'launchvpn',
+              Brand.wordmark,
               style: BrandText.wordmark.copyWith(
                 fontSize: 72,
                 letterSpacing: -1.44,
