@@ -199,6 +199,31 @@ gh release delete v1.0.1 --repo LaunchVPN/launchvpn-client --cleanup-tag --yes
 A rerun of the `release` job fails while its draft exists; delete the draft alone,
 without `--cleanup-tag`, before rerunning it.
 
+### Store listings
+
+The listings live in fastlane's folders, in Russian and English, for `deliver`
+and `supply` to upload: texts in `ios/fastlane/metadata/` and
+`android/fastlane/metadata/android/<language>/`, screenshots in
+`ios/fastlane/screenshots/` and the `images/` of each Play language. App Store
+Connect takes the icon from the build; Google Play gets `icon.png` and the
+`featureGraphic.png` banner.
+
+[The store renderer](../tool/store/screenshots_test.dart) draws every screenshot,
+the Play icon and the banner from the App's own screens on test data, so no
+subscription link, server address or personal data reaches a store. A frame is a
+caption over a phone or tablet on the backdrop of app.launch.tel: the 6.9"
+iPhone (1320×2868) and 13" iPad (2064×2752) for the App Store, a 1080×1920 phone
+for Google Play. Captions and the test data are in
+[scenes.dart](../tool/store/scenes.dart). After a change to the App's screens,
+render them again and commit the images:
+
+```shell
+flutter test tool/store/screenshots_test.dart
+```
+
+It lives outside `test/` because fonts render differently on each machine, so
+CI does not run it.
+
 ## Build
 
 Set a positive `BUILD_NUMBER`; the [configured base](app/config.py) is added to it.
