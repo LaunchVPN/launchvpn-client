@@ -163,8 +163,8 @@ upstream pages kept for merging. They are not reachable in this build.
   parts: `AccountSession` (tokens, the Bearer header and the refresh), `EmailAuth`,
   `TelegramAccount` (sign-in and linking) and `AccountData` (the account's subscription, details,
   devices, trial, sign-out and deletion). `--dart-define=LAUNCHVPN_API_URL` points a local run at
-  another backend. It opens in create mode, with the 3-day trial in its subtitle and Create
-  account, and its footer switches to sign-in mode
+  another backend. It opens in create mode, with «Бесплатный период для новых пользователей» in its subtitle and
+  Create account, and its footer switches to sign-in mode
   (Sign in, «Нет аккаунта? Создать») and back. The button waits for both fields. A refusal shows its
   text under the fields: wrong email or password, email already registered, invalid email or a
   password under 8 characters, a blocked account (write to support), sign-in in the App not open
@@ -197,8 +197,8 @@ upstream pages kept for merging. They are not reachable in this build.
 - Create account (`/api/app/auth/signup`) mails a code and replaces the form with «Проверьте почту»
   on the same page; signing in with an unconfirmed email does the same with the attempt the backend
   returns. The attempt's `signupToken` stays in memory for this flow only. The screen promises the
-  3 free days only when the backend says the code starts them, or does not say; otherwise it asks
-  to enter the code to confirm the email. The code field takes
+  trial only when the backend says the code starts it, or does not say; otherwise it asks to enter
+  the code to confirm the email. The code field takes
   digits only, so a pasted code keeps its digits, and offers one-time-code autofill. Confirm calls
   `/api/app/auth/verify-code`; a wrong code shows the attempts left under the field, an expired
   or burned one asks for a new code, and a blocked account or a closed App sign-in shows the
@@ -211,9 +211,13 @@ upstream pages kept for merging. They are not reachable in this build.
   subscription claims the trial (`/api/app/trial`) and adds the subscription it brings, unless the
   code from the email already started it or the signup said `trialAvailable: false`. A password or Telegram sign-in cannot tell an account
   that never had a subscription from an ended one, so it claims and the backend refuses one whose
-  trial was used. When
-  the trial was used, Home and Account show Subscription ended, whose refresh reads the account's
-  subscription again. I have a subscription link asks for a link in a sheet and sends it down the same
+  trial was used. Whenever Account reads no active subscription, it asks `GET /api/app/trial` what
+  the account can start: `available` claims it there, which also finishes a trial a panel failure
+  missed at sign-up; `telegram_required` (an email at a domain outside the backend's mail services)
+  makes Home and Account say the trial comes with Telegram, with Link Telegram on Home, and Buy a
+  subscription in APK builds; linking Telegram then reads it again and starts the trial without
+  signing in again. `unavailable`, a used trial, shows Subscription ended, whose refresh reads the
+  account's subscription again. I have a subscription link asks for a link in a sheet and sends it down the same
   queue; an unsuitable one gets the deep link's invalid-link toast.
 - The session is an access token for an hour and a refresh token for 90 days, both in the
   platform's secure store (Keychain on iOS, Keystore-encrypted storage on Android), never in

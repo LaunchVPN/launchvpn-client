@@ -74,6 +74,27 @@ final class AccountSubscription {
   final int? maxDevices;
 }
 
+/// What `GET /api/app/trial` says an account without a subscription can
+/// start.
+enum TrialAvailability {
+  /// Claiming starts it.
+  available,
+
+  /// Only after Telegram is linked: the email alone is at a domain anyone
+  /// can make endless addresses on.
+  telegramRequired,
+
+  /// Used, or trials are off.
+  unavailable;
+
+  static TrialAvailability fromJson(Map<String, Object?> data) =>
+      switch (data['trial']) {
+        'available' => available,
+        'telegram_required' => telegramRequired,
+        _ => unavailable,
+      };
+}
+
 /// What `GET /api/me` says about the signed-in account.
 final class AccountDetails {
   const AccountDetails({required this.email, required this.telegramLinked});

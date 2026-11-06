@@ -110,9 +110,7 @@ void main() {
 
       expect(find.text('Интернет\nбез границ'), findsOneWidget);
       expect(
-        find.text(
-          'Создайте аккаунт и получите 3 дня бесплатно. Карта не нужна.',
-        ),
+        find.text('Бесплатный период для новых пользователей. Карта не нужна.'),
         findsOneWidget,
       );
       expect(
@@ -456,8 +454,8 @@ void main() {
       expect(find.byType(ShaderBackdrop), findsOneWidget);
       expect(
         find.text(
-          'Отправили код на ivan@proton.me. Введите его, и 3 дня бесплатно '
-          'начнутся сразу.',
+          'Отправили код на ivan@proton.me. Введите его, и пробный период '
+          'начнётся сразу.',
         ),
         findsOneWidget,
       );

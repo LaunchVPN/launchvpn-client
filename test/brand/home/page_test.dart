@@ -1274,6 +1274,40 @@ void main() {
     });
   });
 
+  testWidgets('a new account whose trial waits on Telegram offers to link it '
+      'instead of ended', (tester) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    final api = FakeAccountApi()
+      ..loginWith(access: 'a1', refresh: 'r1')
+      ..subscription(null)
+      ..me(email: 'ivan@example.org', telegramLinked: false)
+      ..trialOffer('telegram_required');
+    final account = accountServiceFor(api);
+    await tester.runAsync(
+      () => account.email.login(email: 'ivan@example.org', password: 'pw'),
+    );
+    await pumpHome(
+      tester,
+      account: account,
+      locale: const Locale('en'),
+      distribution: AppDistribution.apk,
+    );
+    await tester.runAsync(pumpEventQueue);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Get your trial with Telegram'), findsOneWidget);
+    expect(
+      find.text(
+        'This email needs Telegram for the trial. Link it and your trial '
+        'starts right away.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Link Telegram'), findsOneWidget);
+    expect(find.text('Buy a subscription'), findsOneWidget);
+    expect(find.text('Your subscription has ended'), findsNothing);
+  });
+
   group('device limit', () {
     testWidgets(
       'signed in, the other devices are listed to remove one, and «Обновить» '

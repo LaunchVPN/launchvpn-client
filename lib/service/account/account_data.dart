@@ -108,6 +108,20 @@ final class AccountData {
     return changed;
   }
 
+  /// The trial an account without a subscription can start, the device
+  /// aside: [startTrial] checks that.
+  Future<TrialAvailability> trialOffer() async =>
+      TrialAvailability.fromJson(await _session.get('/api/app/trial'));
+
+  /// Claims the trial and adds the subscription it starts. Whether it
+  /// started.
+  Future<bool> startTrial() async {
+    final link = await _readQuietly(_claimTrial);
+    if (link == null) return false;
+    addSubscription(link);
+    return true;
+  }
+
   /// What the backend knows about the account.
   Future<AccountDetails> details() async =>
       AccountDetails.fromJson(await _session.get('/api/me'));

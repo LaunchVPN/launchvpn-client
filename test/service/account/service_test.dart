@@ -998,6 +998,26 @@ void main() {
       },
     );
 
+    for (final (answer, expected) in [
+      ('available', TrialAvailability.available),
+      ('telegram_required', TrialAvailability.telegramRequired),
+      ('unavailable', TrialAvailability.unavailable),
+      ('something new', TrialAvailability.unavailable),
+    ]) {
+      test('the offer «$answer» reads as ${expected.name}', () async {
+        api.loginWith(access: 'a1', refresh: 'r1');
+        api.subscription(null);
+        api.trialOffer(answer);
+        final service = account();
+        await service.email.login(email: 'ivan@proton.me', password: 'pw');
+
+        final offer = await service.data.trialOffer();
+
+        expect(offer, expected);
+        expect(api.authorizations('/api/app/trial').last, 'Bearer a1');
+      });
+    }
+
     test('a used trial leaves the account without a subscription', () async {
       api.verifyWith(access: 'a1', refresh: 'r1', trialGranted: false);
       api.subscription(null);

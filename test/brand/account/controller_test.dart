@@ -172,6 +172,115 @@ void main() {
     expect(controller.state.inactive, isTrue);
   });
 
+  test('an account whose email needs Telegram for the trial says so', () async {
+    final service = await signedIn(configLink: null);
+    api.trialOffer('telegram_required');
+    final controller = controllerFor(service);
+
+    await controller.refresh();
+
+    expect(controller.state.trialWaitsOnTelegram, isTrue);
+    expect(api.bodies('/api/app/trial'), isEmpty);
+    expect(opened, isEmpty);
+  });
+
+  test('an account that can start the trial starts it', () async {
+    final service = await signedIn(configLink: null);
+    api.trialOffer('available');
+    api.trialGrants(_configLink);
+    final controller = controllerFor(service);
+
+    await controller.refresh();
+
+    expect(api.bodies('/api/app/trial'), hasLength(1));
+    expect(opened, [_link]);
+    expect(controller.state.inactive, isFalse);
+    expect(controller.state.trialWaitsOnTelegram, isFalse);
+  });
+
+  test('an ended account claims nothing', () async {
+    final service = await signedIn(configLink: null);
+    api.trialOffer('unavailable');
+    final controller = controllerFor(service);
+
+    await controller.refresh();
+
+    expect(api.bodies('/api/app/trial'), isEmpty);
+    expect(controller.state.inactive, isTrue);
+    expect(controller.state.trialWaitsOnTelegram, isFalse);
+  });
+
+  test('linking Telegram starts the trial it waited for', () async {
+    final service = await signedIn(configLink: null);
+    api.trialOffer('telegram_required');
+    final controller = controllerFor(service);
+    await controller.refresh();
+    api.linkStartWith('https://app.test/api/auth/telegram/start?ticket=t1');
+    api.refreshWith(access: 'a2', refresh: 'r2');
+    api.exchangeWith(access: 'a3', refresh: 'r3');
+    api.me(email: 'ivan@example.org', telegramLinked: true);
+    api.trialOffer('available');
+    api.trialGrants(_configLink);
+
+    final outcome = controller.linkTelegram();
+    await pumpEventQueue();
+    service.telegram.browser.handleReturn(
+      Uri.parse('launchvpn://auth?code=c1&mode=link'),
+    );
+
+    expect(await outcome, isA<TelegramLinked>());
+    expect(opened, [_link]);
+    expect(controller.state.inactive, isFalse);
+    expect(controller.state.trialWaitsOnTelegram, isFalse);
+  });
+
+  test('linking Telegram while an earlier offer read is pending still '
+      'starts the trial', () async {
+    final service = await signedIn(configLink: null);
+    final firstRead = Completer<void>();
+    api.trialOffer('available');
+    api.hold('GET /api/app/trial', firstRead.future);
+    api.trialGrants(_configLink);
+    api.linkStartWith('https://app.test/api/auth/telegram/start?ticket=t1');
+    api.refreshWith(access: 'a2', refresh: 'r2');
+    api.exchangeWith(access: 'a3', refresh: 'r3');
+    api.me(email: 'ivan@example.org', telegramLinked: true);
+    final controller = controllerFor(service);
+    await pumpEventQueue();
+
+    final outcome = controller.linkTelegram();
+    await pumpEventQueue();
+    service.telegram.browser.handleReturn(
+      Uri.parse('launchvpn://auth?code=c1&mode=link'),
+    );
+    // The link has reloaded the account and asks for the offer again.
+    await pumpEventQueue(times: 500);
+    expect(api.requests.where((r) => r.path == '/api/me'), isNotEmpty);
+    firstRead.complete();
+
+    expect(await outcome, isA<TelegramLinked>());
+    expect(api.bodies('/api/app/trial'), hasLength(1));
+    expect(opened, [_link]);
+  });
+
+  test('a trial that starts after signing out stays off the device', () async {
+    final service = await signedIn(configLink: null);
+    final claim = Completer<void>();
+    api.trialOffer('available');
+    api.trialGrants(_configLink);
+    api.hold('POST /api/app/trial', claim.future);
+    final controller = controllerFor(service);
+    await pumpEventQueue();
+    expect(api.bodies('/api/app/trial'), hasLength(1));
+
+    await controller.logout();
+    claim.complete();
+    await pumpEventQueue();
+
+    expect(opened, isEmpty);
+    expect(controller.state.signedIn, isFalse);
+  });
+
   test('from a link only, days and traffic come from the device', () async {
     await addRow('https://sub.launch.tel/from-bot');
     final controller = controllerFor(account());

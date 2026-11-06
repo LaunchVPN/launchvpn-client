@@ -20,6 +20,7 @@ final class AccountState {
     this.devices,
     this.subscriptionMaxDevices,
     this.inactive = false,
+    this.trial,
     this.refreshing = false,
     this.linkingTelegram = false,
     this.resumedLink,
@@ -47,6 +48,15 @@ final class AccountState {
   /// The account has no active subscription.
   final bool inactive;
 
+  /// What an [inactive] account can start; null with a subscription and
+  /// until read.
+  final TrialAvailability? trial;
+
+  /// A signed-in [inactive] account gets the trial only once Telegram is
+  /// linked.
+  bool get trialWaitsOnTelegram =>
+      signedIn && inactive && trial == TrialAvailability.telegramRequired;
+
   /// [AccountController.refresh] is running.
   final bool refreshing;
 
@@ -73,6 +83,7 @@ final class AccountState {
     AccountDevices? Function()? devices,
     int? subscriptionMaxDevices,
     bool? inactive,
+    TrialAvailability? Function()? trial,
     bool? refreshing,
     bool? linkingTelegram,
     TelegramLinkOutcome? Function()? resumedLink,
@@ -85,6 +96,7 @@ final class AccountState {
     subscriptionMaxDevices:
         subscriptionMaxDevices ?? this.subscriptionMaxDevices,
     inactive: inactive ?? this.inactive,
+    trial: trial == null ? this.trial : trial(),
     refreshing: refreshing ?? this.refreshing,
     linkingTelegram: linkingTelegram ?? this.linkingTelegram,
     resumedLink: resumedLink == null ? this.resumedLink : resumedLink(),
@@ -223,17 +235,57 @@ final class AccountController extends PageCubit<AccountState> {
   }
 
   /// Reads whether the account's subscription is active, and the devices it
-  /// allows. Its link; null when there is none or the read failed.
+  /// allows. Its link; null when there is none or the read failed. Without
+  /// one, the trial is read, and started when it can be.
   Future<SubscriptionDeepLink?> _loadSubscription() async {
     SubscriptionDeepLink? link;
-    await _load(_account.data.subscription, (subscription) {
+    final loaded = await _load(_account.data.subscription, (subscription) {
       link = subscription.link;
       return state.copyWith(
         inactive: link == null,
+        trial: link == null ? null : () => null,
         subscriptionMaxDevices: subscription.maxDevices,
       );
     });
+    if (loaded && link == null) await _offerTrial();
     return link;
+  }
+
+  /// An account without a subscription starts the trial it can get: one
+  /// missed at sign-up, or one linking Telegram just made available. Else
+  /// the tab and Home tell what it can get. Reads that overlap within a
+  /// session, as the first load and a refresh do, share one attempt; a new
+  /// session, as after a Telegram link, starts its own.
+  Future<void> _offerTrial() {
+    if (_offering case (final session, final attempt)
+        when session == _session) {
+      return attempt;
+    }
+    final offering = (_session, _startOfferedTrial());
+    _offering = offering;
+    return offering.$2.whenComplete(() {
+      if (identical(_offering, offering)) _offering = null;
+    });
+  }
+
+  (int, Future<void>)? _offering;
+
+  Future<void> _startOfferedTrial() async {
+    final session = _session;
+    final TrialAvailability offer;
+    try {
+      offer = await _account.data.trialOffer();
+    } on AccountException catch (error) {
+      ygLogger('read trial offer failed (${error.error.name})');
+      return;
+    }
+    if (isClosed || session != _session) return;
+    if (offer == TrialAvailability.available &&
+        await _account.data.startTrial()) {
+      if (!isClosed) emit(state.copyWith(inactive: false, trial: () => null));
+      return;
+    }
+    if (!isClosed) emit(state.copyWith(trial: () => offer));
   }
 
   /// Whether the panel may take this device now. After it refused the
@@ -342,6 +394,8 @@ final class AccountController extends PageCubit<AccountState> {
         inactive: _account.data.subscriptionMissing,
       ),
     );
+    // Telegram may be what the trial waited for.
+    if (_account.data.subscriptionMissing) await _offerTrial();
   }
 
   /// Signs out. The gate then shows «Вход» unless a subscription from a link
