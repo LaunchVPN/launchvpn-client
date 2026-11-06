@@ -1,0 +1,11 @@
+LaunchVPN connects you in one tap. The app picks the server with the lowest latency on its own, and when you need a particular country, the list of locations shows the latency of each one.
+
+In Smart mode only the sites that need VPN go through it, and the rest open directly at full speed. When you want all traffic in the tunnel, switch the mode right on the main screen.
+
+On iPhone, VPN can turn itself back on after a restart or a network change. The Home Screen widget shows whether VPN is on and turns it on without opening the app.
+
+The Account screen shows how many days your plan has left and which devices use it, and you can remove a device right there. Before the plan ends, the app reminds you to renew.
+
+New users get 3 days free, no card needed. If you already have a plan, sign in with your email or add it with the link from the bot.
+
+The app does not record which sites you open, and it has no ads or analytics. The privacy policy explains what data goes where: https://privacy.launch.tel
