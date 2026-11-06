@@ -28,6 +28,7 @@
 		EB2400000000000000000108 /* AppleWidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB2400000000000000000013 /* AppleWidgetIntents.swift */; };
 		EB2400000000000000000109 /* AppleWidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB2400000000000000000013 /* AppleWidgetIntents.swift */; };
 		EB240000000000000000010A /* AppleWidgetApi.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB2400000000000000000014 /* AppleWidgetApi.swift */; };
+		EB240000000000000000010D /* TesterApi.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB2400000000000000000017 /* TesterApi.swift */; };
 		EB240000000000000000010B /* Widget.strings in Resources */ = {isa = PBXBuildFile; fileRef = EB2400000000000000000020 /* Widget.strings */; };
 		EB240000000000000000010C /* AppleVpnStartAdmission.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB2400000000000000000016 /* AppleVpnStartAdmission.swift */; };
 		EB67F754308F0B400096B893 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EB67F753308F0B400096B893 /* WidgetKit.framework */; };
@@ -129,6 +130,7 @@
 		EB2400000000000000000012 /* AppleWidgetActionInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWidgetActionInbox.swift; path = ../swift/iOS/AppleWidgetActionInbox.swift; sourceTree = SOURCE_ROOT; };
 		EB2400000000000000000013 /* AppleWidgetIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWidgetIntents.swift; path = ../swift/iOS/AppleWidgetIntents.swift; sourceTree = SOURCE_ROOT; };
 		EB2400000000000000000014 /* AppleWidgetApi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWidgetApi.swift; path = Runner/AppleWidgetApi.swift; sourceTree = SOURCE_ROOT; };
+		EB2400000000000000000017 /* TesterApi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TesterApi.swift; path = Runner/TesterApi.swift; sourceTree = SOURCE_ROOT; };
 		EB2400000000000000000016 /* AppleVpnStartAdmission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleVpnStartAdmission.swift; path = ../swift/iOS/AppleVpnStartAdmission.swift; sourceTree = SOURCE_ROOT; };
 		EB2400000000000000000021 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = widget/en.lproj/Widget.strings; sourceTree = SOURCE_ROOT; };
 		EB2400000000000000000022 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "widget/zh-Hans.lproj/Widget.strings"; sourceTree = SOURCE_ROOT; };
@@ -290,6 +292,7 @@
 				EB2400000000000000000012 /* AppleWidgetActionInbox.swift */,
 				EB2400000000000000000013 /* AppleWidgetIntents.swift */,
 				EB2400000000000000000014 /* AppleWidgetApi.swift */,
+				EB2400000000000000000017 /* TesterApi.swift */,
 				EB2400000000000000000016 /* AppleVpnStartAdmission.swift */,
 				EB2400000000000000000020 /* Widget.strings */,
 			);
@@ -559,6 +562,7 @@
 				EB2400000000000000000106 /* AppleWidgetActionInbox.swift in Sources */,
 				EB2400000000000000000108 /* AppleWidgetIntents.swift in Sources */,
 				EB240000000000000000010A /* AppleWidgetApi.swift in Sources */,
+				EB240000000000000000010D /* TesterApi.swift in Sources */,
 				EB240000000000000000010C /* AppleVpnStartAdmission.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				EB3100000000000000000001 /* FileExportApi.swift in Sources */,

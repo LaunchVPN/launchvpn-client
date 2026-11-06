@@ -151,7 +151,9 @@ upstream pages kept for merging. They are not reachable in this build.
 - About, under More, shows the version and opens a screen above the tabs with the version and
   build from the package, the GPL-3.0 license, OneXray, which LaunchVPN is based on, the privacy
   policy and support. Each opens in the browser: the license on gnu.org, OneXray's repository, the
-  policy in the App's language, and the panel's support or the bot's, as on Home.
+  policy in the App's language, and the panel's support or the bot's, as on Home. In an iOS build
+  installed from TestFlight, a line under the version shows the running tunnel's
+  [memory](xray-configuration.md#ios-memory-headroom); App Store installs never show it.
 - «Вход» talks to the account API at `Brand.apiUrl` through `AccountService`, which wires its
   parts: `AccountSession` (tokens, the Bearer header and the refresh), `EmailAuth`,
   `TelegramAccount` (sign-in and linking) and `AccountData` (the account's subscription, details,

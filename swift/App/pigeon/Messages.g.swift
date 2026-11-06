@@ -226,6 +226,55 @@ enum NativeLaunchAtLoginState: Int, CaseIterable {
   case error = 4
 }
 
+/// The iOS tunnel extension's memory, in bytes. iOS ends the extension, and
+/// with it the VPN, once its footprint reaches [limit].
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct TunnelMemory: Hashable, CustomStringConvertible {
+  var footprint: Int64
+  /// The highest footprint since the tunnel started, spikes included.
+  var peak: Int64
+  var limit: Int64
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> TunnelMemory? {
+    let footprint = pigeonVar_list[0] as! Int64
+    let peak = pigeonVar_list[1] as! Int64
+    let limit = pigeonVar_list[2] as! Int64
+
+    return TunnelMemory(
+      footprint: footprint,
+      peak: peak,
+      limit: limit
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      footprint,
+      peak,
+      limit,
+    ]
+  }
+  static func == (lhs: TunnelMemory, rhs: TunnelMemory) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return MessagesPigeonInternal.deepEquals(lhs.footprint, rhs.footprint) && MessagesPigeonInternal.deepEquals(lhs.peak, rhs.peak) && MessagesPigeonInternal.deepEquals(lhs.limit, rhs.limit)
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("TunnelMemory")
+    MessagesPigeonInternal.deepHash(value: footprint, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: peak, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: limit, hasher: &hasher)
+  }
+
+  public var description: String {
+    return "TunnelMemory(footprint: \(String(describing: footprint)), peak: \(String(describing: peak)), limit: \(String(describing: limit)))"
+  }
+}
+
 /// Generated class from Pigeon that represents data sent in messages.
 struct AndroidAutomationSettings: Hashable, CustomStringConvertible {
   var enabled: Bool
@@ -607,20 +656,22 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
       }
       return nil
     case 134:
-      return AndroidAutomationSettings.fromList(self.readValue() as! [Any?])
+      return TunnelMemory.fromList(self.readValue() as! [Any?])
     case 135:
-      return BackupLocation.fromList(self.readValue() as! [Any?])
+      return AndroidAutomationSettings.fromList(self.readValue() as! [Any?])
     case 136:
-      return DeviceIdentity.fromList(self.readValue() as! [Any?])
+      return BackupLocation.fromList(self.readValue() as! [Any?])
     case 137:
-      return AppleVpnCapabilities.fromList(self.readValue() as! [Any?])
+      return DeviceIdentity.fromList(self.readValue() as! [Any?])
     case 138:
-      return NativeLaunchAtLoginResult.fromList(self.readValue() as! [Any?])
+      return AppleVpnCapabilities.fromList(self.readValue() as! [Any?])
     case 139:
-      return PlatformPermissionResult.fromList(self.readValue() as! [Any?])
+      return NativeLaunchAtLoginResult.fromList(self.readValue() as! [Any?])
     case 140:
-      return NativeVpnCommandResult.fromList(self.readValue() as! [Any?])
+      return PlatformPermissionResult.fromList(self.readValue() as! [Any?])
     case 141:
+      return NativeVpnCommandResult.fromList(self.readValue() as! [Any?])
+    case 142:
       return AndroidAppInfo.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -645,29 +696,32 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? NativeLaunchAtLoginState {
       super.writeByte(133)
       super.writeValue(value.rawValue)
-    } else if let value = value as? AndroidAutomationSettings {
+    } else if let value = value as? TunnelMemory {
       super.writeByte(134)
       super.writeValue(value.toList())
-    } else if let value = value as? BackupLocation {
+    } else if let value = value as? AndroidAutomationSettings {
       super.writeByte(135)
       super.writeValue(value.toList())
-    } else if let value = value as? DeviceIdentity {
+    } else if let value = value as? BackupLocation {
       super.writeByte(136)
       super.writeValue(value.toList())
-    } else if let value = value as? AppleVpnCapabilities {
+    } else if let value = value as? DeviceIdentity {
       super.writeByte(137)
       super.writeValue(value.toList())
-    } else if let value = value as? NativeLaunchAtLoginResult {
+    } else if let value = value as? AppleVpnCapabilities {
       super.writeByte(138)
       super.writeValue(value.toList())
-    } else if let value = value as? PlatformPermissionResult {
+    } else if let value = value as? NativeLaunchAtLoginResult {
       super.writeByte(139)
       super.writeValue(value.toList())
-    } else if let value = value as? NativeVpnCommandResult {
+    } else if let value = value as? PlatformPermissionResult {
       super.writeByte(140)
       super.writeValue(value.toList())
-    } else if let value = value as? AndroidAppInfo {
+    } else if let value = value as? NativeVpnCommandResult {
       super.writeByte(141)
+      super.writeValue(value.toList())
+    } else if let value = value as? AndroidAppInfo {
+      super.writeByte(142)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -1025,6 +1079,54 @@ class AppleWidgetHostApiSetup {
       }
     } else {
       setLanguageChannel.setMessageHandler(nil)
+    }
+  }
+}
+/// What only testers see, in builds installed from TestFlight.
+///
+/// Generated protocol from Pigeon that represents a handler of messages from Flutter.
+protocol TesterHostApi {
+  func isTestFlight(completion: @escaping (Result<Bool, Error>) -> Void)
+  /// Null while no tunnel runs.
+  func readTunnelMemory(completion: @escaping (Result<TunnelMemory?, Error>) -> Void)
+}
+
+/// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
+class TesterHostApiSetup {
+  static var codec: FlutterStandardMessageCodec { MessagesPigeonCodec.shared }
+  /// Sets up an instance of `TesterHostApi` to handle messages through the `binaryMessenger`.
+  static func setUp(binaryMessenger: FlutterBinaryMessenger, api: TesterHostApi?, messageChannelSuffix: String = "") {
+    let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
+    let isTestFlightChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.onexray.TesterHostApi.isTestFlight\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      isTestFlightChannel.setMessageHandler { _, reply in
+        api.isTestFlight { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      isTestFlightChannel.setMessageHandler(nil)
+    }
+    /// Null while no tunnel runs.
+    let readTunnelMemoryChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.onexray.TesterHostApi.readTunnelMemory\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      readTunnelMemoryChannel.setMessageHandler { _, reply in
+        api.readTunnelMemory { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      readTunnelMemoryChannel.setMessageHandler(nil)
     }
   }
 }

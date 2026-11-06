@@ -263,6 +263,57 @@ enum class NativeLaunchAtLoginState(val raw: Int) {
   }
 }
 
+/**
+ * The iOS tunnel extension's memory, in bytes. iOS ends the extension, and
+ * with it the VPN, once its footprint reaches [limit].
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class TunnelMemory (
+  val footprint: Long,
+  /** The highest footprint since the tunnel started, spikes included. */
+  val peak: Long,
+  val limit: Long
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): TunnelMemory {
+      val footprint = pigeonVar_list[0] as Long
+      val peak = pigeonVar_list[1] as Long
+      val limit = pigeonVar_list[2] as Long
+      return TunnelMemory(footprint, peak, limit)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      footprint,
+      peak,
+      limit,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as TunnelMemory
+    return MessagesPigeonUtils.deepEquals(this.footprint, other.footprint) && MessagesPigeonUtils.deepEquals(this.peak, other.peak) && MessagesPigeonUtils.deepEquals(this.limit, other.limit)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.footprint)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.peak)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.limit)
+    return result
+  }
+  override fun toString(): String {
+    return "TunnelMemory(footprint=$footprint, peak=$peak, limit=$limit)"
+  }
+}
+
 /** Generated class from Pigeon that represents data sent in messages. */
 data class AndroidAutomationSettings (
   val enabled: Boolean,
@@ -644,40 +695,45 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       134.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AndroidAutomationSettings.fromList(it)
+          TunnelMemory.fromList(it)
         }
       }
       135.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          BackupLocation.fromList(it)
+          AndroidAutomationSettings.fromList(it)
         }
       }
       136.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          DeviceIdentity.fromList(it)
+          BackupLocation.fromList(it)
         }
       }
       137.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AppleVpnCapabilities.fromList(it)
+          DeviceIdentity.fromList(it)
         }
       }
       138.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          NativeLaunchAtLoginResult.fromList(it)
+          AppleVpnCapabilities.fromList(it)
         }
       }
       139.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          PlatformPermissionResult.fromList(it)
+          NativeLaunchAtLoginResult.fromList(it)
         }
       }
       140.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          NativeVpnCommandResult.fromList(it)
+          PlatformPermissionResult.fromList(it)
         }
       }
       141.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          NativeVpnCommandResult.fromList(it)
+        }
+      }
+      142.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
           AndroidAppInfo.fromList(it)
         }
@@ -707,36 +763,40 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(133)
         writeValue(stream, value.raw.toLong())
       }
-      is AndroidAutomationSettings -> {
+      is TunnelMemory -> {
         stream.write(134)
         writeValue(stream, value.toList())
       }
-      is BackupLocation -> {
+      is AndroidAutomationSettings -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is DeviceIdentity -> {
+      is BackupLocation -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is AppleVpnCapabilities -> {
+      is DeviceIdentity -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is NativeLaunchAtLoginResult -> {
+      is AppleVpnCapabilities -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is PlatformPermissionResult -> {
+      is NativeLaunchAtLoginResult -> {
         stream.write(139)
         writeValue(stream, value.toList())
       }
-      is NativeVpnCommandResult -> {
+      is PlatformPermissionResult -> {
         stream.write(140)
         writeValue(stream, value.toList())
       }
-      is AndroidAppInfo -> {
+      is NativeVpnCommandResult -> {
         stream.write(141)
+        writeValue(stream, value.toList())
+      }
+      is AndroidAppInfo -> {
+        stream.write(142)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -1135,6 +1195,64 @@ interface AppleWidgetHostApi {
                 reply.reply(MessagesPigeonUtils.wrapError(error))
               } else {
                 reply.reply(MessagesPigeonUtils.wrapResult(null))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+    }
+  }
+}
+/**
+ * What only testers see, in builds installed from TestFlight.
+ *
+ * Generated interface from Pigeon that represents a handler of messages from Flutter.
+ */
+interface TesterHostApi {
+  fun isTestFlight(callback: (Result<Boolean>) -> Unit)
+  /** Null while no tunnel runs. */
+  fun readTunnelMemory(callback: (Result<TunnelMemory?>) -> Unit)
+
+  companion object {
+    /** The codec used by TesterHostApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      MessagesPigeonCodec()
+    }
+    /** Sets up an instance of `TesterHostApi` to handle messages through the `binaryMessenger`. */
+    @JvmOverloads
+    fun setUp(binaryMessenger: BinaryMessenger, api: TesterHostApi?, messageChannelSuffix: String = "") {
+      val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.onexray.TesterHostApi.isTestFlight$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.isTestFlight{ result: Result<Boolean> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.onexray.TesterHostApi.readTunnelMemory$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.readTunnelMemory{ result: Result<TunnelMemory?> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
               }
             }
           }

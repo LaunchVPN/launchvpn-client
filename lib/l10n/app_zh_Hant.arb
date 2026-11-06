@@ -1034,6 +1034,7 @@
   "settingsAbout": "About",
   "settingsVersion": "Version {version}",
   "aboutVersion": "Version {version} ({build})",
+  "aboutTunnelMemory": "VPN memory {footprint}, peak {peak}, headroom {headroom} MB",
   "aboutLicense": "License",
   "aboutBasedOn": "Based on {project}",
   "aboutPrivacy": "Privacy",

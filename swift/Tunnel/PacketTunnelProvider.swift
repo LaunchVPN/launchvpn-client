@@ -303,6 +303,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         if Constants.useSystemExtension {
             return handleAppMessageSE(messageData)
         }
+        #if os(iOS)
+        if case .memory? = try? TunnelMessageCoder.decode(TunnelRequest.self, from: messageData) {
+            let response = TunnelMemoryReading.current().map(TunnelResponse.memory) ?? .error("task_info")
+            return try? TunnelMessageCoder.encode(response)
+        }
+        #endif
         return messageData
     }
 
@@ -335,6 +341,8 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
             case .startXray:
                 fulfillStartSignal()
                 response = .ok
+            case .memory:
+                response = .error("unsupported")
             }
         } catch {
             YGLog("dat transfer error: \(error)")

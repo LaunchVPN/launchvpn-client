@@ -464,6 +464,12 @@ tunnel starts, once Xray has started, on stop, and every 30 seconds in between. 
 limit minus the peak footprint the kernel recorded for this process, so it includes spikes between
 lines. It is the value to compare between configurations. With logs off, nothing is written.
 
+The App can also ask the running extension for the same reading through `TunnelRequest.memory`,
+without logs, which themselves use memory. In builds installed from TestFlight, About polls it and
+shows the footprint now, the peak and the headroom. iOS tells a TestFlight install by its sandbox
+receipt, so App Store installs of the same binary never ask. How to measure is in
+[verification](validation.md#ios-tunnel-memory).
+
 ### IPv6 策略
 
 关闭时 Apple/Android/Linux/EXE 不配置隧道 IPv6 地址、路由和 DNS；MSIX/Vole 保留自身处理。

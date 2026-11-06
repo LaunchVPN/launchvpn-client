@@ -301,6 +301,12 @@ Android 模拟器直接使用当前分支构建覆盖已经安装的 LaunchVPN�
   Widget 不泄露配置名、订阅、地址或流量。签名安装包须检查 Widget 扩展嵌入、独立 provisioning profile、
   App/隧道扩展/Widget 的共享 App Group 权限。模拟器与无签名构建不能证明真机 NE 授权、锁屏交互或后台刷新，
   App Intent 前台执行、WidgetKit 调度与系统限制须在对应真机签名渠道单独验收。
+- <a id="ios-tunnel-memory"></a>iOS tunnel memory is measured on a TestFlight build on a real
+  iPhone. Connect, open About and load the tunnel, for example with a speed test and video, then
+  read the peak and headroom. The peak covers the extension's whole life, so disconnect and connect
+  again before each case. Compare a group with one server against the largest «AUTO» group, each in
+  Smart, which also loads the routing data, and in Everything through VPN. If the VPN drops under
+  load and the line disappears, iOS ended the extension at its limit.
 - Android 自动化需普通第三方 UID 的后台启停、冷进程、Token 撤销和清理/恢复阻断，
   至少联调一款真实工具；shell 广播不等于工具联调。
 - macOS 桌面 UI 使用 Flutter Debug 验证；VPN、Apple 授权、按需连接、SE 跨容器交接

@@ -82,6 +82,32 @@ abstract class AppleWidgetHostApi {
   void setLanguage(String languageCode);
 }
 
+/// The iOS tunnel extension's memory, in bytes. iOS ends the extension, and
+/// with it the VPN, once its footprint reaches [limit].
+class TunnelMemory {
+  TunnelMemory({
+    required this.footprint,
+    required this.peak,
+    required this.limit,
+  });
+  final int footprint;
+
+  /// The highest footprint since the tunnel started, spikes included.
+  final int peak;
+  final int limit;
+}
+
+/// What only testers see, in builds installed from TestFlight.
+@HostApi()
+abstract class TesterHostApi {
+  @asyncCallback
+  bool isTestFlight();
+
+  /// Null while no tunnel runs.
+  @asyncCallback
+  TunnelMemory? readTunnelMemory();
+}
+
 class AndroidAutomationSettings {
   AndroidAutomationSettings({required this.enabled, this.token});
   final bool enabled;
