@@ -7,6 +7,7 @@ import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/settings/controller.dart';
 import 'package:onexray/brand/settings/row.dart';
+import 'package:onexray/brand/settings/tunnel_memory.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/brand/top_bar.dart';
 import 'package:onexray/core/brand.dart';
@@ -14,7 +15,7 @@ import 'package:onexray/l10n/localizations/app_localizations.dart';
 
 /// «О приложении»: the version with its build, the license, the project we
 /// forked, the privacy policy and support. Every row opens a link outside the
-/// App.
+/// App. TestFlight builds also show the tunnel's memory under the version.
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key, required this.settings, required this.home});
 
@@ -108,7 +109,8 @@ class AboutPage extends StatelessWidget {
       Uri.parse(Brand.privacyUrl(Localizations.localeOf(context).languageCode));
 }
 
-/// The logo, the name, and the version with its build.
+/// The logo, the name, the version with its build, and in TestFlight builds
+/// the tunnel's memory.
 class _Identity extends StatelessWidget {
   const _Identity({required this.settings});
 
@@ -133,6 +135,7 @@ class _Identity extends StatelessWidget {
               null => '',
             }, style: BrandText.caption),
           ),
+          const TunnelMemoryLine(),
         ],
       ),
     );

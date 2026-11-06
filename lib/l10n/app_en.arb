@@ -3246,6 +3246,33 @@
       }
     }
   },
+  "aboutTunnelMemory": "VPN memory {footprint}, peak {peak}, headroom {headroom} MB",
+  "@aboutTunnelMemory": {
+    "description": "TestFlight builds only: the iOS tunnel's memory in megabytes, now and at its peak, and the headroom left at the peak below the limit iOS ends the VPN at.",
+    "placeholders": {
+      "footprint": {
+        "type": "double",
+        "format": "decimalPatternDigits",
+        "optionalParameters": {
+          "decimalDigits": 1
+        }
+      },
+      "peak": {
+        "type": "double",
+        "format": "decimalPatternDigits",
+        "optionalParameters": {
+          "decimalDigits": 1
+        }
+      },
+      "headroom": {
+        "type": "double",
+        "format": "decimalPatternDigits",
+        "optionalParameters": {
+          "decimalDigits": 1
+        }
+      }
+    }
+  },
   "aboutLicense": "License",
   "aboutBasedOn": "Based on {project}",
   "@aboutBasedOn": {

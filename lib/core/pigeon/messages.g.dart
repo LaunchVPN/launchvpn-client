@@ -140,6 +140,63 @@ enum NativeLaunchAtLoginState {
   error,
 }
 
+/// The iOS tunnel extension's memory, in bytes. iOS ends the extension, and
+/// with it the VPN, once its footprint reaches [limit].
+class TunnelMemory {
+  TunnelMemory({
+    required this.footprint,
+    required this.peak,
+    required this.limit,
+  });
+
+  int footprint;
+
+  /// The highest footprint since the tunnel started, spikes included.
+  int peak;
+
+  int limit;
+
+  List<Object?> _toList() {
+    return <Object?>[footprint, peak, limit];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static TunnelMemory decode(Object result) {
+    result as List<Object?>;
+    return TunnelMemory(
+      footprint: result[0]! as int,
+      peak: result[1]! as int,
+      limit: result[2]! as int,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! TunnelMemory || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(footprint, other.footprint) &&
+        _deepEquals(peak, other.peak) &&
+        _deepEquals(limit, other.limit);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'TunnelMemory(footprint: $footprint, peak: $peak, limit: $limit)';
+  }
+}
+
 class AndroidAutomationSettings {
   AndroidAutomationSettings({required this.enabled, this.token});
 
@@ -571,29 +628,32 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is NativeLaunchAtLoginState) {
       buffer.putUint8(133);
       writeValue(buffer, value.index);
-    } else if (value is AndroidAutomationSettings) {
+    } else if (value is TunnelMemory) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    } else if (value is BackupLocation) {
+    } else if (value is AndroidAutomationSettings) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    } else if (value is DeviceIdentity) {
+    } else if (value is BackupLocation) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    } else if (value is AppleVpnCapabilities) {
+    } else if (value is DeviceIdentity) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    } else if (value is NativeLaunchAtLoginResult) {
+    } else if (value is AppleVpnCapabilities) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    } else if (value is PlatformPermissionResult) {
+    } else if (value is NativeLaunchAtLoginResult) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
-    } else if (value is NativeVpnCommandResult) {
+    } else if (value is PlatformPermissionResult) {
       buffer.putUint8(140);
       writeValue(buffer, value.encode());
-    } else if (value is AndroidAppInfo) {
+    } else if (value is NativeVpnCommandResult) {
       buffer.putUint8(141);
+      writeValue(buffer, value.encode());
+    } else if (value is AndroidAppInfo) {
+      buffer.putUint8(142);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -619,20 +679,22 @@ class _PigeonCodec extends StandardMessageCodec {
         final value = readValue(buffer) as int?;
         return value == null ? null : NativeLaunchAtLoginState.values[value];
       case 134:
-        return AndroidAutomationSettings.decode(readValue(buffer)!);
+        return TunnelMemory.decode(readValue(buffer)!);
       case 135:
-        return BackupLocation.decode(readValue(buffer)!);
+        return AndroidAutomationSettings.decode(readValue(buffer)!);
       case 136:
-        return DeviceIdentity.decode(readValue(buffer)!);
+        return BackupLocation.decode(readValue(buffer)!);
       case 137:
-        return AppleVpnCapabilities.decode(readValue(buffer)!);
+        return DeviceIdentity.decode(readValue(buffer)!);
       case 138:
-        return NativeLaunchAtLoginResult.decode(readValue(buffer)!);
+        return AppleVpnCapabilities.decode(readValue(buffer)!);
       case 139:
-        return PlatformPermissionResult.decode(readValue(buffer)!);
+        return NativeLaunchAtLoginResult.decode(readValue(buffer)!);
       case 140:
-        return NativeVpnCommandResult.decode(readValue(buffer)!);
+        return PlatformPermissionResult.decode(readValue(buffer)!);
       case 141:
+        return NativeVpnCommandResult.decode(readValue(buffer)!);
+      case 142:
         return AndroidAppInfo.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -1043,6 +1105,64 @@ class AppleWidgetHostApi {
       pigeonVar_channelName,
       isNullValid: true,
     );
+  }
+}
+
+/// What only testers see, in builds installed from TestFlight.
+class TesterHostApi {
+  /// Constructor for [TesterHostApi]. The [binaryMessenger] named argument is
+  /// available for dependency injection. If it is left null, the default
+  /// BinaryMessenger will be used which routes to the host platform.
+  TesterHostApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
+
+  final BinaryMessenger? pigeonVar_binaryMessenger;
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  final String pigeonVar_messageChannelSuffix;
+
+  Future<bool> isTestFlight() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.onexray.TesterHostApi.isTestFlight$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as bool;
+  }
+
+  /// Null while no tunnel runs.
+  Future<TunnelMemory?> readTunnelMemory() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.onexray.TesterHostApi.readTunnelMemory$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
+    return pigeonVar_replyValue as TunnelMemory?;
   }
 }
 

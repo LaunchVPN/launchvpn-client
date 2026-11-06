@@ -1034,6 +1034,7 @@
   "settingsAbout": "О приложении",
   "settingsVersion": "Версия {version}",
   "aboutVersion": "Версия {version} ({build})",
+  "aboutTunnelMemory": "Память VPN {footprint}, пик {peak}, запас {headroom} МБ",
   "aboutLicense": "Лицензия",
   "aboutBasedOn": "Основано на {project}",
   "aboutPrivacy": "Конфиденциальность",
