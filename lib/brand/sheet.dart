@@ -239,6 +239,8 @@ ModalBottomSheetRoute<T> _sheetRoute<T>(
     ),
     barrierLabel: MaterialLocalizations.of(context).scrimLabel,
     isScrollControlled: true,
+    // A tall sheet, or one the keyboard lifts, stops below the status bar.
+    useSafeArea: true,
     isDismissible: dismissible,
     enableDrag: dismissible,
     showDragHandle: dismissible,
