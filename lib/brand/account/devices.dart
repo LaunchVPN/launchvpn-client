@@ -73,9 +73,10 @@ Future<void> _confirmRemoval(
   if (!confirmed || !context.mounted) return;
   final removed = await controller.removeDevice(device);
   if (!context.mounted) return;
-  showReadingToast(
+  showBrandToast(
     context,
     removed ? l.accountDeviceRemoved(name) : l.accountDeviceRemoveFailed,
+    kind: removed ? ToastKind.success : ToastKind.error,
   );
 }
 

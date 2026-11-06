@@ -36,6 +36,11 @@ upstream pages kept for merging. They are not reachable in this build.
   come from the panel and are not translated.
   `BrandTheme.palette` also feeds upstream's Material and Shad themes, so shared dialogs and
   toasts match. Manrope and Unbounded are bundled with their licenses in `assets/fonts/`.
+- Our screens tell outcomes with `showBrandToast`: a success, error or info icon on a tinted
+  tile, at the bottom and above the tab bar while the tabs show (`ToastArea`). One line centres
+  on the tile; a longer text starts at its top. Questions and waits are bottom sheets from
+  `lib/brand/sheet.dart`, never centred dialogs: a confirmation with a red action, a notice, a
+  one-field prompt above the keyboard, and a progress sheet that cannot be closed.
 - Home's toggle follows `ConnectionCoordinator`. A tap connects, cancels our own connection in
   progress, or disconnects, which also stops a start from outside the app.
 - A session falling from connected to connecting reads as a reconnect. No platform emits that
@@ -201,7 +206,7 @@ upstream pages kept for merging. They are not reachable in this build.
   that never had a subscription from an ended one, so it claims and the backend refuses one whose
   trial was used. When
   the trial was used, Home and Account show Subscription ended, whose refresh reads the account's
-  subscription again. I have a subscription link asks for a link and sends it down the same
+  subscription again. I have a subscription link asks for a link in a sheet and sends it down the same
   queue; an unsuitable one gets the deep link's invalid-link toast.
 - The session is an access token for an hour and a refresh token for 90 days, both in the
   platform's secure store (Keychain on iOS, Keystore-encrypted storage on Android), never in

@@ -27,6 +27,8 @@ abstract final class BrandColors {
   static const warningBadge = Color(0x24F5AE39);
   static const warningBadgeLine = Color(0x66F5AE39);
   static const success = Color(0xFF4BCB71);
+  static const successBadge = Color(0x244BCB71);
+  static const mutedBadge = Color(0x24A09CA9);
 }
 
 /// The colors of `.shader-backdrop` on app.launch.tel, which `ShaderBackdrop`
@@ -47,6 +49,7 @@ abstract final class BrandRadii {
   static const control = 14.0;
   static const md = 16.0;
   static const card = 20.0;
+  static const sheet = 28.0;
   static const full = 999.0;
 }
 
@@ -56,6 +59,15 @@ abstract final class BrandShadows {
       color: Color.fromRGBO(0, 0, 0, 0.3),
       offset: Offset(0, 4),
       blurRadius: 12,
+    ),
+  ];
+
+  /// Lifts a toast off whatever it covers.
+  static const toast = [
+    BoxShadow(
+      color: Color.fromRGBO(0, 0, 0, 0.45),
+      offset: Offset(0, 8),
+      blurRadius: 24,
     ),
   ];
 }
@@ -252,6 +264,10 @@ abstract final class BrandTheme {
       textTheme: base.textTheme.apply(fontFamily: BrandText._body),
       primaryTextTheme: base.primaryTextTheme.apply(
         fontFamily: BrandText._body,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        dragHandleColor: BrandColors.line,
+        dragHandleSize: Size(36, 5),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: BrandColors.bg,
