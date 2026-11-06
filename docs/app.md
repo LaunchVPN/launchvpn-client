@@ -541,16 +541,20 @@ Android 设置页可请求固定 `home_widget`，不把请求完成当作已添�
 iOS/iPadOS 15 起提供连接 Widget，支持 `systemSmall`、`systemMedium`；16 起增加
 `accessoryCircular`、`accessoryRectangular`，可添加位置由系统版本与设备决定。
 iOS/iPadOS 15–16 静态展示状态，点击打开连接页；
-17 起主屏幕小号/中号 Widget 增加显式“启动 VPN”“停止 VPN”，通过前台 App Intent 打开 App。
+From iOS 17 the toggle on the small and medium Widgets starts or stops the VPN through a foreground App Intent that opens the App.
 锁屏两种 accessory 只导航。当前仅接入 Widget，不发布可发现的 Siri/App Shortcuts，
 也不提供 Control Widget 或 Live Activity。
 
-主屏组件跟随系统浅深色，配色复用 App 色板，由 Widget 命名颜色资源统一管理；
-系统配置界面通过同一资源目录中的强调色和背景色匹配主题。小号居中展示状态，底部并排显示简短启停文案；
-中号将状态摘要与操作分列，摘要和旧系统的“打开 App”均进入连接页。
-启动使用蓝色，停止使用红色，已连接用绿色盾牌标识，未连接使用中性色。
-按钮强调跟随展示快照，两种操作始终可用，不因可能过期的状态禁用。
-操作保留 44pt 点击范围，最小尺寸与大字模式精简重复品牌、装饰及可见按钮文字，保留完整无障碍名称。
+The Home screen sizes follow the App rather than the system appearance: its dark surfaces, its
+fonts, bundled with the Widget, and Home's toggle as the one control, concentric like Home's. A dot
+and a line give the status: not connected with «IP виден», connecting, or connected with a timer
+from the system's connection time and «IP скрыт». The toggle shows the snapshot's state and waits,
+like Home's, while the VPN disconnects; when the snapshot is too old to trust it gives way to Open,
+which only opens the App. An ended subscription shows no days.
+Medium adds the days left and Home's location with its mode, which `HomeController` sends through
+`AppleWidgetService.setContext` whenever they change; the Widget keeps them in `details.json`. The
+lock screen sizes keep the system's tint and only navigate. Controls keep a 44 pt tap area and
+full accessible names.
 
 启停复用 App 的 `ConnectionCoordinator` 与当前选择、权限检查和错误反馈；不读取 saved-start，
 Widget 扩展不在后台直接启停 VPN。已到达的冷启动输入先于偏好自动连接处理，Shell 就绪后执行；
@@ -559,7 +563,7 @@ Widget 扩展不在后台直接启停 VPN。已到达的冷启动输入先于偏
 
 Widget 展示最近一次原生状态快照及观测时间，非实时状态。真机“已连接”只来自 NetworkExtension 状态观测，
 提交启动请求或 Core 构造成功不代表已连接。快照超过 15 分钟、缺失、损坏或版本未知时按“未知”处理；
-WidgetKit 负责刷新调度，不承诺 App 退出后持续更新。展示不包含配置名称、订阅、服务器地址或流量。
+WidgetKit 负责刷新调度，不承诺 App 退出后持续更新。It shows no configuration, server address or traffic; the location, mode and days left are hidden while the device is locked.
 语言跟随 App 有效语言，支持英语、简体中文、繁体中文、俄语、波斯语；系统语言偏好先按 App 规则匹配，
 波斯语使用 RTL。模拟器代理状态不作为真机 NetworkExtension 验收证据，见 [平台验收](validation.md#平台验收)。
 

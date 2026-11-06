@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onexray/core/pigeon/messages.g.dart';
+import 'package:onexray/service/connect/preset.dart';
+import 'package:onexray/service/servers/locations.dart';
 import 'package:onexray/service/shared/apple_widget/service.dart';
 import 'package:onexray/service/shared/menu/short_cut/service.dart';
 
@@ -197,5 +200,39 @@ void main() {
       isFalse,
     );
     service.dispose();
+  });
+
+  test('the Widget gets Home\'s context once per change', () async {
+    final sent = <AppleWidgetContext>[];
+    final service = AppleWidgetService.forTesting(
+      events: const Stream.empty(),
+      takeAction: () async => null,
+      setLanguage: (_) async {},
+      receive: (_) async {},
+      setContext: (context) async => sent.add(context),
+    );
+    final germany = Location.parse(id: 1, label: '🇩🇪 Германия', delay: 0);
+    final ends = DateTime.utc(2026, 12, 1);
+
+    for (var i = 0; i < 2; i++) {
+      await service.setContext(
+        location: germany,
+        preset: ConnectionPreset.smart,
+        expiresAt: ends,
+      );
+    }
+    await service.setContext(
+      location: germany,
+      preset: ConnectionPreset.allVpn,
+      expiresAt: ends,
+    );
+
+    expect(sent, hasLength(2));
+    expect(sent.first.location, 'Германия');
+    expect(sent.first.countryCode, 'DE');
+    expect(sent.first.automatic, isFalse);
+    expect(sent.first.mode, 'smart');
+    expect(sent.first.expiresAtMs, ends.millisecondsSinceEpoch);
+    expect(sent.last.mode, 'allVpn');
   });
 }

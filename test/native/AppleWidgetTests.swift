@@ -45,6 +45,38 @@ final class AppleWidgetTests: XCTestCase {
         }
     }
 
+    func testConnectedAtStaysOnlyWithConnectedAndOldSnapshotsDecode() throws {
+        let store = try temporaryStore()
+        let now = Date()
+        let since = now.addingTimeInterval(-600)
+        XCTAssertTrue(try store.writeStatus(.connected, connectedAt: since, at: now))
+        XCTAssertEqual(store.snapshot()?.connectedAt, since)
+        XCTAssertTrue(try store.writeStatus(.connected, connectedAt: now, at: now.addingTimeInterval(1)))
+        XCTAssertNil(AppleWidgetSnapshot(status: .disconnected, connectedAt: since).connectedAt)
+        try Data("{\"version\":1,\"status\":\"connected\",\"observedAt\":0}".utf8)
+            .write(to: store.directory.appendingPathComponent("status.json"))
+        XCTAssertEqual(store.snapshot()?.status, .connected)
+        XCTAssertNil(store.snapshot()?.connectedAt)
+    }
+
+    func testDetailsCountDaysLikeHomeAndDrawTheFlag() throws {
+        let store = try temporaryStore()
+        let now = Date()
+        let details = AppleWidgetDetails(
+            location: "Германия", countryCode: "de", automatic: false, mode: "smart",
+            expiresAt: now.addingTimeInterval(86_400 * 2 + 60)
+        )
+        XCTAssertEqual(details.daysLeft(at: now), 3)
+        XCTAssertEqual(details.nextDayChange(after: now), now.addingTimeInterval(60))
+        XCTAssertEqual(details.daysLeft(at: now.addingTimeInterval(60)), 2)
+        XCTAssertEqual(details.daysLeft(at: now.addingTimeInterval(86_400 * 3)), 0)
+        XCTAssertEqual(details.flag, "🇩🇪")
+        XCTAssertNil(AppleWidgetDetails(automatic: true).daysLeft(at: now))
+        XCTAssertTrue(try store.writeDetails(details))
+        XCTAssertFalse(try store.writeDetails(details))
+        XCTAssertEqual(store.details(), details)
+    }
+
     func testLanguagesMatchTheAppCodesAndUnsupportedFallsBackToEnglish() {
         for (input, expected) in [("en", "en"), ("zh", "zh-Hans"), ("zh-Hans", "zh-Hans"),
                                   ("zh_Hant", "zh-Hant"), ("ru", "ru"), ("fa", "fa"), ("de", "en")] {

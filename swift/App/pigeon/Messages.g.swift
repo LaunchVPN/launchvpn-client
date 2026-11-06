@@ -226,6 +226,67 @@ enum NativeLaunchAtLoginState: Int, CaseIterable {
   case error = 4
 }
 
+/// What the iOS Widget shows next to the status, as Home shows it.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct AppleWidgetContext: Hashable, CustomStringConvertible {
+  /// The chosen location's name, without the panel's flag and prefix.
+  var location: String? = nil
+  /// ISO letters of the location's flag.
+  var countryCode: String? = nil
+  var automatic: Bool
+  /// `ConnectionPreset.name`.
+  var mode: String? = nil
+  /// When the subscription ends, in milliseconds since the epoch.
+  var expiresAtMs: Int64? = nil
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> AppleWidgetContext? {
+    let location: String? = nilOrValue(pigeonVar_list[0])
+    let countryCode: String? = nilOrValue(pigeonVar_list[1])
+    let automatic = pigeonVar_list[2] as! Bool
+    let mode: String? = nilOrValue(pigeonVar_list[3])
+    let expiresAtMs: Int64? = nilOrValue(pigeonVar_list[4])
+
+    return AppleWidgetContext(
+      location: location,
+      countryCode: countryCode,
+      automatic: automatic,
+      mode: mode,
+      expiresAtMs: expiresAtMs
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      location,
+      countryCode,
+      automatic,
+      mode,
+      expiresAtMs,
+    ]
+  }
+  static func == (lhs: AppleWidgetContext, rhs: AppleWidgetContext) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return MessagesPigeonInternal.deepEquals(lhs.location, rhs.location) && MessagesPigeonInternal.deepEquals(lhs.countryCode, rhs.countryCode) && MessagesPigeonInternal.deepEquals(lhs.automatic, rhs.automatic) && MessagesPigeonInternal.deepEquals(lhs.mode, rhs.mode) && MessagesPigeonInternal.deepEquals(lhs.expiresAtMs, rhs.expiresAtMs)
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("AppleWidgetContext")
+    MessagesPigeonInternal.deepHash(value: location, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: countryCode, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: automatic, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: mode, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: expiresAtMs, hasher: &hasher)
+  }
+
+  public var description: String {
+    return "AppleWidgetContext(location: \(String(describing: location)), countryCode: \(String(describing: countryCode)), automatic: \(String(describing: automatic)), mode: \(String(describing: mode)), expiresAtMs: \(String(describing: expiresAtMs)))"
+  }
+}
+
 /// The iOS tunnel extension's memory, in bytes. iOS ends the extension, and
 /// with it the VPN, once its footprint reaches [limit].
 ///
@@ -656,22 +717,24 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
       }
       return nil
     case 134:
-      return TunnelMemory.fromList(self.readValue() as! [Any?])
+      return AppleWidgetContext.fromList(self.readValue() as! [Any?])
     case 135:
-      return AndroidAutomationSettings.fromList(self.readValue() as! [Any?])
+      return TunnelMemory.fromList(self.readValue() as! [Any?])
     case 136:
-      return BackupLocation.fromList(self.readValue() as! [Any?])
+      return AndroidAutomationSettings.fromList(self.readValue() as! [Any?])
     case 137:
-      return DeviceIdentity.fromList(self.readValue() as! [Any?])
+      return BackupLocation.fromList(self.readValue() as! [Any?])
     case 138:
-      return AppleVpnCapabilities.fromList(self.readValue() as! [Any?])
+      return DeviceIdentity.fromList(self.readValue() as! [Any?])
     case 139:
-      return NativeLaunchAtLoginResult.fromList(self.readValue() as! [Any?])
+      return AppleVpnCapabilities.fromList(self.readValue() as! [Any?])
     case 140:
-      return PlatformPermissionResult.fromList(self.readValue() as! [Any?])
+      return NativeLaunchAtLoginResult.fromList(self.readValue() as! [Any?])
     case 141:
-      return NativeVpnCommandResult.fromList(self.readValue() as! [Any?])
+      return PlatformPermissionResult.fromList(self.readValue() as! [Any?])
     case 142:
+      return NativeVpnCommandResult.fromList(self.readValue() as! [Any?])
+    case 143:
       return AndroidAppInfo.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -696,32 +759,35 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? NativeLaunchAtLoginState {
       super.writeByte(133)
       super.writeValue(value.rawValue)
-    } else if let value = value as? TunnelMemory {
+    } else if let value = value as? AppleWidgetContext {
       super.writeByte(134)
       super.writeValue(value.toList())
-    } else if let value = value as? AndroidAutomationSettings {
+    } else if let value = value as? TunnelMemory {
       super.writeByte(135)
       super.writeValue(value.toList())
-    } else if let value = value as? BackupLocation {
+    } else if let value = value as? AndroidAutomationSettings {
       super.writeByte(136)
       super.writeValue(value.toList())
-    } else if let value = value as? DeviceIdentity {
+    } else if let value = value as? BackupLocation {
       super.writeByte(137)
       super.writeValue(value.toList())
-    } else if let value = value as? AppleVpnCapabilities {
+    } else if let value = value as? DeviceIdentity {
       super.writeByte(138)
       super.writeValue(value.toList())
-    } else if let value = value as? NativeLaunchAtLoginResult {
+    } else if let value = value as? AppleVpnCapabilities {
       super.writeByte(139)
       super.writeValue(value.toList())
-    } else if let value = value as? PlatformPermissionResult {
+    } else if let value = value as? NativeLaunchAtLoginResult {
       super.writeByte(140)
       super.writeValue(value.toList())
-    } else if let value = value as? NativeVpnCommandResult {
+    } else if let value = value as? PlatformPermissionResult {
       super.writeByte(141)
       super.writeValue(value.toList())
-    } else if let value = value as? AndroidAppInfo {
+    } else if let value = value as? NativeVpnCommandResult {
       super.writeByte(142)
+      super.writeValue(value.toList())
+    } else if let value = value as? AndroidAppInfo {
+      super.writeByte(143)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -1040,6 +1106,7 @@ class BridgeHostApiSetup {
 protocol AppleWidgetHostApi {
   func takeAction(completion: @escaping (Result<String?, Error>) -> Void)
   func setLanguage(languageCode: String, completion: @escaping (Result<Void, Error>) -> Void)
+  func setContext(context: AppleWidgetContext, completion: @escaping (Result<Void, Error>) -> Void)
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -1079,6 +1146,23 @@ class AppleWidgetHostApiSetup {
       }
     } else {
       setLanguageChannel.setMessageHandler(nil)
+    }
+    let setContextChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.onexray.AppleWidgetHostApi.setContext\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      setContextChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let contextArg = args[0] as! AppleWidgetContext
+        api.setContext(context: contextArg) { result in
+          switch result {
+          case .success:
+            reply(wrapResult(nil))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      setContextChannel.setMessageHandler(nil)
     }
   }
 }

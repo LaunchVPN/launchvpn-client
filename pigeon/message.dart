@@ -73,6 +73,30 @@ abstract class BridgeHostApi {
 
 enum VpnStatus { disconnecting, disconnected, connecting, connected }
 
+/// What the iOS Widget shows next to the status, as Home shows it.
+class AppleWidgetContext {
+  AppleWidgetContext({
+    this.location,
+    this.countryCode,
+    required this.automatic,
+    this.mode,
+    this.expiresAtMs,
+  });
+
+  /// The chosen location's name, without the panel's flag and prefix.
+  final String? location;
+
+  /// ISO letters of the location's flag.
+  final String? countryCode;
+  final bool automatic;
+
+  /// `ConnectionPreset.name`.
+  final String? mode;
+
+  /// When the subscription ends, in milliseconds since the epoch.
+  final int? expiresAtMs;
+}
+
 @HostApi()
 abstract class AppleWidgetHostApi {
   @asyncCallback
@@ -80,6 +104,9 @@ abstract class AppleWidgetHostApi {
 
   @asyncCallback
   void setLanguage(String languageCode);
+
+  @asyncCallback
+  void setContext(AppleWidgetContext context);
 }
 
 /// The iOS tunnel extension's memory, in bytes. iOS ends the extension, and

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/pigeon/host_api.dart';
@@ -11,6 +12,7 @@ import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/connect/connection_permissions.dart';
 import 'package:onexray/service/advanced/platform_policy.dart';
 import 'package:onexray/service/connect/coordinator.dart';
+import 'package:onexray/service/shared/apple_widget/service.dart';
 import 'package:onexray/service/connect/keep_vpn_on.dart';
 import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/resolver.dart';
@@ -292,6 +294,13 @@ class HomeState {
   );
 }
 
+/// Hands the iOS Widget what Home shows next to the status.
+typedef WidgetContextPublisher = Future<void> Function({
+  required Location? location,
+  required ConnectionPreset? preset,
+  required DateTime? expiresAt,
+});
+
 class HomeController extends PageCubit<HomeState> {
   HomeController({
     AppDatabase? database,
@@ -302,7 +311,9 @@ class HomeController extends PageCubit<HomeState> {
     ConnectionPlatform? platform,
     InstalledApps? installedApps,
     ValueListenable<bool>? deviceLimit,
+    WidgetContextPublisher? widgetContext,
   }) : _db = database ?? AppDatabase(),
+       _widgetContext = widgetContext ?? AppleWidgetService().setContext,
        installedApps = installedApps ?? AppHostApi().getInstalledApps,
        _platform = platform ?? connectionPlatform,
        coordinator = coordinator ?? ConnectionCoordinator.instance,
@@ -331,6 +342,7 @@ class HomeController extends PageCubit<HomeState> {
   final AnnouncementDismissal _dismissAnnounce;
   final SubscriptionRefresh _refreshSubscription;
   final ValueListenable<bool> _deviceLimit;
+  final WidgetContextPublisher _widgetContext;
   StreamSubscription<ServerCatalog>? _catalog;
   StreamSubscription<void>? _settings;
   Timer? _expiry;
@@ -346,6 +358,23 @@ class HomeController extends PageCubit<HomeState> {
 
   /// Settings offers «Не отключать VPN» on iOS only.
   bool get offersKeepVpnOn => KeepVpnOn.offeredOn(_platform);
+
+  /// The iOS Widget shows the same location, mode and end date as Home.
+  @override
+  void onChange(Change<HomeState> change) {
+    super.onChange(change);
+    final next = change.nextState;
+    unawaited(
+      _widgetContext(
+        location: next.location,
+        preset: next.preset,
+        expiresAt: switch (next.subscription) {
+          final row? => SubscriptionUserInfo.fromSubscription(row)?.expiresAt,
+          null => null,
+        },
+      ),
+    );
+  }
 
   void _connectionChanged() {
     final view = coordinator.state.value;
