@@ -68,7 +68,6 @@ final class EmailAuth {
       token: token,
       resendIn: PendingSignup.waitIn(data),
       trialAvailable: PendingSignup.trialIn(data),
-      trialDays: PendingSignup.trialDaysIn(data),
     );
   }
 

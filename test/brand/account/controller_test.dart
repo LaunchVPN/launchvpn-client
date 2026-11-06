@@ -234,6 +234,35 @@ void main() {
     expect(controller.state.trialWaitsOnTelegram, isFalse);
   });
 
+  test('linking Telegram while an earlier offer read is pending still '
+      'starts the trial', () async {
+    final service = await signedIn(configLink: null);
+    final firstRead = Completer<void>();
+    api.trialOffer('available');
+    api.hold('GET /api/app/trial', firstRead.future);
+    api.trialGrants(_configLink);
+    api.linkStartWith('https://app.test/api/auth/telegram/start?ticket=t1');
+    api.refreshWith(access: 'a2', refresh: 'r2');
+    api.exchangeWith(access: 'a3', refresh: 'r3');
+    api.me(email: 'ivan@example.org', telegramLinked: true);
+    final controller = controllerFor(service);
+    await pumpEventQueue();
+
+    final outcome = controller.linkTelegram();
+    await pumpEventQueue();
+    service.telegram.browser.handleReturn(
+      Uri.parse('launchvpn://auth?code=c1&mode=link'),
+    );
+    // The link has reloaded the account and asks for the offer again.
+    await pumpEventQueue(times: 500);
+    expect(api.requests.where((r) => r.path == '/api/me'), isNotEmpty);
+    firstRead.complete();
+
+    expect(await outcome, isA<TelegramLinked>());
+    expect(api.bodies('/api/app/trial'), hasLength(1));
+    expect(opened, [_link]);
+  });
+
   test('from a link only, days and traffic come from the device', () async {
     await addRow('https://sub.launch.tel/from-bot');
     final controller = controllerFor(account());

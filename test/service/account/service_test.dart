@@ -327,17 +327,6 @@ void main() {
     );
     const verifyPath = '/api/app/auth/verify-code';
 
-    test('the code screen learns the trial\'s length', () async {
-      api.signupWith(token: 'st1', trialAvailable: true, trialDays: 1);
-
-      final pending = await account().email.signup(
-        email: 'ivan@proton.me',
-        password: 'long-secret',
-      );
-
-      expect(pending.trialDays, 1);
-    });
-
     test('mails a code and keeps the attempt in memory only', () async {
       api.signupWith(token: 'st1', resendIn: 42);
       final service = account();

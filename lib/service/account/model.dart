@@ -8,7 +8,6 @@ final class PendingSignup {
     required this.token,
     required this.resendIn,
     this.trialAvailable = true,
-    this.trialDays,
   });
 
   final String email;
@@ -21,21 +20,10 @@ final class PendingSignup {
   /// say is taken to offer it.
   final bool trialAvailable;
 
-  /// The trial's length; null when the backend does not say, and then the
-  /// code screen names no length.
-  final int? trialDays;
-
   /// The answer to a signup, or to a login of an unconfirmed email, carries
   /// whether the trial waits.
   static bool trialIn(Map<Object?, Object?> data) =>
       data['trialAvailable'] != false;
-
-  /// ...and how long it lasts.
-  static int? trialDaysIn(Map<Object?, Object?> data) =>
-      switch (data['trialDays']) {
-        final int days when days > 0 => days,
-        _ => null,
-      };
 
   /// The wait before another code when the backend names none.
   static const resendGap = Duration(seconds: 60);

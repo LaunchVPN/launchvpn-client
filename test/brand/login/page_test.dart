@@ -443,7 +443,7 @@ void main() {
     testWidgets('the code from the email passes the gate with the trial', (
       tester,
     ) async {
-      api.signupWith(token: 'st1', resendIn: 42, trialDays: 3);
+      api.signupWith(token: 'st1', resendIn: 42);
       api.verifyWith(access: 'a1', refresh: 'r1');
       api.subscription(_configLink);
       await pumpApp(tester, hasSubscription: false);
@@ -454,8 +454,8 @@ void main() {
       expect(find.byType(ShaderBackdrop), findsOneWidget);
       expect(
         find.text(
-          'Отправили код на ivan@proton.me. Введите его, и пробный период на '
-          '3\u00a0дня начнётся сразу.',
+          'Отправили код на ivan@proton.me. Введите его, и пробный период '
+          'начнётся сразу.',
         ),
         findsOneWidget,
       );

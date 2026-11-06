@@ -1132,7 +1132,7 @@
   "loginErrorEmailTaken": "This email is already registered. Sign in instead",
   "loginErrorInvalidRequest": "Check the email. The password needs at least 8 characters",
   "codeTitle": "Check\nyour email",
-  "codeBody": "We sent a code to {email}. Enter it and your {days, plural, one {free day starts} other {{days} free days start}} right away.",
+  "codeBody": "We sent a code to {email}. Enter it and your trial starts right away.",
   "codeBodyConfirm": "We sent a code to {email}. Enter it to confirm your email.",
   "codeHint": "6-digit code",
   "codeSubmit": "Confirm",

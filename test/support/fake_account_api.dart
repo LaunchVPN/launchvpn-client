@@ -43,7 +43,6 @@ final class FakeAccountApi implements HttpClientAdapter {
     required String token,
     int resendIn = 60,
     bool? trialAvailable,
-    int? trialDays,
   }) => _routes['/api/app/auth/signup'] = (_) async => (
     200,
     {
@@ -51,7 +50,6 @@ final class FakeAccountApi implements HttpClientAdapter {
       'resendIn': resendIn,
       'signupToken': token,
       'trialAvailable': ?trialAvailable,
-      'trialDays': ?trialDays,
     },
   );
 

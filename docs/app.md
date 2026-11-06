@@ -197,8 +197,8 @@ upstream pages kept for merging. They are not reachable in this build.
 - Create account (`/api/app/auth/signup`) mails a code and replaces the form with «Проверьте почту»
   on the same page; signing in with an unconfirmed email does the same with the attempt the backend
   returns. The attempt's `signupToken` stays in memory for this flow only. The screen promises the
-  the trial's days, from the backend's `trialDays`, only when the backend says the code starts it;
-  otherwise, or without `trialDays`, it asks to enter the code to confirm the email. The code field takes
+  trial only when the backend says the code starts it, or does not say; otherwise it asks to enter
+  the code to confirm the email. The code field takes
   digits only, so a pasted code keeps its digits, and offers one-time-code autofill. Confirm calls
   `/api/app/auth/verify-code`; a wrong code shows the attempts left under the field, an expired
   or burned one asks for a new code, and a blocked account or a closed App sign-in shows the

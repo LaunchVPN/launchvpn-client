@@ -253,11 +253,22 @@ final class AccountController extends PageCubit<AccountState> {
 
   /// An account without a subscription starts the trial it can get: one
   /// missed at sign-up, or one linking Telegram just made available. Else
-  /// the tab and Home tell what it can get. Reads that overlap, as the
-  /// first load and a refresh do, share one attempt.
-  Future<void> _offerTrial() =>
-      _offering ??= _startOfferedTrial().whenComplete(() => _offering = null);
-  Future<void>? _offering;
+  /// the tab and Home tell what it can get. Reads that overlap within a
+  /// session, as the first load and a refresh do, share one attempt; a new
+  /// session, as after a Telegram link, starts its own.
+  Future<void> _offerTrial() {
+    if (_offering case (final session, final attempt)
+        when session == _session) {
+      return attempt;
+    }
+    final offering = (_session, _startOfferedTrial());
+    _offering = offering;
+    return offering.$2.whenComplete(() {
+      if (identical(_offering, offering)) _offering = null;
+    });
+  }
+
+  (int, Future<void>)? _offering;
 
   Future<void> _startOfferedTrial() async {
     final session = _session;
