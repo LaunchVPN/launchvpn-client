@@ -287,7 +287,9 @@ class _AccountPageState extends State<AccountPage> {
         ),
         null => null,
       },
-      if (state.signedIn && details != null && !details.telegramLinked)
+      // The trial's hero asks for it even when the details failed to load.
+      if (state.signedIn &&
+          (details?.telegramLinked == false || state.trialWaitsOnTelegram))
         SettingsRow(
           icon: LucideIcons.send,
           title: l.accountLinkTelegram,

@@ -49,6 +49,7 @@ void main() {
     bool telegramOnly = false,
     bool openAccount = true,
     bool accountActive = true,
+    bool detailsLoad = true,
   }) async {
     api.loginWith(access: 'a1', refresh: 'r1');
     api.subscription('https://sub.launch.tel/abc', maxDevices: 5);
@@ -71,6 +72,7 @@ void main() {
       );
     }
     if (!accountActive) api.subscription(null);
+    if (!detailsLoad) api.refuse('/api/me', 500, 'server_error');
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     if (linkSubscription != null) {
@@ -211,6 +213,15 @@ void main() {
     expect(find.text('Привязать Telegram'), findsOneWidget);
     expect(find.text('Купить подписку'), findsOneWidget);
     expect(find.text('Продлить подписку'), findsNothing);
+  });
+
+  testWidgets('without the account details, the trial still offers to link '
+      'Telegram', (tester) async {
+    api.trialOffer('telegram_required');
+    await pumpAccount(tester, accountActive: false, detailsLoad: false);
+
+    expect(find.text('Пробный период — через Telegram'), findsOneWidget);
+    expect(find.text('Привязать Telegram'), findsOneWidget);
   });
 
   testWidgets('the APK build renews on the site', (tester) async {

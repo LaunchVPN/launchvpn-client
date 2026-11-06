@@ -263,6 +263,24 @@ void main() {
     expect(opened, [_link]);
   });
 
+  test('a trial that starts after signing out stays off the device', () async {
+    final service = await signedIn(configLink: null);
+    final claim = Completer<void>();
+    api.trialOffer('available');
+    api.trialGrants(_configLink);
+    api.hold('POST /api/app/trial', claim.future);
+    final controller = controllerFor(service);
+    await pumpEventQueue();
+    expect(api.bodies('/api/app/trial'), hasLength(1));
+
+    await controller.logout();
+    claim.complete();
+    await pumpEventQueue();
+
+    expect(opened, isEmpty);
+    expect(controller.state.signedIn, isFalse);
+  });
+
   test('from a link only, days and traffic come from the device', () async {
     await addRow('https://sub.launch.tel/from-bot');
     final controller = controllerFor(account());
