@@ -355,7 +355,10 @@ class VPNManager {
         case .connecting: .connecting
         case .connected: .connected
         }
-        AppleWidgetPublisher.publish(widgetStatus)
+        AppleWidgetPublisher.publish(
+            widgetStatus,
+            connectedAt: result == .connected ? vpn?.connection.connectedDate : nil
+        )
         #endif
         return result
     }
