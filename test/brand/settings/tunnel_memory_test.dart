@@ -52,10 +52,16 @@ void main() {
     await pump(tester, extension.service);
     await tester.pump();
 
-    expect(find.text('Память VPN 18,4, пик 27,0, запас 23,0 МБ'), findsOneWidget);
+    expect(
+      find.text('Память VPN 18,4, пик 27,0, запас 23,0 МБ'),
+      findsOneWidget,
+    );
 
     await tester.pump(TunnelMemoryController.interval);
-    expect(find.text('Память VPN 21,0, пик 31,6, запас 18,4 МБ'), findsOneWidget);
+    expect(
+      find.text('Память VPN 21,0, пик 31,6, запас 18,4 МБ'),
+      findsOneWidget,
+    );
 
     await tester.pumpWidget(const SizedBox());
     final reads = extension.reads[0];
