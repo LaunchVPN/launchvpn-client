@@ -6,6 +6,6 @@ On iPhone, VPN can turn itself back on after a restart or a network change. The 
 
 The Account screen shows how many days your plan has left and which devices use it, and you can remove a device right there. Before the plan ends, the app reminds you to renew.
 
-A new account gets 3 days free, no card needed. If you already have a plan, sign in with your email or add it with the link from the bot.
+New users get 3 days free, no card needed. If you already have a plan, sign in with your email or add it with the link from the bot.
 
 The app does not record which sites you open, and it has no ads or analytics. The privacy policy explains what data goes where: https://privacy.launch.tel
