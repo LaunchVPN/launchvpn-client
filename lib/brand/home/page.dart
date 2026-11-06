@@ -12,6 +12,7 @@ import 'package:onexray/brand/home/toggle.dart';
 import 'package:onexray/brand/home/update_banner.dart';
 import 'package:onexray/brand/external_link.dart';
 import 'package:onexray/brand/locations/page.dart';
+import 'package:onexray/brand/launch_reveal.dart';
 import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/settings/preset_page.dart';
 import 'package:onexray/brand/settings/vpn_apps_page.dart';
@@ -359,8 +360,11 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      // A logo keeps its size when the system font grows.
-      const LaunchMark.logo(color: BrandColors.accent),
+      // A logo keeps its size when the system font grows. The launch mark
+      // lands here.
+      const LaunchMarkLanding(
+        child: LaunchMark.logo(color: BrandColors.accent),
+      ),
       const SizedBox(width: 8),
       const Text(
         Brand.wordmark,

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:onexray/brand/login/controller.dart';
 import 'package:onexray/brand/login/gate.dart';
+import 'package:onexray/brand/launch_reveal.dart';
 import 'package:onexray/brand/login/page.dart';
 import 'package:onexray/brand/permission/vpn_permission_page.dart';
 import 'package:onexray/brand/router.dart';
@@ -225,28 +226,11 @@ class _BrandShellState extends State<BrandShell> {
   Widget build(BuildContext context) => FutureBuilder<void>(
     future: _servicesReady,
     builder: (context, snapshot) {
-      if (snapshot.connectionState != ConnectionState.done) return _loading;
-      final l = AppLocalizations.of(context)!;
-      if (snapshot.hasError) {
-        return Scaffold(
-          body: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SelectableText(appFailureMessage(l, snapshot.error)),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    key: const ValueKey('service-initialization-retry'),
-                    onPressed: _retry,
-                    child: Text(l.buttonRetry),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
+      final ready =
+          snapshot.connectionState == ConnectionState.done &&
+          !snapshot.hasError;
+      if (!ready) {
+        return LaunchReveal(key: _launch, child: _failure(context, snapshot));
       }
       _attach();
       // The subscription table is readable only once the services are up.
@@ -257,21 +241,48 @@ class _BrandShellState extends State<BrandShell> {
       _gateSubscription ??= gate.stream.listen((_) => _scheduleDrain());
       return BlocBuilder<AccessGateController, AccessGateState>(
         bloc: gate,
-        builder: (context, state) => switch (state) {
-          AccessGateState.checking => _loading,
-          AccessGateState.login => LoginPage(
-            account: _account,
-            links: _shareService,
-          ),
-          AccessGateState.tabs => _tabs(l),
-        },
+        builder: (context, state) => LaunchReveal(
+          key: _launch,
+          child: switch (state) {
+            AccessGateState.checking => null,
+            AccessGateState.login => LoginPage(
+              account: _account,
+              links: _shareService,
+            ),
+            AccessGateState.tabs => _tabs(AppLocalizations.of(context)!),
+          },
+        ),
       );
     },
   );
 
-  static const _loading = Scaffold(
-    body: Center(child: CircularProgressIndicator()),
-  );
+  /// One launch screen from the first frame until a page shows.
+  final _launch = GlobalKey();
+
+  /// Null while the services start.
+  Widget? _failure(BuildContext context, AsyncSnapshot<void> snapshot) {
+    if (!snapshot.hasError) return null;
+    final l = AppLocalizations.of(context)!;
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SelectableText(appFailureMessage(l, snapshot.error)),
+              const SizedBox(height: 16),
+              FilledButton(
+                key: const ValueKey('service-initialization-retry'),
+                onPressed: _retry,
+                child: Text(l.buttonRetry),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _tabs(AppLocalizations l) {
     final shell = widget.navigationShell;

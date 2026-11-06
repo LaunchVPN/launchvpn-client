@@ -19,7 +19,12 @@ upstream pages kept for merging. They are not reachable in this build.
   goes on to the system prompts and the connection; Not now or Back leaves the connection off
   without an error, and the screen comes back next time. After one Continue the screen is not
   shown again, even if the system prompt was refused.
-- The launch screens on both platforms use the background of the theme.
+- The launch screens on both platforms draw the mark at 64 in the accent color, centered on the
+  theme's background: `LaunchScreen.storyboard` with `LaunchImage` on iOS, `ic_splash_icon` on
+  Android. `LaunchReveal` in the shell draws the same mark at the same place until the first page is
+  ready, adding a spinner only after a second. Then the page fades in while the mark flies into its
+  `LaunchMarkLanding`, the header's logo on Home or the tile on «Вход», and fades where it is when
+  the page has none, as the start-up error does. With system animations off the page shows at once.
 - Phone builds carry none of upstream's artwork: `pubspec.yaml` limits its logo and icons to
   desktop, and iOS builds only the primary icon. The desktop folders, `msix_config`, that artwork
   and internal identifiers such as the `onexray` package name stay, because removing them would

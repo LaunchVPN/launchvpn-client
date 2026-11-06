@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:onexray/brand/launch_reveal.dart';
 import 'package:onexray/brand/theme.dart';
 
 /// The app icon from the mockups: the mark on an accent tile. The mark and the
@@ -24,9 +25,12 @@ class LaunchMarkTile extends StatelessWidget {
         border: Border.all(color: BrandColors.accent),
         borderRadius: BorderRadius.circular(BrandRadii.card * scale),
       ),
-      child: LaunchMark.tile(
-        color: BrandColors.accent,
-        size: _baseMark * scale,
+      // On «Вход», the launch mark lands here.
+      child: LaunchMarkLanding(
+        child: LaunchMark.tile(
+          color: BrandColors.accent,
+          size: _baseMark * scale,
+        ),
       ),
     );
   }
@@ -42,6 +46,12 @@ class LaunchMark extends StatelessWidget {
 
   /// Inside [LaunchMarkTile].
   const LaunchMark.tile({super.key, required this.color, this.size = 36})
+    : inset = 0.28125,
+      stroke = 0.09375;
+
+  /// The launch screens draw it at 64, centered, natively and in the App's
+  /// first frames. It keeps the logo's proportions, so it can shrink into it.
+  const LaunchMark.splash({super.key, required this.color, this.size = 64})
     : inset = 0.28125,
       stroke = 0.09375;
 
