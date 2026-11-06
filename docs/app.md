@@ -543,8 +543,9 @@ From iOS 17 the toggle on the small and medium Widgets starts or stops the VPN t
 The Home screen sizes follow the App rather than the system appearance: its dark surfaces, its
 fonts, bundled with the Widget, and Home's toggle as the one control, concentric like Home's. A dot
 and a line give the status: not connected with «IP виден», connecting, or connected with a timer
-from the system's connection time and «IP скрыт». The toggle shows the snapshot's state and stays
-usable; when the snapshot is too old to trust it gives way to Open, which only opens the App.
+from the system's connection time and «IP скрыт». The toggle shows the snapshot's state and waits,
+like Home's, while the VPN disconnects; when the snapshot is too old to trust it gives way to Open,
+which only opens the App. An ended subscription shows no days.
 Medium adds the days left and Home's location with its mode, which `HomeController` sends through
 `AppleWidgetService.setContext` whenever they change; the Widget keeps them in `details.json`. The
 lock screen sizes keep the system's tint and only navigate. Controls keep a 44 pt tap area and
