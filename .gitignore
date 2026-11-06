@@ -77,6 +77,10 @@ android/app/key.properties
 **/fastlane/test_output/
 **/fastlane/screenshots/
 **/fastlane/metadata/
+# LaunchVPN's store listings, rendered by tool/store
+!/ios/fastlane/metadata/
+!/ios/fastlane/screenshots/
+!/android/fastlane/metadata/
 
 # my ignore
 /assets/dat
