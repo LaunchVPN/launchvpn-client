@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/icon_tile.dart';
 import 'package:onexray/brand/theme.dart';
@@ -40,11 +42,13 @@ class _ToastAreaState extends State<ToastArea> {
   void initState() {
     super.initState();
     _shown.add(this);
+    _ShownToast.moveAfterFrame();
   }
 
   @override
   void dispose() {
     _shown.remove(this);
+    _ShownToast.moveAfterFrame();
     super.dispose();
   }
 
@@ -64,42 +68,73 @@ void showBrandToast(
   String message, {
   ToastKind kind = ToastKind.info,
   Duration duration = _readingTime,
-}) {
-  final toaster = ShadToaster.of(context);
-  // The system bar's inset even while a closing keyboard still hides it.
-  final bottom =
-      MediaQuery.viewPaddingOf(toaster.context).bottom + ToastArea._bottom + 16;
-  final width = MediaQuery.sizeOf(context).width;
-  toaster.show(
-    ShadToast(
-      title: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          IconTile(
-            icon: kind.icon,
-            color: kind.color,
-            fill: kind.fill,
-            size: 32,
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: _ToastMessage(message)),
-        ],
+}) => _ShownToast(
+  ShadToaster.of(context),
+  message,
+  kind,
+  DateTime.now().add(duration),
+).show();
+
+/// The toast on screen, so it can move when the tab bar comes or goes.
+class _ShownToast {
+  _ShownToast(this.toaster, this.message, this.kind, this.until);
+
+  final ShadToasterState toaster;
+  final String message;
+  final ToastKind kind;
+  final DateTime until;
+
+  static _ShownToast? _current;
+
+  /// Shows it again at the new height for the time it has left, once the
+  /// screen that added or removed a [ToastArea] has built.
+  static void moveAfterFrame() =>
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final toast = _current;
+        if (toast == null || !toast.toaster.mounted) return;
+        if (toast.until.isAfter(DateTime.now())) toast.show();
+      });
+
+  void show() {
+    _current = this;
+    final screen = toaster.context;
+    // The system bar's inset even while a closing keyboard still hides it.
+    final bottom =
+        MediaQuery.viewPaddingOf(screen).bottom + ToastArea._bottom + 16;
+    final width = MediaQuery.sizeOf(screen).width;
+    toaster.show(
+      ShadToast(
+        title: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            IconTile(
+              icon: kind.icon,
+              color: kind.color,
+              fill: kind.fill,
+              size: _tile,
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: _ToastMessage(message)),
+          ],
+        ),
+        alignment: Alignment.bottomCenter,
+        offset: Offset(BrandSpacing.page, bottom),
+        constraints: BoxConstraints.tightFor(
+          width: (width - 2 * BrandSpacing.page).clamp(0, _wideWidth),
+        ),
+        backgroundColor: BrandColors.surfaceRaised,
+        border: ShadBorder.none,
+        radius: BorderRadius.circular(BrandRadii.card),
+        shadows: BrandShadows.toast,
+        padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+        closeIcon: const SizedBox.shrink(),
+        duration: until.difference(DateTime.now()),
       ),
-      alignment: Alignment.bottomCenter,
-      offset: Offset(BrandSpacing.page, bottom),
-      constraints: BoxConstraints.tightFor(
-        width: (width - 2 * BrandSpacing.page).clamp(0, _wideWidth),
-      ),
-      backgroundColor: BrandColors.surfaceRaised,
-      border: ShadBorder.none,
-      radius: BorderRadius.circular(BrandRadii.card),
-      shadows: BrandShadows.toast,
-      padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
-      closeIcon: const SizedBox.shrink(),
-      duration: duration,
-    ),
-  );
+    );
+  }
 }
+
+const _tile = 32.0;
 
 /// One line centres on the tile. The first of more lines starts at the
 /// tile's top, as a paragraph centred on the tile reads as floating.
@@ -108,32 +143,38 @@ class _ToastMessage extends StatelessWidget {
 
   final String message;
 
-  /// The tile's centre is the line's: (32 - 22) / 2.
-  static const _oneLineInset = 5.0;
+  /// Manrope's capitals start this far below the top of a line, per pixel
+  /// of font size: 6 px in a 15 px font's 22 px line.
+  static const _capitalsDrop = 6 / 15;
 
-  /// Lifts the first line so its capitals sit 2 px below the tile's top,
-  /// which reads as level beside the tile's faint rounded edge. Measured on
-  /// Manrope: its capitals start 6 px below the top of a 22 px line.
-  static const _capitalsLift = 4.0;
+  /// Where the capitals of more lines sit below the tile's top, which reads as
+  /// level beside the tile's faint rounded edge.
+  static const _capitalsBelowTile = 2.0;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
+      final style = BrandText.body;
+      final scaler = MediaQuery.textScalerOf(context);
       final painter = TextPainter(
-        text: TextSpan(text: message, style: BrandText.body),
+        text: TextSpan(text: message, style: style),
         textDirection: Directionality.of(context),
-        textScaler: MediaQuery.textScalerOf(context),
+        textScaler: scaler,
       )..layout(maxWidth: constraints.maxWidth);
       final oneLine = painter.computeLineMetrics().length == 1;
       painter.dispose();
-      final text = Text(message, style: BrandText.body);
+      // The system's text size changes the line and its capitals with it.
+      final fontSize = scaler.scale(style.fontSize!);
+      final text = Text(message, style: style);
       return oneLine
           ? Padding(
-              padding: const EdgeInsets.only(top: _oneLineInset),
+              padding: EdgeInsets.only(
+                top: math.max(0, (_tile - fontSize * style.height!) / 2),
+              ),
               child: text,
             )
           : Transform.translate(
-              offset: const Offset(0, -_capitalsLift),
+              offset: Offset(0, _capitalsBelowTile - fontSize * _capitalsDrop),
               child: text,
             );
     },

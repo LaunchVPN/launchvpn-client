@@ -72,6 +72,65 @@ void main() {
     expect(text.center.dy, moreOrLessEquals(tile.center.dy, epsilon: 1));
   });
 
+  testWidgets('a larger text size still centres one line on the tile', (
+    tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.platformDispatcher.clearAllTestValues);
+    await show(tester, 'Готово');
+
+    final tile = tester.getRect(find.byType(IconTile));
+    final text = tester.getRect(find.text('Готово'));
+    expect(text.center.dy, moreOrLessEquals(tile.center.dy, epsilon: 1));
+  });
+
+  testWidgets('a toast moves above the tab bar when the tabs appear', (
+    tester,
+  ) async {
+    final tabs = ValueNotifier(false);
+    addTearDown(tabs.dispose);
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: BrandTheme.material(),
+        builder: (context, child) => ShadTheme(
+          data: BrandTheme.shad(TextScaler.noScaling),
+          child: ShadToaster(child: child!),
+        ),
+        home: ValueListenableBuilder(
+          valueListenable: tabs,
+          builder: (context, shown, _) {
+            final screen = Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: TextButton(
+                    onPressed: () => showBrandToast(context, 'Готово'),
+                    child: const Text('show'),
+                  ),
+                ),
+              ),
+            );
+            return shown ? ToastArea(bottom: 80, child: screen) : screen;
+          },
+        ),
+      ),
+    );
+    await tester.tap(find.text('show'));
+    await tester.pumpAndSettle();
+
+    tabs.value = true;
+    await tester.pumpAndSettle();
+
+    expect(find.text('Готово'), findsOneWidget);
+    expect(
+      tester.getRect(find.byType(ShadToast)).bottom,
+      lessThanOrEqualTo(2532 / 3 - 80),
+    );
+  });
+
   testWidgets('more lines start at the tile', (tester) async {
     const long =
         'Если приложение сломается, оно пришлёт нам отчёт без ссылок, '
