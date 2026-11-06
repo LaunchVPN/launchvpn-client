@@ -305,28 +305,36 @@ abstract final class BrandTheme {
 
   /// The mockup's full-width buttons: the main action, a second one on a raised
   /// surface, the quiet one below and a muted link.
-  static final primaryButton = FilledButton.styleFrom(
-    backgroundColor: BrandColors.accent,
-    foregroundColor: BrandColors.accentInk,
-  ).merge(_wideButton);
-  static final secondaryButton = FilledButton.styleFrom(
-    backgroundColor: BrandColors.surfaceRaised,
-    foregroundColor: BrandColors.ink,
-    side: const BorderSide(color: BrandColors.line),
-  ).merge(_wideButton);
+  static final primaryButton = _wide(
+    FilledButton.styleFrom(
+      backgroundColor: BrandColors.accent,
+      foregroundColor: BrandColors.accentInk,
+    ),
+  );
+  static final secondaryButton = _wide(
+    FilledButton.styleFrom(
+      backgroundColor: BrandColors.surfaceRaised,
+      foregroundColor: BrandColors.ink,
+      side: const BorderSide(color: BrandColors.line),
+    ),
+  );
 
   /// The action of a sheet that deletes something.
-  static final dangerButton = FilledButton.styleFrom(
-    backgroundColor: BrandColors.danger,
-    foregroundColor: BrandColors.accentInk,
-  ).merge(_wideButton);
-  static final quietButton = TextButton.styleFrom(
-    foregroundColor: BrandColors.ink,
-  ).merge(_wideButton);
-  static final linkButton = TextButton.styleFrom(
-    foregroundColor: BrandColors.muted,
-    minimumSize: const Size.fromHeight(44),
-  ).merge(_wideButton);
+  static final dangerButton = _wide(
+    FilledButton.styleFrom(
+      backgroundColor: BrandColors.danger,
+      foregroundColor: BrandColors.accentInk,
+    ),
+  );
+  static final quietButton = _wide(
+    TextButton.styleFrom(foregroundColor: BrandColors.ink),
+  );
+  static final linkButton = _wide(
+    TextButton.styleFrom(
+      foregroundColor: BrandColors.muted,
+      minimumSize: const Size.fromHeight(44),
+    ),
+  );
 
   /// A link inside a line of text, such as «Войти» after «Уже есть аккаунт?».
   static final inlineLinkButton = TextButton.styleFrom(
@@ -335,6 +343,12 @@ abstract final class BrandTheme {
     minimumSize: const Size(48, 44),
     padding: const EdgeInsets.symmetric(horizontal: 6),
   );
+
+  /// [style] on [_wideButton]. `styleFrom` sets a text style even when given
+  /// none, which `merge` would keep over the wide one.
+  static ButtonStyle _wide(ButtonStyle style) =>
+      style.copyWith(textStyle: _wideButton.textStyle).merge(_wideButton);
+
   static final _wideButton = ButtonStyle(
     minimumSize: const WidgetStatePropertyAll(Size.fromHeight(52)),
     iconSize: const WidgetStatePropertyAll(20),
