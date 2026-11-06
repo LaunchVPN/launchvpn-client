@@ -1,0 +1,9 @@
+LaunchVPN connects you in one tap. The app picks the server with the lowest latency on its own, and when you need a particular country, the list of locations shows the latency of each one.
+
+In Smart mode only the sites that need VPN go through it, and the rest open directly at full speed. When you want all traffic in the tunnel, switch the mode right on the main screen. In Apps mode only the apps you choose use VPN.
+
+The Account screen shows how many days your plan has left and which devices use it, and you can remove a device right there. Before the plan ends, the app reminds you to renew.
+
+A new account gets 3 days free, no card needed. Sign in with your email or Telegram, or add an existing plan with the link from the bot.
+
+The app does not record which sites you open, and it has no ads or analytics. The privacy policy explains what data goes where: https://privacy.launch.tel
