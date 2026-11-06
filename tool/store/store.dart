@@ -144,7 +144,9 @@ class StoreFrame extends StatelessWidget {
       canvas.width * 0.86,
     );
     final bezel = width * 0.022;
-    final radius = device.corner * width / device.screen.width + bezel;
+    // The screen inside the bezel keeps the device's proportions.
+    final scale = (width - 2 * bezel) / device.screen.width;
+    final radius = device.corner * scale + bezel;
     return Directionality(
       textDirection: TextDirection.ltr,
       child: ShaderBackdrop(
@@ -169,7 +171,7 @@ class StoreFrame extends StatelessWidget {
               top: captionHeight,
               left: (canvas.width - width) / 2,
               width: width,
-              height: width / device.screen.aspectRatio,
+              height: device.screen.height * scale + 2 * bezel,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: Colors.black,
