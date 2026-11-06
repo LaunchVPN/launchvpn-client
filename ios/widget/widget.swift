@@ -145,7 +145,8 @@ private struct ConnectionWidgetView: View {
             HStack(alignment: .center) {
                 BrandRow()
                 Spacer(minLength: 8)
-                if entry.status != .unknown, let days = entry.details?.daysLeft(at: entry.date) {
+                // An ended subscription shows no pill, as Home shows none.
+                if entry.status != .unknown, let days = entry.details?.daysLeft(at: entry.date), days > 0 {
                     DaysPill(days: days, language: entry.languageCode)
                 }
             }
@@ -249,8 +250,9 @@ private struct StatusBlock: View {
     }
 }
 
-/// Home's toggle: tapping it starts or stops the VPN in the App. When the
-/// status is too old to trust, it only opens the App.
+/// Home's toggle: tapping it starts or stops the VPN in the App. While the
+/// VPN disconnects it waits, and when the status is too old to trust it only
+/// opens the App.
 private struct ConnectionControl: View {
     let status: AppleWidgetStatus
     let height: CGFloat
@@ -266,6 +268,9 @@ private struct ConnectionControl: View {
                     .background(Capsule().fill(WidgetPalette.raised))
                     .overlay(Capsule().strokeBorder(WidgetPalette.line, lineWidth: 1))
             }
+        } else if status == .disconnecting {
+            // Home's toggle waits for the teardown too.
+            track.accessibilityHidden(true)
         } else if #available(iOS 17.0, *) {
             if status == .connected || status == .connecting {
                 Button(intent: StopVpnWidgetIntent()) { track }
@@ -321,7 +326,12 @@ private struct DaysPill: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "calendar").font(.system(size: 10, weight: .medium))
-            Text(String.localizedStringWithFormat(widgetText("%d days", language), days))
+            // Plural rules of the Widget's language, not the system's.
+            Text(String(
+                format: widgetText("%d days", language),
+                locale: Locale(identifier: AppleWidgetLanguage.normalized(language)),
+                days
+            ))
                 .font(WidgetFont.medium(11))
                 .lineLimit(1)
         }
