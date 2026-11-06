@@ -34,10 +34,13 @@ class _LaunchRevealState extends State<LaunchReveal>
   );
   final _flight = _Flight();
   final _stack = GlobalKey();
-  late final Timer _spinnerTimer;
+  Timer? _spinnerTimer;
   bool _spinner = false;
   bool _revealing = false;
   bool _revealed = false;
+
+  /// Counts reveals, so a stopped one never finishes a later one.
+  int _run = 0;
 
   /// Where the mark lands, in the stack's coordinates. Null when it fades.
   Rect? _landing;
@@ -45,40 +48,72 @@ class _LaunchRevealState extends State<LaunchReveal>
   @override
   void initState() {
     super.initState();
-    _spinnerTimer = Timer(LaunchReveal.spinnerDelay, () {
-      if (mounted) setState(() => _spinner = true);
-    });
+    _waitForChild();
     if (widget.child != null) _reveal();
   }
 
   @override
   void didUpdateWidget(LaunchReveal old) {
     super.didUpdateWidget(old);
-    if (widget.child != null) _reveal();
+    if (widget.child == null) {
+      // A retry after a start-up error: the mark comes back until it is ready.
+      if (_revealing || _revealed) _restart();
+    } else if (_controller.isAnimating) {
+      // The page may have changed mid-flight, as «Вход» giving way to the tabs.
+      final run = _run;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && run == _run && !_revealed) {
+          setState(() => _landing = _measureLanding());
+        }
+      });
+    } else {
+      _reveal();
+    }
   }
 
   @override
   void dispose() {
-    _spinnerTimer.cancel();
+    _spinnerTimer?.cancel();
     _progress.dispose();
     _controller.dispose();
     _flight.dispose();
     super.dispose();
   }
 
+  void _waitForChild() {
+    _spinner = false;
+    _spinnerTimer?.cancel();
+    _spinnerTimer = Timer(LaunchReveal.spinnerDelay, () {
+      if (mounted) setState(() => _spinner = true);
+    });
+  }
+
+  void _restart() {
+    _run++;
+    _controller.value = 0;
+    _revealing = false;
+    _revealed = false;
+    _landing = null;
+    _flight.takeOff();
+    _waitForChild();
+  }
+
   /// Waits one frame, so [LaunchReveal.child] has laid out its landing.
   void _reveal() {
     if (_revealing || _revealed) return;
     _revealing = true;
-    _spinnerTimer.cancel();
+    _spinnerTimer?.cancel();
+    final run = ++_run;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || run != _run) return;
       if (MediaQuery.disableAnimationsOf(context)) {
         _controller.value = 1;
         return _finish();
       }
       setState(() => _landing = _measureLanding());
-      _controller.forward().whenCompleteOrCancel(_finish);
+      _controller.forward().whenCompleteOrCancel(() {
+        if (run == _run) _finish();
+      });
     });
   }
 
@@ -220,6 +255,13 @@ class _Flight extends ChangeNotifier {
   void land() {
     landed = true;
     notifyListeners();
+  }
+
+  /// Before another reveal. The landings of the page that left are gone, and
+  /// the next page's read [landed] when they build.
+  void takeOff() {
+    landed = false;
+    target = null;
   }
 }
 

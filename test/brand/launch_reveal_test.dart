@@ -94,6 +94,37 @@ void main() {
     expect(find.text('0'), findsOneWidget);
   });
 
+  testWidgets('a retry brings the mark back, then reveals again', (
+    tester,
+  ) async {
+    await pump(tester, page(landing: false));
+    await tester.pumpAndSettle();
+    expect(find.byType(LaunchMark), findsNothing);
+
+    await pump(tester, null);
+    expect(find.byType(LaunchMark), findsOneWidget);
+    expect(find.text('0'), findsNothing);
+
+    await pump(tester, page());
+    await tester.pumpAndSettle();
+    expect(find.byType(LaunchMark), findsOneWidget);
+    expect(landingOpacity(tester), 1);
+  });
+
+  testWidgets('a page that changes mid-flight still gets the mark', (
+    tester,
+  ) async {
+    await pump(tester, null);
+    await pump(tester, page(landing: false));
+    await tester.pump();
+    await tester.pump(LaunchReveal.duration ~/ 3);
+    await pump(tester, page());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LaunchMark), findsOneWidget);
+    expect(landingOpacity(tester), 1);
+  });
+
   testWidgets('with animations off the page shows at once', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
