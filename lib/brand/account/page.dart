@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/account/controller.dart';
 import 'package:onexray/brand/account/devices.dart';
+import 'package:onexray/brand/account/telegram_link_notice.dart';
 import 'package:onexray/brand/external_link.dart';
 import 'package:onexray/brand/login/controller.dart';
 import 'package:onexray/brand/login/page.dart';
@@ -20,7 +21,6 @@ import 'package:onexray/core/distribution.dart';
 import 'package:onexray/core/tools/traffic_format.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/shared/widgets/button_progress.dart';
-import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/service.dart';
 
@@ -111,7 +111,7 @@ class _AccountPageState extends State<AccountPage> {
 
   Future<void> _linkTelegram() async {
     final outcome = await _controller.linkTelegram();
-    if (mounted) await _tellLink(outcome);
+    if (mounted) await tellTelegramLink(context, outcome);
   }
 
   /// Tells, once the tab shows, how a link the system closed the App during
@@ -120,37 +120,7 @@ class _AccountPageState extends State<AccountPage> {
     final outcome = _controller.state.resumedLink;
     if (!mounted || !_visible || outcome == null) return;
     _controller.resumedLinkShown();
-    unawaited(_tellLink(outcome));
-  }
-
-  /// Tells how «Привязать Telegram» ended; turning Telegram down says nothing.
-  Future<void> _tellLink(TelegramLinkOutcome outcome) async {
-    final l = AppLocalizations.of(context)!;
-    switch (outcome) {
-      case TelegramLinked(:final addedDays):
-        showBrandToast(
-          context,
-          addedDays > 0
-              ? l.accountTelegramLinkedDays(addedDays)
-              : l.accountTelegramLinked,
-          kind: ToastKind.success,
-        );
-      case TelegramLinkFailed(error: AccountError.cancelled):
-        break;
-      case TelegramLinkFailed(error: AccountError.telegramTaken):
-        await NoticeSheet.show(
-          context,
-          title: l.accountTelegramTakenTitle,
-          body: l.accountTelegramTakenBody,
-          action: l.accountTelegramTakenOk,
-        );
-      case TelegramLinkFailed():
-        showBrandToast(
-          context,
-          l.accountLinkTelegramFailed,
-          kind: ToastKind.error,
-        );
-    }
+    unawaited(tellTelegramLink(context, outcome));
   }
 
   @override
@@ -234,6 +204,18 @@ class _AccountPageState extends State<AccountPage> {
   List<Widget> _subscription(AppLocalizations l, AccountState state) {
     final now = DateTime.now();
     final usage = state.usage;
+    if (state.subscription == null ? state.trialAfterTelegram : null
+        case final days?) {
+      // «Привязать Telegram» is in the list below.
+      return [
+        const SizedBox(height: 24),
+        StateHero.accent(
+          icon: LucideIcons.send,
+          title: l.homeTrialTelegramTitle,
+          body: l.homeTrialTelegramBody(days),
+        ),
+      ];
+    }
     if ((state.signedIn && state.inactive && state.subscription == null) ||
         (usage?.isExpired(now) ?? false)) {
       return [

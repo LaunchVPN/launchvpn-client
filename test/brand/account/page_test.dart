@@ -190,6 +190,23 @@ void main() {
     });
   }
 
+  testWidgets('an account whose trial waits on Telegram says so instead of '
+      'ended', (tester) async {
+    api.trialOffer('telegram_required', days: 1);
+    await pumpAccount(tester, accountActive: false);
+
+    expect(find.text('Пробный период — через Telegram'), findsOneWidget);
+    expect(
+      find.text(
+        'Для этой почты нужен Telegram. Привяжите его, и пробный период на '
+        '1 день начнётся сразу.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Подписка закончилась'), findsNothing);
+    expect(find.text('Привязать Telegram'), findsOneWidget);
+  });
+
   testWidgets('the APK build renews on the site', (tester) async {
     await pumpAccount(tester, distribution: AppDistribution.apk);
 

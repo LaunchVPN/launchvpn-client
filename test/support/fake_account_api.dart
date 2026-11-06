@@ -14,7 +14,8 @@ typedef _Reply = Future<(int, Map<String, Object?>)> Function(RequestOptions);
 final class FakeAccountApi implements HttpClientAdapter {
   /// What each request carried when it was sent. A retry reuses and changes
   /// its [RequestOptions], so they are copied here.
-  final requests = <({String path, Object? data, Object? authorization})>[];
+  final requests =
+      <({String method, String path, Object? data, Object? authorization})>[];
   final _rejected = <String>{};
   final _routes = <String, _Reply>{};
 
@@ -42,6 +43,7 @@ final class FakeAccountApi implements HttpClientAdapter {
     required String token,
     int resendIn = 60,
     bool? trialAvailable,
+    int? trialDays,
   }) => _routes['/api/app/auth/signup'] = (_) async => (
     200,
     {
@@ -49,6 +51,7 @@ final class FakeAccountApi implements HttpClientAdapter {
       'resendIn': resendIn,
       'signupToken': token,
       'trialAvailable': ?trialAvailable,
+      'trialDays': ?trialDays,
     },
   );
 
@@ -67,11 +70,18 @@ final class FakeAccountApi implements HttpClientAdapter {
       _routes['/api/app/auth/resend-code'] = (_) async =>
           (200, {'ok': true, 'resendIn': resendIn});
 
+  /// What `GET /api/app/trial` says the account can start: `available`,
+  /// `telegram_required` or `unavailable`.
+  void trialOffer(String trial, {int days = 1}) =>
+      _routes['GET /api/app/trial'] = (_) async =>
+          (200, <String, Object?>{'ok': true, 'trial': trial, 'days': days});
+
   /// The trial starts and the account's subscription becomes [configLink].
-  void trialGrants(String configLink) => _routes['/api/app/trial'] = (_) async {
-    subscription(configLink);
-    return (200, <String, Object?>{'ok': true, 'endDate': '2026-11-08'});
-  };
+  void trialGrants(String configLink) =>
+      _routes['POST /api/app/trial'] = (_) async {
+        subscription(configLink);
+        return (200, <String, Object?>{'ok': true, 'endDate': '2026-11-08'});
+      };
 
   /// The code from a Telegram return signs in with this token pair. A link
   /// code also says how many days Telegram's side added, and the merged
@@ -92,10 +102,10 @@ final class FakeAccountApi implements HttpClientAdapter {
       _routes['/api/app/link/telegram/start'] = (_) async =>
           (200, <String, Object?>{'ok': true, 'url': url});
 
-  /// Bodies sent to [path], in order.
+  /// Bodies sent to [path], in order; reads send none.
   List<Object?> bodies(String path) => [
     for (final request in requests)
-      if (request.path == path) request.data,
+      if (request.path == path && request.method != 'GET') request.data,
   ];
 
   /// No connection to the backend for [path].
@@ -189,6 +199,7 @@ final class FakeAccountApi implements HttpClientAdapter {
   ) async {
     final bearer = options.headers['Authorization'];
     requests.add((
+      method: options.method,
       path: options.path,
       data: options.data,
       authorization: bearer,
@@ -198,7 +209,9 @@ final class FakeAccountApi implements HttpClientAdapter {
       body,
     ) = bearer is String && _rejected.contains(bearer.substring(7))
         ? (401, {'ok': false, 'code': 'invalid_token'})
-        : await (_routes[options.path] ?? _ok)(options);
+        : await (_routes['${options.method} ${options.path}'] ??
+              _routes[options.path] ??
+              _ok)(options);
     return ResponseBody.fromString(
       jsonEncode(body),
       status,

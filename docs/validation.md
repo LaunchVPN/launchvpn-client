@@ -139,7 +139,8 @@ the app and check that the session stays.
 
 Account is covered by `test/brand/account/controller_test.dart`, against the same in-memory
 account API: the signed-in data, the link-only state, device removal and signing out with the
-account's subscription removed. `test/brand/account/page_test.dart` walks the device sheet, the
+account's subscription removed, and the trial offer: started when available, waiting on
+Telegram, and started by linking it. `test/brand/account/page_test.dart` walks the device sheet, the
 Sign out sheet back to «Вход» and Renew in APK and store builds; the Device limit cases are in
 `test/brand/home/page_test.dart`. On a device, sign in against the local backend with a second
 device registered on the fake panel, remove it from Account, and sign out.

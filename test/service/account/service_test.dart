@@ -327,6 +327,17 @@ void main() {
     );
     const verifyPath = '/api/app/auth/verify-code';
 
+    test('the code screen learns the trial\'s length', () async {
+      api.signupWith(token: 'st1', trialAvailable: true, trialDays: 1);
+
+      final pending = await account().email.signup(
+        email: 'ivan@proton.me',
+        password: 'long-secret',
+      );
+
+      expect(pending.trialDays, 1);
+    });
+
     test('mails a code and keeps the attempt in memory only', () async {
       api.signupWith(token: 'st1', resendIn: 42);
       final service = account();
@@ -997,6 +1008,27 @@ void main() {
         expect(service.data.subscriptionMissing, isTrue);
       },
     );
+
+    for (final (answer, expected) in [
+      ('available', TrialAvailability.available),
+      ('telegram_required', TrialAvailability.telegramRequired),
+      ('unavailable', TrialAvailability.unavailable),
+      ('something new', TrialAvailability.unavailable),
+    ]) {
+      test('the offer «$answer» reads as ${expected.name}', () async {
+        api.loginWith(access: 'a1', refresh: 'r1');
+        api.subscription(null);
+        api.trialOffer(answer, days: 3);
+        final service = account();
+        await service.email.login(email: 'ivan@proton.me', password: 'pw');
+
+        final offer = await service.data.trialOffer();
+
+        expect(offer.availability, expected);
+        expect(offer.days, 3);
+        expect(api.authorizations('/api/app/trial').last, 'Bearer a1');
+      });
+    }
 
     test('a used trial leaves the account without a subscription', () async {
       api.verifyWith(access: 'a1', refresh: 'r1', trialGranted: false);

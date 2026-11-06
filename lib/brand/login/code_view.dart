@@ -64,12 +64,15 @@ class _EmailCodeViewState extends State<EmailCodeView> {
       builder: (context, state) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            widget.signup.trialAvailable
-                ? l.codeBody(widget.signup.email)
-                : l.codeBodyConfirm(widget.signup.email),
-            style: BrandText.hint,
-          ),
+          Text(switch (widget.signup) {
+            PendingSignup(
+              trialAvailable: true,
+              :final email,
+              :final trialDays?,
+            ) =>
+              l.codeBody(email, trialDays),
+            PendingSignup(:final email) => l.codeBodyConfirm(email),
+          }, style: BrandText.hint),
           const SizedBox(height: 24),
           AutofillGroup(
             child: BrandTextField(

@@ -116,6 +116,7 @@ final class AccountException implements Exception {
               token: token,
               resendIn: PendingSignup.resendGap,
               trialAvailable: PendingSignup.trialIn(data),
+              trialDays: PendingSignup.trialDaysIn(data),
             )
           : null,
     );

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:onexray/brand/account/controller.dart';
+import 'package:onexray/brand/account/telegram_link_notice.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/device_limit.dart';
 import 'package:onexray/brand/home/toggle.dart';
@@ -164,7 +165,12 @@ class _HomePageState extends State<HomePage> {
                     BlocSelector<
                       AccountController,
                       AccountState,
-                      ({bool ended, bool refreshing})
+                      ({
+                        bool ended,
+                        bool refreshing,
+                        int? trialAfterTelegram,
+                        bool linking,
+                      })
                     >(
                       bloc: widget.account,
                       // A signed-in account without a subscription, its trial
@@ -172,6 +178,8 @@ class _HomePageState extends State<HomePage> {
                       selector: (account) => (
                         ended: account.signedIn && account.inactive,
                         refreshing: account.refreshing,
+                        trialAfterTelegram: account.trialAfterTelegram,
+                        linking: account.linkingTelegram,
                       ),
                       builder: (context, account) =>
                           BlocBuilder<HomeController, HomeState>(
@@ -216,7 +224,16 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                             ),
                                           ],
-                                          if (expired)
+                                          if (accountEnded
+                                                  ? account.trialAfterTelegram
+                                                  : null
+                                              case final days?)
+                                            ..._trialTelegramContent(
+                                              state,
+                                              days: days,
+                                              linking: account.linking,
+                                            )
+                                          else if (expired)
                                             ..._expiredContent(
                                               state,
                                               // Only the account can bring one.
@@ -303,6 +320,52 @@ class _HomePageState extends State<HomePage> {
         onContactSupport: () => openSupport(state.subscription),
       ),
     );
+  }
+
+  /// A new account the trial waits on Telegram for: its email is at a
+  /// domain anyone can make endless addresses on.
+  List<Widget> _trialTelegramContent(
+    HomeState state, {
+    required int days,
+    required bool linking,
+  }) {
+    final l = AppLocalizations.of(context)!;
+    final buys = widget.distribution == AppDistribution.apk;
+    return _stateContent(
+      StateHero.accent(
+        icon: LucideIcons.send,
+        title: l.homeTrialTelegramTitle,
+        body: l.homeTrialTelegramBody(days),
+      ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 12,
+        children: [
+          FilledButton.icon(
+            style: BrandTheme.primaryButton,
+            onPressed: linking ? null : _linkTelegram,
+            icon: linking
+                ? const ButtonProgressIndicator(size: 20)
+                : const Icon(LucideIcons.send),
+            label: Text(l.accountLinkTelegram),
+          ),
+          if (buys)
+            TextButton.icon(
+              style: BrandTheme.quietButton,
+              onPressed: () =>
+                  openExternalLink(Uri.parse(Brand.renewalUrl), 'renewal'),
+              icon: const Icon(LucideIcons.externalLink),
+              label: Text(l.homeTrialBuy),
+            ),
+          _SupportLink(onPressed: () => openSupport(state.subscription)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _linkTelegram() async {
+    final outcome = await widget.account.linkTelegram();
+    if (mounted) await tellTelegramLink(context, outcome);
   }
 
   List<Widget> _deviceLimitContent(HomeState state) => _stateContent(

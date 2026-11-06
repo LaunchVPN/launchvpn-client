@@ -3184,6 +3184,10 @@
   "homeExpiredRenew": "Renew",
   "homeExpiredRefresh": "Refresh status",
   "homeExpiredNotRenewed": "Your subscription has not been renewed yet",
+  "homeTrialTelegramTitle": "Get your trial with Telegram",
+  "homeTrialTelegramBody": "This email needs Telegram for the trial. Link it and your {days, plural, one {free day starts} other {{days} free days start}} right away.",
+  "@homeTrialTelegramBody": {"placeholders": {"days": {"type": "int"}}},
+  "homeTrialBuy": "Buy a subscription",
   "homeNoSubscription": "Open your subscription link from the bot or the website",
   "homeDaysLeft": "{days, plural, one {{days} day} other {{days} days}}",
   "@homeDaysLeft": {
@@ -3415,7 +3419,7 @@
   "homeDeviceLimitBodyAccount": "Every device place on the subscription is taken. Remove one to connect this phone.",
   "homeDeviceLimitBodyLinkOnly": "Every device place on the subscription is taken. Remove one in the bot or in your account at app.launch.tel to connect this phone.",
   "homeDeviceLimitRefresh": "Refresh",
-  "loginCreateSubtitle": "Create an account and get 3 days free. No card needed.",
+  "loginCreateSubtitle": "New users get a free trial. No card needed.",
   "loginCreate": "Create account",
   "loginHaveAccount": "Already have an account?",
   "loginNoAccount": "No account yet?",
@@ -3423,9 +3427,9 @@
   "loginErrorEmailTaken": "This email is already registered. Sign in instead",
   "loginErrorInvalidRequest": "Check the email. The password needs at least 8 characters",
   "codeTitle": "Check\nyour email",
-  "codeBody": "We sent a code to {email}. Enter it and your 3 free days start right away.",
+  "codeBody": "We sent a code to {email}. Enter it and your {days, plural, one {free day starts} other {{days} free days start}} right away.",
   "@codeBody": {
-    "placeholders": {"email": {"type": "String"}}
+    "placeholders": {"email": {"type": "String"}, "days": {"type": "int"}}
   },
   "codeBodyConfirm": "We sent a code to {email}. Enter it to confirm your email.",
   "@codeBodyConfirm": {

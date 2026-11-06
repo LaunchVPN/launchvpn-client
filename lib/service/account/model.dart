@@ -8,6 +8,7 @@ final class PendingSignup {
     required this.token,
     required this.resendIn,
     this.trialAvailable = true,
+    this.trialDays,
   });
 
   final String email;
@@ -20,10 +21,21 @@ final class PendingSignup {
   /// say is taken to offer it.
   final bool trialAvailable;
 
+  /// The trial's length; null when the backend does not say, and then the
+  /// code screen names no length.
+  final int? trialDays;
+
   /// The answer to a signup, or to a login of an unconfirmed email, carries
   /// whether the trial waits.
   static bool trialIn(Map<Object?, Object?> data) =>
       data['trialAvailable'] != false;
+
+  /// ...and how long it lasts.
+  static int? trialDaysIn(Map<Object?, Object?> data) =>
+      switch (data['trialDays']) {
+        final int days when days > 0 => days,
+        _ => null,
+      };
 
   /// The wait before another code when the backend names none.
   static const resendGap = Duration(seconds: 60);
@@ -72,6 +84,39 @@ final class AccountSubscription {
 
   /// The devices the panel allows this user. Null when it does not say.
   final int? maxDevices;
+}
+
+/// What `GET /api/app/trial` says an account without a subscription can
+/// start.
+enum TrialAvailability {
+  /// Claiming starts it.
+  available,
+
+  /// Only after Telegram is linked: the email alone is at a domain anyone
+  /// can make endless addresses on.
+  telegramRequired,
+
+  /// Used, or trials are off.
+  unavailable,
+}
+
+final class TrialOffer {
+  const TrialOffer(this.availability, this.days);
+
+  final TrialAvailability availability;
+  final int days;
+
+  static TrialOffer fromJson(Map<String, Object?> data) => TrialOffer(
+    switch (data['trial']) {
+      'available' => TrialAvailability.available,
+      'telegram_required' => TrialAvailability.telegramRequired,
+      _ => TrialAvailability.unavailable,
+    },
+    switch (data['days']) {
+      final int days when days > 0 => days,
+      _ => 0,
+    },
+  );
 }
 
 /// What `GET /api/me` says about the signed-in account.

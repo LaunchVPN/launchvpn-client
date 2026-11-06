@@ -111,7 +111,7 @@ void main() {
       expect(find.text('Интернет\nбез границ'), findsOneWidget);
       expect(
         find.text(
-          'Создайте аккаунт и получите 3 дня бесплатно. Карта не нужна.',
+          'Новым пользователям — бесплатный пробный период. Карта не нужна.',
         ),
         findsOneWidget,
       );
@@ -445,7 +445,7 @@ void main() {
     testWidgets('the code from the email passes the gate with the trial', (
       tester,
     ) async {
-      api.signupWith(token: 'st1', resendIn: 42);
+      api.signupWith(token: 'st1', resendIn: 42, trialDays: 3);
       api.verifyWith(access: 'a1', refresh: 'r1');
       api.subscription(_configLink);
       await pumpApp(tester, hasSubscription: false);
@@ -456,8 +456,8 @@ void main() {
       expect(find.byType(ShaderBackdrop), findsOneWidget);
       expect(
         find.text(
-          'Отправили код на ivan@proton.me. Введите его, и 3 дня бесплатно '
-          'начнутся сразу.',
+          'Отправили код на ivan@proton.me. Введите его, и пробный период на '
+          '3 дня начнётся сразу.',
         ),
         findsOneWidget,
       );
