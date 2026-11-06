@@ -54,6 +54,7 @@ void main() {
   late ConnectionRuntime runtime;
   late List<Object> failures;
   late List<List<int>> sweeps;
+  late List<(String?, String?, ConnectionPreset?)> widgetContexts;
   late List<bool Function()?> sweepCancels;
   late Future<void> Function() sweep;
   late Future<SubscriptionRefreshResult> Function(SubscriptionData) refresh;
@@ -72,6 +73,7 @@ void main() {
     stop = Completer();
     prepareFailure = () async {};
     failures = [];
+    widgetContexts = [];
     sweeps = [];
     sweepCancels = [];
     sweep = () async {};
@@ -113,6 +115,13 @@ void main() {
         return sweep();
       },
       refreshSubscription: (row) => refresh(row),
+      widgetContext:
+          ({required location, required preset, required expiresAt}) async =>
+              widgetContexts.add((
+                location?.name,
+                location?.countryCode,
+                preset,
+              )),
     );
     addTearDown(controller.close);
     await controller.initialize();
@@ -627,6 +636,16 @@ void main() {
 
     test('is the first group until the user chooses', () {
       expect(controller.state.location?.id, fastest);
+    });
+
+    test('the iOS Widget follows the location and the mode', () async {
+      await controller.selectLocation(
+        controller.state.locations.withId(germany)!,
+        run,
+        explain: _explainNever,
+      );
+
+      expect(widgetContexts.last, ('Германия', 'DE', ConnectionPreset.smart));
     });
 
     test(

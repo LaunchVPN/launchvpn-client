@@ -25,6 +25,21 @@ final class AppleWidgetApi: NSObject, @preconcurrency AppleWidgetHostApi {
         completion(.success(AppleWidgetActionInbox.shared.takeAction()))
     }
 
+    func setContext(context: AppleWidgetContext, completion: @escaping (Result<Void, Error>) -> Void) {
+        do {
+            try AppleWidgetPublisher.setDetails(AppleWidgetDetails(
+                location: context.location,
+                countryCode: context.countryCode,
+                automatic: context.automatic,
+                mode: context.mode,
+                expiresAt: context.expiresAtMs.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) }
+            ))
+            completion(.success(()))
+        } catch {
+            completion(.failure(error))
+        }
+    }
+
     func setLanguage(languageCode: String, completion: @escaping (Result<Void, Error>) -> Void) {
         do {
             try AppleWidgetPublisher.setLanguage(languageCode)

@@ -264,6 +264,67 @@ enum class NativeLaunchAtLoginState(val raw: Int) {
 }
 
 /**
+ * What the iOS Widget shows next to the status, as Home shows it.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class AppleWidgetContext (
+  /** The chosen location's name, without the panel's flag and prefix. */
+  val location: String? = null,
+  /** ISO letters of the location's flag. */
+  val countryCode: String? = null,
+  val automatic: Boolean,
+  /** `ConnectionPreset.name`. */
+  val mode: String? = null,
+  /** When the subscription ends, in milliseconds since the epoch. */
+  val expiresAtMs: Long? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): AppleWidgetContext {
+      val location = pigeonVar_list[0] as String?
+      val countryCode = pigeonVar_list[1] as String?
+      val automatic = pigeonVar_list[2] as Boolean
+      val mode = pigeonVar_list[3] as String?
+      val expiresAtMs = pigeonVar_list[4] as Long?
+      return AppleWidgetContext(location, countryCode, automatic, mode, expiresAtMs)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      location,
+      countryCode,
+      automatic,
+      mode,
+      expiresAtMs,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as AppleWidgetContext
+    return MessagesPigeonUtils.deepEquals(this.location, other.location) && MessagesPigeonUtils.deepEquals(this.countryCode, other.countryCode) && MessagesPigeonUtils.deepEquals(this.automatic, other.automatic) && MessagesPigeonUtils.deepEquals(this.mode, other.mode) && MessagesPigeonUtils.deepEquals(this.expiresAtMs, other.expiresAtMs)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.location)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.countryCode)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.automatic)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.mode)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.expiresAtMs)
+    return result
+  }
+  override fun toString(): String {
+    return "AppleWidgetContext(location=$location, countryCode=$countryCode, automatic=$automatic, mode=$mode, expiresAtMs=$expiresAtMs)"
+  }
+}
+
+/**
  * The iOS tunnel extension's memory, in bytes. iOS ends the extension, and
  * with it the VPN, once its footprint reaches [limit].
  *
@@ -695,45 +756,50 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       134.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TunnelMemory.fromList(it)
+          AppleWidgetContext.fromList(it)
         }
       }
       135.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AndroidAutomationSettings.fromList(it)
+          TunnelMemory.fromList(it)
         }
       }
       136.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          BackupLocation.fromList(it)
+          AndroidAutomationSettings.fromList(it)
         }
       }
       137.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          DeviceIdentity.fromList(it)
+          BackupLocation.fromList(it)
         }
       }
       138.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AppleVpnCapabilities.fromList(it)
+          DeviceIdentity.fromList(it)
         }
       }
       139.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          NativeLaunchAtLoginResult.fromList(it)
+          AppleVpnCapabilities.fromList(it)
         }
       }
       140.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          PlatformPermissionResult.fromList(it)
+          NativeLaunchAtLoginResult.fromList(it)
         }
       }
       141.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          NativeVpnCommandResult.fromList(it)
+          PlatformPermissionResult.fromList(it)
         }
       }
       142.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          NativeVpnCommandResult.fromList(it)
+        }
+      }
+      143.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
           AndroidAppInfo.fromList(it)
         }
@@ -763,40 +829,44 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(133)
         writeValue(stream, value.raw.toLong())
       }
-      is TunnelMemory -> {
+      is AppleWidgetContext -> {
         stream.write(134)
         writeValue(stream, value.toList())
       }
-      is AndroidAutomationSettings -> {
+      is TunnelMemory -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is BackupLocation -> {
+      is AndroidAutomationSettings -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is DeviceIdentity -> {
+      is BackupLocation -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is AppleVpnCapabilities -> {
+      is DeviceIdentity -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is NativeLaunchAtLoginResult -> {
+      is AppleVpnCapabilities -> {
         stream.write(139)
         writeValue(stream, value.toList())
       }
-      is PlatformPermissionResult -> {
+      is NativeLaunchAtLoginResult -> {
         stream.write(140)
         writeValue(stream, value.toList())
       }
-      is NativeVpnCommandResult -> {
+      is PlatformPermissionResult -> {
         stream.write(141)
         writeValue(stream, value.toList())
       }
-      is AndroidAppInfo -> {
+      is NativeVpnCommandResult -> {
         stream.write(142)
+        writeValue(stream, value.toList())
+      }
+      is AndroidAppInfo -> {
+        stream.write(143)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -1155,6 +1225,7 @@ interface BridgeHostApi {
 interface AppleWidgetHostApi {
   fun takeAction(callback: (Result<String?>) -> Unit)
   fun setLanguage(languageCode: String, callback: (Result<Unit>) -> Unit)
+  fun setContext(context: AppleWidgetContext, callback: (Result<Unit>) -> Unit)
 
   companion object {
     /** The codec used by AppleWidgetHostApi. */
@@ -1190,6 +1261,25 @@ interface AppleWidgetHostApi {
             val args = message as List<Any?>
             val languageCodeArg = args[0] as String
             api.setLanguage(languageCodeArg) { result: Result<Unit> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                reply.reply(MessagesPigeonUtils.wrapResult(null))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.onexray.AppleWidgetHostApi.setContext$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val contextArg = args[0] as AppleWidgetContext
+            api.setContext(contextArg) { result: Result<Unit> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(MessagesPigeonUtils.wrapError(error))

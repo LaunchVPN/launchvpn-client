@@ -6,6 +6,8 @@ import 'package:onexray/core/pigeon/flutter_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/core/tools/platform.dart';
+import 'package:onexray/service/connect/preset.dart';
+import 'package:onexray/service/servers/locations.dart';
 import 'package:onexray/service/settings/language/brand_language.dart';
 import 'package:onexray/service/shared/event_bus/enum.dart';
 import 'package:onexray/service/shared/menu/short_cut/service.dart';
@@ -19,6 +21,7 @@ final class AppleWidgetService with WidgetsBindingObserver {
     AppleWidgetHostApi().takeAction,
     AppleWidgetHostApi().setLanguage,
     ShortCutService().receive,
+    AppleWidgetHostApi().setContext,
   );
 
   factory AppleWidgetService() => _instance;
@@ -29,6 +32,7 @@ final class AppleWidgetService with WidgetsBindingObserver {
     this._takeAction,
     this._setLanguage,
     this._receive,
+    this._setContext,
   );
 
   @visibleForTesting
@@ -38,13 +42,24 @@ final class AppleWidgetService with WidgetsBindingObserver {
     required Future<String?> Function() takeAction,
     required Future<void> Function(String) setLanguage,
     required Future<void> Function(String) receive,
-  }) => AppleWidgetService._(enabled, events, takeAction, setLanguage, receive);
+    Future<void> Function(AppleWidgetContext)? setContext,
+  }) => AppleWidgetService._(
+    enabled,
+    events,
+    takeAction,
+    setLanguage,
+    receive,
+    setContext ?? (_) async {},
+  );
 
   final bool _enabled;
   final Stream<void> _events;
   final Future<String?> Function() _takeAction;
   final Future<void> Function(String) _setLanguage;
   final Future<void> Function(String) _receive;
+  final Future<void> Function(AppleWidgetContext) _setContext;
+  ({String? name, String? country, bool automatic, String? mode, int? ends})?
+  _context;
   StreamSubscription<void>? _subscription;
   Future<void>? _draining;
   bool _needsDrain = false;
@@ -109,6 +124,39 @@ final class AppleWidgetService with WidgetsBindingObserver {
       await _setLanguage(code);
     } catch (error, stack) {
       ygLogger('Apple widget language unavailable: $error\n$stack');
+    }
+  }
+
+  /// Gives the Widget what Home shows: the location, the mode and when the
+  /// subscription ends. Sends only changes.
+  Future<void> setContext({
+    required Location? location,
+    required ConnectionPreset? preset,
+    required DateTime? expiresAt,
+  }) async {
+    if (!_enabled) return;
+    final context = (
+      name: location?.name,
+      country: location?.countryCode,
+      automatic: location?.automatic ?? false,
+      mode: preset?.name,
+      ends: expiresAt?.millisecondsSinceEpoch,
+    );
+    if (context == _context) return;
+    _context = context;
+    try {
+      await _setContext(
+        AppleWidgetContext(
+          location: context.name,
+          countryCode: context.country,
+          automatic: context.automatic,
+          mode: context.mode,
+          expiresAtMs: context.ends,
+        ),
+      );
+    } catch (error, stack) {
+      _context = null;
+      ygLogger('Apple widget context unavailable: $error\n$stack');
     }
   }
 
