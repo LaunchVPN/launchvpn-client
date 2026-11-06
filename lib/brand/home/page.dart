@@ -168,7 +168,7 @@ class _HomePageState extends State<HomePage> {
                       ({
                         bool ended,
                         bool refreshing,
-                        int? trialAfterTelegram,
+                        bool trialWaitsOnTelegram,
                         bool linking,
                       })
                     >(
@@ -178,7 +178,7 @@ class _HomePageState extends State<HomePage> {
                       selector: (account) => (
                         ended: account.signedIn && account.inactive,
                         refreshing: account.refreshing,
-                        trialAfterTelegram: account.trialAfterTelegram,
+                        trialWaitsOnTelegram: account.trialWaitsOnTelegram,
                         linking: account.linkingTelegram,
                       ),
                       builder: (context, account) =>
@@ -224,13 +224,10 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                             ),
                                           ],
-                                          if (accountEnded
-                                                  ? account.trialAfterTelegram
-                                                  : null
-                                              case final days?)
+                                          if (accountEnded &&
+                                              account.trialWaitsOnTelegram)
                                             ..._trialTelegramContent(
                                               state,
-                                              days: days,
                                               linking: account.linking,
                                             )
                                           else if (expired)
@@ -324,18 +321,14 @@ class _HomePageState extends State<HomePage> {
 
   /// A new account the trial waits on Telegram for: its email is at a
   /// domain anyone can make endless addresses on.
-  List<Widget> _trialTelegramContent(
-    HomeState state, {
-    required int days,
-    required bool linking,
-  }) {
+  List<Widget> _trialTelegramContent(HomeState state, {required bool linking}) {
     final l = AppLocalizations.of(context)!;
     final buys = widget.distribution == AppDistribution.apk;
     return _stateContent(
       StateHero.accent(
         icon: LucideIcons.send,
         title: l.homeTrialTelegramTitle,
-        body: l.homeTrialTelegramBody(days),
+        body: l.homeTrialTelegramBody,
       ),
       Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

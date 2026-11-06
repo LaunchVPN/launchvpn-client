@@ -174,12 +174,12 @@ void main() {
 
   test('an account whose email needs Telegram for the trial says so', () async {
     final service = await signedIn(configLink: null);
-    api.trialOffer('telegram_required', days: 3);
+    api.trialOffer('telegram_required');
     final controller = controllerFor(service);
 
     await controller.refresh();
 
-    expect(controller.state.trialAfterTelegram, 3);
+    expect(controller.state.trialWaitsOnTelegram, isTrue);
     expect(api.bodies('/api/app/trial'), isEmpty);
     expect(opened, isEmpty);
   });
@@ -195,7 +195,7 @@ void main() {
     expect(api.bodies('/api/app/trial'), hasLength(1));
     expect(opened, [_link]);
     expect(controller.state.inactive, isFalse);
-    expect(controller.state.trialAfterTelegram, isNull);
+    expect(controller.state.trialWaitsOnTelegram, isFalse);
   });
 
   test('an ended account claims nothing', () async {
@@ -207,7 +207,7 @@ void main() {
 
     expect(api.bodies('/api/app/trial'), isEmpty);
     expect(controller.state.inactive, isTrue);
-    expect(controller.state.trialAfterTelegram, isNull);
+    expect(controller.state.trialWaitsOnTelegram, isFalse);
   });
 
   test('linking Telegram starts the trial it waited for', () async {
@@ -231,7 +231,7 @@ void main() {
     expect(await outcome, isA<TelegramLinked>());
     expect(opened, [_link]);
     expect(controller.state.inactive, isFalse);
-    expect(controller.state.trialAfterTelegram, isNull);
+    expect(controller.state.trialWaitsOnTelegram, isFalse);
   });
 
   test('from a link only, days and traffic come from the device', () async {

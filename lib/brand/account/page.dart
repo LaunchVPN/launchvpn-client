@@ -160,7 +160,12 @@ class _AccountPageState extends State<AccountPage> {
                         'renewal',
                       ),
                       icon: const Icon(LucideIcons.externalLink),
-                      label: Text(l.accountRenew),
+                      // Nothing to renew before the first subscription.
+                      label: Text(
+                        state.trialWaitsOnTelegram
+                            ? l.homeTrialBuy
+                            : l.accountRenew,
+                      ),
                     ),
                   ],
                   if (!state.signedIn) ...[
@@ -204,15 +209,14 @@ class _AccountPageState extends State<AccountPage> {
   List<Widget> _subscription(AppLocalizations l, AccountState state) {
     final now = DateTime.now();
     final usage = state.usage;
-    if (state.subscription == null ? state.trialAfterTelegram : null
-        case final days?) {
+    if (state.subscription == null && state.trialWaitsOnTelegram) {
       // «Привязать Telegram» is in the list below.
       return [
         const SizedBox(height: 24),
         StateHero.accent(
           icon: LucideIcons.send,
           title: l.homeTrialTelegramTitle,
-          body: l.homeTrialTelegramBody(days),
+          body: l.homeTrialTelegramBody,
         ),
       ];
     }

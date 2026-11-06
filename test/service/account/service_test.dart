@@ -1018,14 +1018,13 @@ void main() {
       test('the offer «$answer» reads as ${expected.name}', () async {
         api.loginWith(access: 'a1', refresh: 'r1');
         api.subscription(null);
-        api.trialOffer(answer, days: 3);
+        api.trialOffer(answer);
         final service = account();
         await service.email.login(email: 'ivan@proton.me', password: 'pw');
 
         final offer = await service.data.trialOffer();
 
-        expect(offer.availability, expected);
-        expect(offer.days, 3);
+        expect(offer, expected);
         expect(api.authorizations('/api/app/trial').last, 'Bearer a1');
       });
     }

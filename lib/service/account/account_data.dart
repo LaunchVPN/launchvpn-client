@@ -110,8 +110,8 @@ final class AccountData {
 
   /// The trial an account without a subscription can start, the device
   /// aside: [startTrial] checks that.
-  Future<TrialOffer> trialOffer() async =>
-      TrialOffer.fromJson(await _session.get('/api/app/trial'));
+  Future<TrialAvailability> trialOffer() async =>
+      TrialAvailability.fromJson(await _session.get('/api/app/trial'));
 
   /// Claims the trial and adds the subscription it starts. Whether it
   /// started.

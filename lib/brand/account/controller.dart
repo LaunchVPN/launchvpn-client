@@ -50,16 +50,12 @@ final class AccountState {
 
   /// What an [inactive] account can start; null with a subscription and
   /// until read.
-  final TrialOffer? trial;
+  final TrialAvailability? trial;
 
-  /// The trial's days when a signed-in [inactive] account gets it only once
-  /// Telegram is linked; null otherwise.
-  int? get trialAfterTelegram => switch (trial) {
-    TrialOffer(availability: TrialAvailability.telegramRequired, :final days)
-        when signedIn && inactive =>
-      days,
-    _ => null,
-  };
+  /// A signed-in [inactive] account gets the trial only once Telegram is
+  /// linked.
+  bool get trialWaitsOnTelegram =>
+      signedIn && inactive && trial == TrialAvailability.telegramRequired;
 
   /// [AccountController.refresh] is running.
   final bool refreshing;
@@ -87,7 +83,7 @@ final class AccountState {
     AccountDevices? Function()? devices,
     int? subscriptionMaxDevices,
     bool? inactive,
-    TrialOffer? Function()? trial,
+    TrialAvailability? Function()? trial,
     bool? refreshing,
     bool? linkingTelegram,
     TelegramLinkOutcome? Function()? resumedLink,
@@ -265,7 +261,7 @@ final class AccountController extends PageCubit<AccountState> {
 
   Future<void> _startOfferedTrial() async {
     final session = _session;
-    final TrialOffer offer;
+    final TrialAvailability offer;
     try {
       offer = await _account.data.trialOffer();
     } on AccountException catch (error) {
@@ -273,7 +269,7 @@ final class AccountController extends PageCubit<AccountState> {
       return;
     }
     if (isClosed || session != _session) return;
-    if (offer.availability == TrialAvailability.available &&
+    if (offer == TrialAvailability.available &&
         await _account.data.startTrial()) {
       if (!isClosed) emit(state.copyWith(inactive: false, trial: () => null));
       return;

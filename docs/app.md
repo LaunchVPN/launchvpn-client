@@ -163,7 +163,7 @@ upstream pages kept for merging. They are not reachable in this build.
   parts: `AccountSession` (tokens, the Bearer header and the refresh), `EmailAuth`,
   `TelegramAccount` (sign-in and linking) and `AccountData` (the account's subscription, details,
   devices, trial, sign-out and deletion). `--dart-define=LAUNCHVPN_API_URL` points a local run at
-  another backend. It opens in create mode, with a free trial for new users in its subtitle and
+  another backend. It opens in create mode, with «Бесплатный период для новых пользователей» in its subtitle and
   Create account, and its footer switches to sign-in mode
   (Sign in, «Нет аккаунта? Создать») and back. The button waits for both fields. A refusal shows its
   text under the fields: wrong email or password, email already registered, invalid email or a

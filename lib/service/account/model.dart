@@ -97,26 +97,14 @@ enum TrialAvailability {
   telegramRequired,
 
   /// Used, or trials are off.
-  unavailable,
-}
+  unavailable;
 
-final class TrialOffer {
-  const TrialOffer(this.availability, this.days);
-
-  final TrialAvailability availability;
-  final int days;
-
-  static TrialOffer fromJson(Map<String, Object?> data) => TrialOffer(
-    switch (data['trial']) {
-      'available' => TrialAvailability.available,
-      'telegram_required' => TrialAvailability.telegramRequired,
-      _ => TrialAvailability.unavailable,
-    },
-    switch (data['days']) {
-      final int days when days > 0 => days,
-      _ => 0,
-    },
-  );
+  static TrialAvailability fromJson(Map<String, Object?> data) =>
+      switch (data['trial']) {
+        'available' => available,
+        'telegram_required' => telegramRequired,
+        _ => unavailable,
+      };
 }
 
 /// What `GET /api/me` says about the signed-in account.

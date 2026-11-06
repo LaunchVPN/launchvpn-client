@@ -72,9 +72,9 @@ final class FakeAccountApi implements HttpClientAdapter {
 
   /// What `GET /api/app/trial` says the account can start: `available`,
   /// `telegram_required` or `unavailable`.
-  void trialOffer(String trial, {int days = 1}) =>
+  void trialOffer(String trial) =>
       _routes['GET /api/app/trial'] = (_) async =>
-          (200, <String, Object?>{'ok': true, 'trial': trial, 'days': days});
+          (200, <String, Object?>{'ok': true, 'trial': trial, 'days': 1});
 
   /// The trial starts and the account's subscription becomes [configLink].
   void trialGrants(String configLink) =>

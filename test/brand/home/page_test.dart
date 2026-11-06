@@ -1281,7 +1281,7 @@ void main() {
       ..loginWith(access: 'a1', refresh: 'r1')
       ..subscription(null)
       ..me(email: 'ivan@example.org', telegramLinked: false)
-      ..trialOffer('telegram_required', days: 3);
+      ..trialOffer('telegram_required');
     final account = accountServiceFor(api);
     await tester.runAsync(
       () => account.email.login(email: 'ivan@example.org', password: 'pw'),
@@ -1298,8 +1298,8 @@ void main() {
     expect(find.text('Get your trial with Telegram'), findsOneWidget);
     expect(
       find.text(
-        'This email needs Telegram for the trial. Link it and your 3 free '
-        'days start right away.',
+        'This email needs Telegram for the trial. Link it and your trial '
+        'starts right away.',
       ),
       findsOneWidget,
     );
