@@ -778,6 +778,17 @@ class VPNManager {
         }
     }
 
+    #if os(iOS)
+    /// The running tunnel's memory, or nil when no tunnel is connected.
+    func readTunnelMemory() async -> TunnelMemoryReading? {
+        guard let session = vpn?.connection as? NETunnelProviderSession,
+              session.status == .connected,
+              case let .memory(reading)? = try? await sendTunnelRequest(session: session, .memory, timeoutSeconds: 2)
+        else { return nil }
+        return reading
+    }
+    #endif
+
     private func sendTunnelRequest(
         session: NETunnelProviderSession,
         _ request: TunnelRequest,

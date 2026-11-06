@@ -52,17 +52,15 @@ final class TunnelMemoryLog: @unchecked Sendable {
 
     private func append(_ stage: String) {
         guard let path else { return }
-        guard let footprint = Self.footprint() else {
+        guard let memory = TunnelMemoryReading.current() else {
             YGLog("TunnelMemoryLog task_info failed")
             return
         }
-        let available = os_proc_available_memory()
-        let headroom = available + footprint.current - footprint.peak
         let line = "\(timeFormat.string(from: Date())) [Memory] \(stage): "
-            + "headroom \(Self.megabytes(headroom)) MB, "
-            + "available \(Self.megabytes(available)) MB, "
-            + "footprint \(Self.megabytes(footprint.current)) MB, "
-            + "peak \(Self.megabytes(footprint.peak)) MB\n"
+            + "headroom \(Self.megabytes(memory.headroom)) MB, "
+            + "available \(Self.megabytes(memory.limit - memory.footprint)) MB, "
+            + "footprint \(Self.megabytes(memory.footprint)) MB, "
+            + "peak \(Self.megabytes(memory.peak)) MB\n"
         let fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0o600)
         guard fd >= 0 else {
             YGLog("TunnelMemoryLog open failed: \(errno)")
@@ -74,7 +72,15 @@ final class TunnelMemoryLog: @unchecked Sendable {
         }
     }
 
-    private static func footprint() -> (current: Int, peak: Int)? {
+    private static func megabytes(_ bytes: Int) -> String {
+        String(format: "%.1f", Double(bytes) / 1_048_576)
+    }
+}
+
+extension TunnelMemoryReading {
+    /// This process's footprint, its peak and the limit iOS ends it at.
+    /// The limit is the footprint plus what iOS still allows.
+    static func current() -> TunnelMemoryReading? {
         var info = task_vm_info_data_t()
         var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
         let result = withUnsafeMutablePointer(to: &info) {
@@ -83,11 +89,12 @@ final class TunnelMemoryLog: @unchecked Sendable {
             }
         }
         guard result == KERN_SUCCESS else { return nil }
-        return (Int(info.phys_footprint), Int(info.ledger_phys_footprint_peak))
-    }
-
-    private static func megabytes(_ bytes: Int) -> String {
-        String(format: "%.1f", Double(bytes) / 1_048_576)
+        let footprint = Int(info.phys_footprint)
+        return TunnelMemoryReading(
+            footprint: footprint,
+            peak: Int(info.ledger_phys_footprint_peak),
+            limit: footprint + os_proc_available_memory()
+        )
     }
 }
 #endif

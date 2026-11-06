@@ -1,7 +1,8 @@
 import Foundation
 
-// App ↔ System Extension resource transfer. This verifies the transfer, not
-// which resources an Xray configuration needs.
+// App ↔ extension messages. The macOS System Extension takes them all; the iOS
+// extension answers only `memory`. The resource transfer verifies the transfer,
+// not which resources an Xray configuration needs.
 enum TunnelRequest: Codable {
     case listDat
     case clearDat
@@ -9,13 +10,26 @@ enum TunnelRequest: Codable {
     // A distinct case also makes old extensions reject the new commit contract.
     case commitDatFiles(expected: [String: Int64])
     case startXray
+    case memory
 }
 
 enum TunnelResponse: Codable {
     case ok
     // nil means no published directory; [:] is a complete, empty directory.
     case datManifest([String: Int64]?)
+    case memory(TunnelMemoryReading)
     case error(String)
+}
+
+/// The extension's memory in bytes. iOS ends the extension at `limit`.
+struct TunnelMemoryReading: Codable {
+    var footprint: Int
+    /// The kernel's peak since the extension started, so spikes count too.
+    var peak: Int
+    var limit: Int
+
+    /// What is left below the limit at the peak.
+    var headroom: Int { limit - peak }
 }
 
 enum TunnelMessageCoder {
