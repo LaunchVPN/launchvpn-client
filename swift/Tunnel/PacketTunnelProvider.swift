@@ -86,7 +86,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
                     try await startTunnelLegacy()
                 }
                 #if os(iOS)
-                runRecorder.start(byApp: startedByApp)
+                runRecorder.start()
                 #endif
                 completionHandler(nil)
             } catch {

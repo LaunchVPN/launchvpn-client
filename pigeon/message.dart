@@ -141,7 +141,6 @@ class TunnelStop {
     this.reason,
     required this.startedAtMs,
     required this.endedAtMs,
-    required this.startedByApp,
     this.memory,
   });
 
@@ -156,9 +155,6 @@ class TunnelStop {
   /// The stop, or without one the extension's last sign of life, at most a
   /// minute before it ended.
   final int endedAtMs;
-
-  /// False when On Demand started the tunnel without the App.
-  final bool startedByApp;
 
   /// The last reading; its peak is the highest since the start.
   final TunnelMemory? memory;

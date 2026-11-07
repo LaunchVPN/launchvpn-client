@@ -16,13 +16,10 @@ SentryEvent tunnelStopEvent(TunnelStop stop) {
           : 'iOS stopped the VPN: $reason',
     ),
     fingerprint: ['tunnel-stop', reason ?? 'no-stop'],
-    tags: {
-      'tunnel.stop_reason': reason ?? 'none',
-      'tunnel.started_by': stop.startedByApp ? 'app' : 'on-demand',
-    },
+    tags: {'tunnel.stop_reason': reason ?? 'none'},
     contexts: Contexts()
       ..['tunnel'] = {
-        'ran_minutes': ran.inMinutes,
+        'ran_seconds': ran.inSeconds,
         if (memory != null) ...{
           'footprint_mb': _megabytes(memory.footprint),
           'peak_mb': _megabytes(memory.peak),

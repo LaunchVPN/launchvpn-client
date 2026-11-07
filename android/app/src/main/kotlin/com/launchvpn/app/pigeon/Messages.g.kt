@@ -394,8 +394,6 @@ data class TunnelStop (
    * minute before it ended.
    */
   val endedAtMs: Long,
-  /** False when On Demand started the tunnel without the App. */
-  val startedByApp: Boolean,
   /** The last reading; its peak is the highest since the start. */
   val memory: TunnelMemory? = null
 )
@@ -405,9 +403,8 @@ data class TunnelStop (
       val reason = pigeonVar_list[0] as String?
       val startedAtMs = pigeonVar_list[1] as Long
       val endedAtMs = pigeonVar_list[2] as Long
-      val startedByApp = pigeonVar_list[3] as Boolean
-      val memory = pigeonVar_list[4] as TunnelMemory?
-      return TunnelStop(reason, startedAtMs, endedAtMs, startedByApp, memory)
+      val memory = pigeonVar_list[3] as TunnelMemory?
+      return TunnelStop(reason, startedAtMs, endedAtMs, memory)
     }
   }
   fun toList(): List<Any?> {
@@ -415,7 +412,6 @@ data class TunnelStop (
       reason,
       startedAtMs,
       endedAtMs,
-      startedByApp,
       memory,
     )
   }
@@ -427,7 +423,7 @@ data class TunnelStop (
       return true
     }
     val other = other as TunnelStop
-    return MessagesPigeonUtils.deepEquals(this.reason, other.reason) && MessagesPigeonUtils.deepEquals(this.startedAtMs, other.startedAtMs) && MessagesPigeonUtils.deepEquals(this.endedAtMs, other.endedAtMs) && MessagesPigeonUtils.deepEquals(this.startedByApp, other.startedByApp) && MessagesPigeonUtils.deepEquals(this.memory, other.memory)
+    return MessagesPigeonUtils.deepEquals(this.reason, other.reason) && MessagesPigeonUtils.deepEquals(this.startedAtMs, other.startedAtMs) && MessagesPigeonUtils.deepEquals(this.endedAtMs, other.endedAtMs) && MessagesPigeonUtils.deepEquals(this.memory, other.memory)
   }
 
   override fun hashCode(): Int {
@@ -435,12 +431,11 @@ data class TunnelStop (
     result = 31 * result + MessagesPigeonUtils.deepHash(this.reason)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.startedAtMs)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.endedAtMs)
-    result = 31 * result + MessagesPigeonUtils.deepHash(this.startedByApp)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.memory)
     return result
   }
   override fun toString(): String {
-    return "TunnelStop(reason=$reason, startedAtMs=$startedAtMs, endedAtMs=$endedAtMs, startedByApp=$startedByApp, memory=$memory)"
+    return "TunnelStop(reason=$reason, startedAtMs=$startedAtMs, endedAtMs=$endedAtMs, memory=$memory)"
   }
 }
 

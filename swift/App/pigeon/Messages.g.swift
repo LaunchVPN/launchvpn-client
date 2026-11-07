@@ -349,8 +349,6 @@ struct TunnelStop: Hashable, CustomStringConvertible {
   /// The stop, or without one the extension's last sign of life, at most a
   /// minute before it ended.
   var endedAtMs: Int64
-  /// False when On Demand started the tunnel without the App.
-  var startedByApp: Bool
   /// The last reading; its peak is the highest since the start.
   var memory: TunnelMemory? = nil
 
@@ -360,14 +358,12 @@ struct TunnelStop: Hashable, CustomStringConvertible {
     let reason: String? = nilOrValue(pigeonVar_list[0])
     let startedAtMs = pigeonVar_list[1] as! Int64
     let endedAtMs = pigeonVar_list[2] as! Int64
-    let startedByApp = pigeonVar_list[3] as! Bool
-    let memory: TunnelMemory? = nilOrValue(pigeonVar_list[4])
+    let memory: TunnelMemory? = nilOrValue(pigeonVar_list[3])
 
     return TunnelStop(
       reason: reason,
       startedAtMs: startedAtMs,
       endedAtMs: endedAtMs,
-      startedByApp: startedByApp,
       memory: memory
     )
   }
@@ -376,7 +372,6 @@ struct TunnelStop: Hashable, CustomStringConvertible {
       reason,
       startedAtMs,
       endedAtMs,
-      startedByApp,
       memory,
     ]
   }
@@ -384,7 +379,7 @@ struct TunnelStop: Hashable, CustomStringConvertible {
     if Swift.type(of: lhs) != Swift.type(of: rhs) {
       return false
     }
-    return MessagesPigeonInternal.deepEquals(lhs.reason, rhs.reason) && MessagesPigeonInternal.deepEquals(lhs.startedAtMs, rhs.startedAtMs) && MessagesPigeonInternal.deepEquals(lhs.endedAtMs, rhs.endedAtMs) && MessagesPigeonInternal.deepEquals(lhs.startedByApp, rhs.startedByApp) && MessagesPigeonInternal.deepEquals(lhs.memory, rhs.memory)
+    return MessagesPigeonInternal.deepEquals(lhs.reason, rhs.reason) && MessagesPigeonInternal.deepEquals(lhs.startedAtMs, rhs.startedAtMs) && MessagesPigeonInternal.deepEquals(lhs.endedAtMs, rhs.endedAtMs) && MessagesPigeonInternal.deepEquals(lhs.memory, rhs.memory)
   }
 
   func hash(into hasher: inout Hasher) {
@@ -392,12 +387,11 @@ struct TunnelStop: Hashable, CustomStringConvertible {
     MessagesPigeonInternal.deepHash(value: reason, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: startedAtMs, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: endedAtMs, hasher: &hasher)
-    MessagesPigeonInternal.deepHash(value: startedByApp, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: memory, hasher: &hasher)
   }
 
   public var description: String {
-    return "TunnelStop(reason: \(String(describing: reason)), startedAtMs: \(String(describing: startedAtMs)), endedAtMs: \(String(describing: endedAtMs)), startedByApp: \(String(describing: startedByApp)), memory: \(String(describing: memory)))"
+    return "TunnelStop(reason: \(String(describing: reason)), startedAtMs: \(String(describing: startedAtMs)), endedAtMs: \(String(describing: endedAtMs)), memory: \(String(describing: memory)))"
   }
 }
 

@@ -5,8 +5,6 @@ import Foundation
 struct TunnelRun: Codable, Sendable {
     let id: UUID
     let startedAt: Date
-    /// False when On Demand started the tunnel without the App.
-    let startedByApp: Bool
     /// The stop, or the extension's last heartbeat while it runs. A process
     /// iOS kills, at its memory limit or on a crash, never stops, so its run
     /// ends at the last heartbeat.
@@ -35,10 +33,16 @@ struct TunnelRunStore: Sendable {
         )
     }
 
+    /// A run without a heartbeat for this long has no process behind it. The
+    /// heartbeat also pauses while the device sleeps, so a stale run alone
+    /// does not prove it.
+    static let silence: TimeInterval = 3 * 60
+
     /// Removes and returns the runs that are over, oldest first: stopped ones
-    /// and ones whose process died. While a tunnel may be up, the newest run
-    /// is the live one unless it stopped, and stays.
-    func takeEnded(tunnelMayRun: Bool) -> [TunnelRun] {
+    /// and ones whose process died. An unstopped run counts as dead only once
+    /// silent, and not while it is the newest and a tunnel may be up. One the
+    /// device's restart ended is removed without being returned.
+    func takeEnded(tunnelMayRun: Bool, bootedAt: Date?, now: Date = Date()) -> [TunnelRun] {
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
         var runs: [(file: URL, run: TunnelRun)] = []
         for file in files {
@@ -50,12 +54,18 @@ struct TunnelRunStore: Sendable {
             }
         }
         runs.sort { $0.run.startedAt < $1.run.startedAt }
-        if tunnelMayRun, let newest = runs.last, newest.run.stopReason == nil {
-            runs.removeLast()
+        let newest = runs.last?.run.id
+        let ended = runs.filter { entry in
+            entry.run.stopReason != nil
+                || (now.timeIntervalSince(entry.run.seenAt) > Self.silence
+                    && !(tunnelMayRun && entry.run.id == newest))
         }
-        for entry in runs {
+        for entry in ended {
             try? FileManager.default.removeItem(at: entry.file)
         }
-        return runs.map { $0.run }
+        return ended.map { $0.run }.filter { run in
+            guard run.stopReason == nil, let bootedAt else { return true }
+            return run.seenAt > bootedAt
+        }
     }
 }

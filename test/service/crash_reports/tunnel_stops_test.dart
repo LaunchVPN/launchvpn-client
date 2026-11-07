@@ -21,7 +21,6 @@ TunnelStop _stop(String? reason, {Duration ran = const Duration(hours: 2)}) =>
       reason: reason,
       startedAtMs: _start.millisecondsSinceEpoch,
       endedAtMs: _start.add(ran).millisecondsSinceEpoch,
-      startedByApp: true,
       memory: TunnelMemory(
         footprint: 31 * 1048576,
         peak: 34 * 1048576,
@@ -87,7 +86,7 @@ void main() {
       expect(reported.single.reason, 'unrecoverableNetworkChange');
     });
 
-    test('a record the App cannot read sends nothing', () async {
+    test('a failed read from the extension sends nothing', () async {
       final failing = TunnelStopReports(
         take: () async => throw PlatformException(code: 'channel-error'),
         report: (stop) async => reported.add(stop),
@@ -115,12 +114,9 @@ void main() {
         expect(event.level, SentryLevel.warning);
         expect(event.timestamp, _start.add(const Duration(minutes: 95)));
         expect(event.fingerprint, ['tunnel-stop', 'noNetworkAvailable']);
-        expect(event.tags, {
-          'tunnel.stop_reason': 'noNetworkAvailable',
-          'tunnel.started_by': 'app',
-        });
+        expect(event.tags, {'tunnel.stop_reason': 'noNetworkAvailable'});
         expect(event.contexts['tunnel'], {
-          'ran_minutes': 95,
+          'ran_seconds': 5700,
           'footprint_mb': 31,
           'peak_mb': 34,
           'limit_mb': 50,
@@ -129,9 +125,7 @@ void main() {
     );
 
     test('a run that ended without a stop says the process died', () {
-      final stop = _stop(null)..startedByApp = false;
-
-      final event = tunnelStopEvent(stop);
+      final event = tunnelStopEvent(_stop(null));
 
       expect(
         event.message?.formatted,
@@ -139,7 +133,6 @@ void main() {
       );
       expect(event.fingerprint, ['tunnel-stop', 'no-stop']);
       expect(event.tags?['tunnel.stop_reason'], 'none');
-      expect(event.tags?['tunnel.started_by'], 'on-demand');
     });
   });
 

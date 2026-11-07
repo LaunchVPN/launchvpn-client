@@ -272,7 +272,6 @@ class TunnelStop {
     this.reason,
     required this.startedAtMs,
     required this.endedAtMs,
-    required this.startedByApp,
     this.memory,
   });
 
@@ -288,14 +287,11 @@ class TunnelStop {
   /// minute before it ended.
   int endedAtMs;
 
-  /// False when On Demand started the tunnel without the App.
-  bool startedByApp;
-
   /// The last reading; its peak is the highest since the start.
   TunnelMemory? memory;
 
   List<Object?> _toList() {
-    return <Object?>[reason, startedAtMs, endedAtMs, startedByApp, memory];
+    return <Object?>[reason, startedAtMs, endedAtMs, memory];
   }
 
   Object encode() {
@@ -308,8 +304,7 @@ class TunnelStop {
       reason: result[0] as String?,
       startedAtMs: result[1]! as int,
       endedAtMs: result[2]! as int,
-      startedByApp: result[3]! as bool,
-      memory: result[4] as TunnelMemory?,
+      memory: result[3] as TunnelMemory?,
     );
   }
 
@@ -325,7 +320,6 @@ class TunnelStop {
     return _deepEquals(reason, other.reason) &&
         _deepEquals(startedAtMs, other.startedAtMs) &&
         _deepEquals(endedAtMs, other.endedAtMs) &&
-        _deepEquals(startedByApp, other.startedByApp) &&
         _deepEquals(memory, other.memory);
   }
 
@@ -335,7 +329,7 @@ class TunnelStop {
 
   @override
   String toString() {
-    return 'TunnelStop(reason: $reason, startedAtMs: $startedAtMs, endedAtMs: $endedAtMs, startedByApp: $startedByApp, memory: $memory)';
+    return 'TunnelStop(reason: $reason, startedAtMs: $startedAtMs, endedAtMs: $endedAtMs, memory: $memory)';
   }
 }
 

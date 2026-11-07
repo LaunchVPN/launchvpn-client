@@ -12,13 +12,15 @@ final class TunnelRunRecorder: @unchecked Sendable {
     private let store = TunnelRunStore.shared
     private var run: TunnelRun?
     private var timer: DispatchSourceTimer?
+    /// A stop that comes while the start still runs leaves no run to record.
+    private var stopped = false
 
-    func start(byApp: Bool) {
+    func start() {
         queue.async {
-            guard self.run == nil else { return }
+            guard self.run == nil, !self.stopped else { return }
             let now = Date()
             self.run = TunnelRun(
-                id: UUID(), startedAt: now, startedByApp: byApp, seenAt: now,
+                id: UUID(), startedAt: now, seenAt: now,
                 memory: TunnelMemoryReading.current(), stopReason: nil
             )
             self.save()
@@ -33,6 +35,7 @@ final class TunnelRunRecorder: @unchecked Sendable {
     /// Synchronous so the reason is on disk before the extension exits.
     func stop(_ reason: NEProviderStopReason) {
         queue.sync {
+            self.stopped = true
             self.timer?.cancel()
             self.timer = nil
             self.update(stopReason: reason.name)

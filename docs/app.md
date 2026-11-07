@@ -149,9 +149,10 @@ upstream pages kept for merging. They are not reachable in this build.
   seconds over «Вход» or the tabs that says reports go without links, addresses or email and can
   be turned off in Settings; it is not shown again.
 - On iOS the tunnel extension keeps a record of each run in the App Group (`TunnelRunRecorder`,
-  `TunnelRunStore`): when it started, whether the App or On Demand started it, its memory every
-  minute and, once iOS calls `stopTunnel`, the `NEProviderStopReason`. A process iOS kills at its
-  memory limit, or one that crashes, never stops, so its record ends at the last heartbeat.
+  `TunnelRunStore`): when it started, its memory every minute and, once iOS calls `stopTunnel`,
+  the `NEProviderStopReason`. A process iOS kills at its memory limit, or one that crashes, never
+  stops, so its record ends at the last heartbeat; it counts as dead after three silent minutes,
+  unless it is the newest run while a tunnel may be up. One that a device restart ended is dropped.
   `TunnelStopReports` takes the ended runs at launch, back in the App and when the VPN goes off,
   and sends each one to Sentry as a warning grouped by reason, unless crash reports are off or
   the user stopped the VPN (`userInitiated`, from the App, the Widget or iOS Settings). Each run is
