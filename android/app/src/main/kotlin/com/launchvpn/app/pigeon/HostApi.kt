@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import libXray.LibXray
+import com.launchvpn.app.vpn.TunnelBypass
 import com.launchvpn.app.vpn.VpnController
 import com.launchvpn.app.vpn.VpnStatusConnection
 import java.io.ByteArrayOutputStream
@@ -65,6 +66,7 @@ class AppHostApi(
     fun onInit(api: AppFlutterApi) {
         XLog.init()
         flutterApi = api
+        TunnelBypass.attach(vpnStatus)
         scope.launch {
             try { api.vpnStatusChanged(vpnStatus.read()) }
             catch (error: Exception) { XLog.e("Initial VPN status failed", error) }
@@ -72,6 +74,7 @@ class AppHostApi(
     }
 
     fun onDestroy() {
+        TunnelBypass.release(vpnStatus)
         vpnStatus.close()
         scope.cancel()
     }
@@ -140,6 +143,7 @@ class AppHostApi(
         scope.launch {
             // Temporary cores share process-global Xray state. The VPN runs in :native.
             invokeMutex.withLock {
+                TunnelBypass.followTunnel(context)
                 callback(runCatching { LibXray.invoke(requestJson) })
             }
         }

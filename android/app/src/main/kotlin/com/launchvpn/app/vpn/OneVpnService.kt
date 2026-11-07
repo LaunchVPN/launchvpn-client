@@ -17,6 +17,7 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
+import android.os.Process
 import android.util.AtomicFile
 import androidx.core.content.ContextCompat
 import com.elvishew.xlog.XLog
@@ -144,11 +145,23 @@ class OneVpnService : VpnService() {
 
     private val statusBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-            if (code != VpnStatusConnection.READ_STATUS) return super.onTransact(code, data, reply, flags)
-            data.enforceInterface(VpnStatusConnection.DESCRIPTOR)
-            reply?.writeNoException()
-            reply?.writeInt(resourceStatus.ordinal)
-            reply?.writeLong(currentStartRequestId)
+            when (code) {
+                VpnStatusConnection.READ_STATUS -> {
+                    data.enforceInterface(VpnStatusConnection.DESCRIPTOR)
+                    reply?.writeNoException()
+                    reply?.writeInt(resourceStatus.ordinal)
+                    reply?.writeLong(currentStartRequestId)
+                }
+                VpnStatusConnection.PROTECT -> {
+                    data.enforceInterface(VpnStatusConnection.DESCRIPTOR)
+                    // Only the App's own process may take a socket past the tunnel.
+                    val protected = Binder.getCallingUid() == Process.myUid() &&
+                        data.readFileDescriptor().use { protect(it.fd) }
+                    reply?.writeNoException()
+                    reply?.writeInt(if (protected) 1 else 0)
+                }
+                else -> return super.onTransact(code, data, reply, flags)
+            }
             return true
         }
     }

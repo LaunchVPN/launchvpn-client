@@ -1,4 +1,6 @@
 import Foundation
+import Network
+import NetworkExtension
 import Security
 #if os(iOS)
 import Flutter
@@ -70,7 +72,8 @@ final class AppHostApi: @preconcurrency BridgeHostApi {
     func invoke(requestJson: String, completion: @escaping (Result<String, any Error>) -> Void) {
         Task {
             do {
-                completion(.success(try await LibXrayInvoker.invoke(requestJson)))
+                let request = try await PingOutsideTunnel.prepare(requestJson)
+                completion(.success(try await LibXrayInvoker.invoke(request)))
             } catch {
                 completion(.failure(error))
             }
@@ -258,6 +261,112 @@ private enum NativeDevice {
         uname(&info)
         return withUnsafeBytes(of: &info.machine) { bytes in
             String(decoding: bytes.prefix { $0 != 0 }, as: UTF8.self)
+        }
+    }
+}
+
+/// The App's own traffic takes the tunnel, so a measurement from here would
+/// describe the tunnel. A socket bound to the physical interface goes past it,
+/// unless the tunnel captures all traffic, where Locations does not measure.
+enum PingOutsideTunnel {
+    enum Failure: LocalizedError {
+        case noPhysicalInterface
+
+        var errorDescription: String? {
+            "No Wi-Fi or cellular interface to measure past the tunnel."
+        }
+    }
+
+    /// A measurement that cannot get past a running tunnel fails rather than
+    /// measure the tunnel.
+    static func prepare(_ requestJson: String) async throws -> String {
+        // Only measurements need the work below, and every other call skips it.
+        guard requestJson.contains("\"pingBatch\""),
+              object(requestJson)?["method"] as? String == "pingBatch",
+              await tunnelLetsPast()
+        else { return requestJson }
+        guard let interface = await physicalInterface(),
+              let bound = bound(requestJson, to: interface)
+        else { throw Failure.noPhysicalInterface }
+        return bound
+    }
+
+    /// Every outbound of every measured config dials through [interface].
+    private static func bound(_ requestJson: String, to interface: String) -> String? {
+        guard var request = object(requestJson),
+              var payload = request["payload"] as? [String: Any],
+              let configs = payload["configs"] as? [[String: Any]]
+        else { return nil }
+        payload["configs"] = configs.map { config in
+            var config = config
+            if let xrayJson = config["xrayJson"] as? String,
+               var xray = object(xrayJson),
+               let outbounds = xray["outbounds"] as? [[String: Any]] {
+                xray["outbounds"] = outbounds.map { outbound in
+                    var outbound = outbound
+                    var stream = outbound["streamSettings"] as? [String: Any] ?? [:]
+                    var sockopt = stream["sockopt"] as? [String: Any] ?? [:]
+                    sockopt["interface"] = interface
+                    stream["sockopt"] = sockopt
+                    outbound["streamSettings"] = stream
+                    return outbound
+                }
+                config["xrayJson"] = text(xray) ?? xrayJson
+            }
+            return config
+        }
+        request["payload"] = payload
+        return text(request)
+    }
+
+    private static func object(_ json: String) -> [String: Any]? {
+        guard let data = json.data(using: .utf8) else { return nil }
+        return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+    }
+
+    private static func text(_ object: [String: Any]) -> String? {
+        guard let data = try? JSONSerialization.data(withJSONObject: object) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    @MainActor
+    private static func tunnelLetsPast() -> Bool {
+        guard let manager = VPNManager.shared.vpn,
+              manager.connection.status == .connected
+        else { return false }
+        return manager.protocolConfiguration?.includeAllNetworks != true
+    }
+
+    /// Wi-Fi before cellular, as the system prefers it.
+    private static func physicalInterface() async -> String? {
+        await withCheckedContinuation { continuation in
+            let monitor = NWPathMonitor(prohibitedInterfaceTypes: [.other, .loopback])
+            let answer = Once()
+            monitor.pathUpdateHandler = { path in
+                guard answer.take() else { return }
+                // The handler holds the monitor, so it goes with it.
+                monitor.pathUpdateHandler = nil
+                monitor.cancel()
+                let physical = path.availableInterfaces.first {
+                    $0.type == .wifi || $0.type == .cellular
+                }
+                continuation.resume(returning: physical?.name)
+            }
+            monitor.start(queue: DispatchQueue(label: "com.launchvpn.ping-path"))
+        }
+    }
+
+    /// The monitor may report again before it stops; only its first path counts.
+    private final class Once: @unchecked Sendable {
+        private let lock = NSLock()
+        private var taken = false
+
+        func take() -> Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            if taken { return false }
+            taken = true
+            return true
         }
     }
 }
