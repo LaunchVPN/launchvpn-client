@@ -790,6 +790,16 @@ class VPNManager {
         else { return nil }
         return reading
     }
+
+    /// Whether the system may still run the tunnel. An unknown status counts
+    /// as running, so a live run is never reported as ended.
+    func tunnelMayRun() async -> Bool {
+        if vpn == nil {
+            do { vpn = try await findVpn() } catch { return true }
+        }
+        guard let status = vpn?.connection.status else { return false }
+        return status != .disconnected && status != .invalid
+    }
     #endif
 
     private func sendTunnelRequest(

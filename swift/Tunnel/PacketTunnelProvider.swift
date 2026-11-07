@@ -53,6 +53,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
     private var pendingStartSignal = false
     #if os(iOS)
     private let memoryLog = TunnelMemoryLog()
+    private let runRecorder = TunnelRunRecorder()
     #endif
 
     override func startTunnel(
@@ -84,6 +85,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
                 } else {
                     try await startTunnelLegacy()
                 }
+                #if os(iOS)
+                runRecorder.start(byApp: startedByApp)
+                #endif
                 completionHandler(nil)
             } catch {
                 #if os(iOS)
@@ -290,6 +294,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
 
     override func stopTunnel(with reason: NEProviderStopReason) async {
         #if os(iOS)
+        runRecorder.stop(reason)
         AppleWidgetPublisher.publish(.disconnecting)
         #endif
         self.stopXray()

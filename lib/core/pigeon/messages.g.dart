@@ -266,6 +266,79 @@ class TunnelMemory {
   }
 }
 
+/// How a run of the iOS tunnel extension ended.
+class TunnelStop {
+  TunnelStop({
+    this.reason,
+    required this.startedAtMs,
+    required this.endedAtMs,
+    required this.startedByApp,
+    this.memory,
+  });
+
+  /// `NEProviderStopReason`'s name, such as `noNetworkAvailable`. Null when
+  /// the process ended without a stop: it crashed, or iOS ended it at its
+  /// memory limit.
+  String? reason;
+
+  /// In milliseconds since the epoch.
+  int startedAtMs;
+
+  /// The stop, or without one the extension's last sign of life, at most a
+  /// minute before it ended.
+  int endedAtMs;
+
+  /// False when On Demand started the tunnel without the App.
+  bool startedByApp;
+
+  /// The last reading; its peak is the highest since the start.
+  TunnelMemory? memory;
+
+  List<Object?> _toList() {
+    return <Object?>[reason, startedAtMs, endedAtMs, startedByApp, memory];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static TunnelStop decode(Object result) {
+    result as List<Object?>;
+    return TunnelStop(
+      reason: result[0] as String?,
+      startedAtMs: result[1]! as int,
+      endedAtMs: result[2]! as int,
+      startedByApp: result[3]! as bool,
+      memory: result[4] as TunnelMemory?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! TunnelStop || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(reason, other.reason) &&
+        _deepEquals(startedAtMs, other.startedAtMs) &&
+        _deepEquals(endedAtMs, other.endedAtMs) &&
+        _deepEquals(startedByApp, other.startedByApp) &&
+        _deepEquals(memory, other.memory);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'TunnelStop(reason: $reason, startedAtMs: $startedAtMs, endedAtMs: $endedAtMs, startedByApp: $startedByApp, memory: $memory)';
+  }
+}
+
 class AndroidAutomationSettings {
   AndroidAutomationSettings({required this.enabled, this.token});
 
@@ -703,29 +776,32 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is TunnelMemory) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    } else if (value is AndroidAutomationSettings) {
+    } else if (value is TunnelStop) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    } else if (value is BackupLocation) {
+    } else if (value is AndroidAutomationSettings) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    } else if (value is DeviceIdentity) {
+    } else if (value is BackupLocation) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    } else if (value is AppleVpnCapabilities) {
+    } else if (value is DeviceIdentity) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
-    } else if (value is NativeLaunchAtLoginResult) {
+    } else if (value is AppleVpnCapabilities) {
       buffer.putUint8(140);
       writeValue(buffer, value.encode());
-    } else if (value is PlatformPermissionResult) {
+    } else if (value is NativeLaunchAtLoginResult) {
       buffer.putUint8(141);
       writeValue(buffer, value.encode());
-    } else if (value is NativeVpnCommandResult) {
+    } else if (value is PlatformPermissionResult) {
       buffer.putUint8(142);
       writeValue(buffer, value.encode());
-    } else if (value is AndroidAppInfo) {
+    } else if (value is NativeVpnCommandResult) {
       buffer.putUint8(143);
+      writeValue(buffer, value.encode());
+    } else if (value is AndroidAppInfo) {
+      buffer.putUint8(144);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -755,20 +831,22 @@ class _PigeonCodec extends StandardMessageCodec {
       case 135:
         return TunnelMemory.decode(readValue(buffer)!);
       case 136:
-        return AndroidAutomationSettings.decode(readValue(buffer)!);
+        return TunnelStop.decode(readValue(buffer)!);
       case 137:
-        return BackupLocation.decode(readValue(buffer)!);
+        return AndroidAutomationSettings.decode(readValue(buffer)!);
       case 138:
-        return DeviceIdentity.decode(readValue(buffer)!);
+        return BackupLocation.decode(readValue(buffer)!);
       case 139:
-        return AppleVpnCapabilities.decode(readValue(buffer)!);
+        return DeviceIdentity.decode(readValue(buffer)!);
       case 140:
-        return NativeLaunchAtLoginResult.decode(readValue(buffer)!);
+        return AppleVpnCapabilities.decode(readValue(buffer)!);
       case 141:
-        return PlatformPermissionResult.decode(readValue(buffer)!);
+        return NativeLaunchAtLoginResult.decode(readValue(buffer)!);
       case 142:
-        return NativeVpnCommandResult.decode(readValue(buffer)!);
+        return PlatformPermissionResult.decode(readValue(buffer)!);
       case 143:
+        return NativeVpnCommandResult.decode(readValue(buffer)!);
+      case 144:
         return AndroidAppInfo.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -1257,6 +1335,46 @@ class TesterHostApi {
       isNullValid: true,
     );
     return pigeonVar_replyValue as TunnelMemory?;
+  }
+}
+
+/// The iOS tunnel extension's record of its runs, kept in the App Group.
+class TunnelStopsHostApi {
+  /// Constructor for [TunnelStopsHostApi]. The [binaryMessenger] named argument is
+  /// available for dependency injection. If it is left null, the default
+  /// BinaryMessenger will be used which routes to the host platform.
+  TunnelStopsHostApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
+
+  final BinaryMessenger? pigeonVar_binaryMessenger;
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  final String pigeonVar_messageChannelSuffix;
+
+  /// The runs that ended since the last call, each handed over once. A run
+  /// that may still be going stays for a later call.
+  Future<List<TunnelStop>> takeTunnelStops() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.onexray.TunnelStopsHostApi.takeTunnelStops$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return (pigeonVar_replyValue! as List<Object?>).cast<TunnelStop>();
   }
 }
 

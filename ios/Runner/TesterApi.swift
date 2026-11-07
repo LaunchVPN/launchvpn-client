@@ -11,9 +11,13 @@ final class TesterApi: @preconcurrency TesterHostApi {
     func readTunnelMemory(completion: @escaping (Result<TunnelMemory?, Error>) -> Void) {
         Task {
             let reading = await VPNManager.shared.readTunnelMemory()
-            completion(.success(reading.map {
-                TunnelMemory(footprint: Int64($0.footprint), peak: Int64($0.peak), limit: Int64($0.limit))
-            }))
+            completion(.success(reading.map(TunnelMemory.init)))
         }
+    }
+}
+
+extension TunnelMemory {
+    init(_ reading: TunnelMemoryReading) {
+        self.init(footprint: Int64(reading.footprint), peak: Int64(reading.peak), limit: Int64(reading.limit))
     }
 }

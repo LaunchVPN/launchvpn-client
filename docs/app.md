@@ -148,6 +148,14 @@ upstream pages kept for merging. They are not reachable in this build.
   closes Sentry at once; turning it on starts it again. The first launch shows a toast for eight
   seconds over «Вход» or the tabs that says reports go without links, addresses or email and can
   be turned off in Settings; it is not shown again.
+- On iOS the tunnel extension keeps a record of each run in the App Group (`TunnelRunRecorder`,
+  `TunnelRunStore`): when it started, whether the App or On Demand started it, its memory every
+  minute and, once iOS calls `stopTunnel`, the `NEProviderStopReason`. A process iOS kills at its
+  memory limit, or one that crashes, never stops, so its record ends at the last heartbeat.
+  `TunnelStopReports` takes the ended runs at launch, back in the App and when the VPN goes off,
+  and sends each one to Sentry as a warning grouped by reason, unless crash reports are off or
+  the user stopped the VPN (`userInitiated`, from the App, the Widget or iOS Settings). Each run is
+  handed over once, sent or not; while a tunnel may be up, its newest unstopped run stays.
 - The [privacy policy](../privacy/index.html) lists what the App sends and to whom. A change to
   that, such as a new header, report field or third-party request, updates both of its pages.
 - Language, under App, opens a screen above the tabs with «Как в системе», «Русский» and

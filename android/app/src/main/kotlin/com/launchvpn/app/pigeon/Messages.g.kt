@@ -375,6 +375,75 @@ data class TunnelMemory (
   }
 }
 
+/**
+ * How a run of the iOS tunnel extension ended.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class TunnelStop (
+  /**
+   * `NEProviderStopReason`'s name, such as `noNetworkAvailable`. Null when
+   * the process ended without a stop: it crashed, or iOS ended it at its
+   * memory limit.
+   */
+  val reason: String? = null,
+  /** In milliseconds since the epoch. */
+  val startedAtMs: Long,
+  /**
+   * The stop, or without one the extension's last sign of life, at most a
+   * minute before it ended.
+   */
+  val endedAtMs: Long,
+  /** False when On Demand started the tunnel without the App. */
+  val startedByApp: Boolean,
+  /** The last reading; its peak is the highest since the start. */
+  val memory: TunnelMemory? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): TunnelStop {
+      val reason = pigeonVar_list[0] as String?
+      val startedAtMs = pigeonVar_list[1] as Long
+      val endedAtMs = pigeonVar_list[2] as Long
+      val startedByApp = pigeonVar_list[3] as Boolean
+      val memory = pigeonVar_list[4] as TunnelMemory?
+      return TunnelStop(reason, startedAtMs, endedAtMs, startedByApp, memory)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      reason,
+      startedAtMs,
+      endedAtMs,
+      startedByApp,
+      memory,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as TunnelStop
+    return MessagesPigeonUtils.deepEquals(this.reason, other.reason) && MessagesPigeonUtils.deepEquals(this.startedAtMs, other.startedAtMs) && MessagesPigeonUtils.deepEquals(this.endedAtMs, other.endedAtMs) && MessagesPigeonUtils.deepEquals(this.startedByApp, other.startedByApp) && MessagesPigeonUtils.deepEquals(this.memory, other.memory)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.reason)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.startedAtMs)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.endedAtMs)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.startedByApp)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.memory)
+    return result
+  }
+  override fun toString(): String {
+    return "TunnelStop(reason=$reason, startedAtMs=$startedAtMs, endedAtMs=$endedAtMs, startedByApp=$startedByApp, memory=$memory)"
+  }
+}
+
 /** Generated class from Pigeon that represents data sent in messages. */
 data class AndroidAutomationSettings (
   val enabled: Boolean,
@@ -766,40 +835,45 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       136.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AndroidAutomationSettings.fromList(it)
+          TunnelStop.fromList(it)
         }
       }
       137.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          BackupLocation.fromList(it)
+          AndroidAutomationSettings.fromList(it)
         }
       }
       138.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          DeviceIdentity.fromList(it)
+          BackupLocation.fromList(it)
         }
       }
       139.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AppleVpnCapabilities.fromList(it)
+          DeviceIdentity.fromList(it)
         }
       }
       140.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          NativeLaunchAtLoginResult.fromList(it)
+          AppleVpnCapabilities.fromList(it)
         }
       }
       141.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          PlatformPermissionResult.fromList(it)
+          NativeLaunchAtLoginResult.fromList(it)
         }
       }
       142.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          NativeVpnCommandResult.fromList(it)
+          PlatformPermissionResult.fromList(it)
         }
       }
       143.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          NativeVpnCommandResult.fromList(it)
+        }
+      }
+      144.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
           AndroidAppInfo.fromList(it)
         }
@@ -837,36 +911,40 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is AndroidAutomationSettings -> {
+      is TunnelStop -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is BackupLocation -> {
+      is AndroidAutomationSettings -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is DeviceIdentity -> {
+      is BackupLocation -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is AppleVpnCapabilities -> {
+      is DeviceIdentity -> {
         stream.write(139)
         writeValue(stream, value.toList())
       }
-      is NativeLaunchAtLoginResult -> {
+      is AppleVpnCapabilities -> {
         stream.write(140)
         writeValue(stream, value.toList())
       }
-      is PlatformPermissionResult -> {
+      is NativeLaunchAtLoginResult -> {
         stream.write(141)
         writeValue(stream, value.toList())
       }
-      is NativeVpnCommandResult -> {
+      is PlatformPermissionResult -> {
         stream.write(142)
         writeValue(stream, value.toList())
       }
-      is AndroidAppInfo -> {
+      is NativeVpnCommandResult -> {
         stream.write(143)
+        writeValue(stream, value.toList())
+      }
+      is AndroidAppInfo -> {
+        stream.write(144)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -1337,6 +1415,48 @@ interface TesterHostApi {
         if (api != null) {
           channel.setMessageHandler { _, reply ->
             api.readTunnelMemory{ result: Result<TunnelMemory?> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+    }
+  }
+}
+/**
+ * The iOS tunnel extension's record of its runs, kept in the App Group.
+ *
+ * Generated interface from Pigeon that represents a handler of messages from Flutter.
+ */
+interface TunnelStopsHostApi {
+  /**
+   * The runs that ended since the last call, each handed over once. A run
+   * that may still be going stays for a later call.
+   */
+  fun takeTunnelStops(callback: (Result<List<TunnelStop>>) -> Unit)
+
+  companion object {
+    /** The codec used by TunnelStopsHostApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      MessagesPigeonCodec()
+    }
+    /** Sets up an instance of `TunnelStopsHostApi` to handle messages through the `binaryMessenger`. */
+    @JvmOverloads
+    fun setUp(binaryMessenger: BinaryMessenger, api: TunnelStopsHostApi?, messageChannelSuffix: String = "") {
+      val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.onexray.TunnelStopsHostApi.takeTunnelStops$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.takeTunnelStops{ result: Result<List<TunnelStop>> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(MessagesPigeonUtils.wrapError(error))
