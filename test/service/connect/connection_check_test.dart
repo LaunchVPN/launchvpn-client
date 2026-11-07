@@ -167,8 +167,7 @@ void main() {
       time.elapse(ConnectionCheck.retry);
 
       expect(harness.restarts, 1);
-      expect(harness.view.passed, isTrue);
-      expect(harness.view.recovering, isFalse);
+      expect(harness.view.stage, ConnectionCheckStage.reached);
       expect(harness.view.delayMs, 75);
       final report = harness.reports.single;
       expect(report.recovered, isTrue);
@@ -179,7 +178,7 @@ void main() {
     });
   });
 
-  test('a new session stays recovering until a check gets through', () {
+  test('a new session stays switching until a check gets through', () {
     run((time, harness) {
       harness.answers.addAll([null, null]);
       harness.connection.value = _up(_session());
@@ -188,8 +187,7 @@ void main() {
       time.elapse(ConnectionCheck.retry);
 
       expect(harness.restarts, 1);
-      expect(harness.view.recovering, isTrue);
-      expect(harness.view.passed, isFalse);
+      expect(harness.view.stage, ConnectionCheckStage.switching);
     });
   });
 

@@ -15,32 +15,38 @@ import 'package:onexray/service/crash_reports/service.dart';
 import 'package:onexray/service/servers/locations.dart';
 import 'package:onexray/service/shared/app_lifecycle.dart';
 
+/// Where the check stands with a session.
+enum ConnectionCheckStage {
+  /// The tunnel is up and no check has got through it yet.
+  checking,
+
+  /// The App restarted the session after its server went silent, and no
+  /// check has got through the new one yet.
+  switching,
+
+  /// A check got through. It stays so until checks fail.
+  reached,
+}
+
 /// What the check knows about the running session.
 @immutable
 class ConnectionCheckView {
   const ConnectionCheckView({
     this.session,
-    this.passed = false,
-    this.recovering = false,
+    this.stage = ConnectionCheckStage.checking,
     this.delayMs,
   });
 
   /// The `ConnectionRuntime.identity` the rest describes.
   final String? session;
-
-  /// A check got through this session. It stays so until checks fail.
-  final bool passed;
-
-  /// The App restarted the session after its server went silent and no
-  /// check has got through since.
-  final bool recovering;
+  final ConnectionCheckStage stage;
 
   /// How long the last check that got through took.
   final int? delayMs;
 
   /// Whether [runtime] got through a check. Without one it may only be up.
   bool reached(ConnectionRuntime runtime) =>
-      passed && session == runtime.identity;
+      stage == ConnectionCheckStage.reached && session == runtime.identity;
 }
 
 /// Tells whether the running VPN reaches the internet. «Подключено» only says
@@ -111,7 +117,6 @@ final class ConnectionCheck with WidgetsBindingObserver {
 
   /// The check restarts or stops the session; it waits for that to end.
   bool _acting = false;
-  int _failures = 0;
   _Episode? _episode;
 
   /// `main` calls it once the coordinator is set up.
@@ -141,13 +146,14 @@ final class ConnectionCheck with WidgetsBindingObserver {
     if (view.value.session == runtime.identity) return;
     view.value = ConnectionCheckView(
       session: runtime.identity,
-      recovering: _episode?.switched ?? false,
+      stage: (_episode?.switched ?? false)
+          ? ConnectionCheckStage.switching
+          : ConnectionCheckStage.checking,
     );
     checkNow();
   }
 
   void _forget() {
-    _failures = 0;
     _episode = null;
     if (view.value.session != null) view.value = const ConnectionCheckView();
   }
@@ -157,10 +163,9 @@ final class ConnectionCheck with WidgetsBindingObserver {
   void _startOver() {
     final episode = _episode;
     if (episode == null || !episode.switched) {
-      _failures = 0;
       _episode = null;
     } else {
-      _failures = episode.actAt - failuresToAct;
+      episode.inRow = 0;
     }
   }
 
@@ -214,55 +219,56 @@ final class ConnectionCheck with WidgetsBindingObserver {
     if (episode != null && episode.switched) {
       unawaited(_send(episode, network, recovered: true));
     }
-    _failures = 0;
     _episode = null;
     view.value = ConnectionCheckView(
       session: runtime.identity,
-      passed: true,
+      stage: ConnectionCheckStage.reached,
       delayMs: delay,
     );
     _schedule(interval);
   }
 
   void _failed(ConnectionRuntime runtime, NetworkKind network) {
-    _failures++;
     final episode = _episode ??= _Episode(
       since: runtime.startedAt,
       location: runtime.profile?.name,
     );
-    if (_failures < episode.actAt) {
+    episode.fail();
+    if (episode.inRow < failuresToAct) {
       _schedule(retry);
     } else if (!episode.switched) {
       episode
         ..switched = true
-        ..actAt += failuresToAct;
+        ..inRow = 0;
       view.value = ConnectionCheckView(
         session: runtime.identity,
-        recovering: true,
+        stage: ConnectionCheckStage.switching,
       );
-      unawaited(_act(_restart, episode, network));
+      unawaited(
+        _act(
+          _restart,
+          failed: () => unawaited(_send(episode, network, recovered: false)),
+        ),
+      );
     } else {
-      unawaited(_act(_stop, episode, network, lost: true));
+      unawaited(_send(episode, network, recovered: false));
+      unawaited(_act(_stop));
     }
   }
 
-  /// Runs the restart or, with [lost], the stop. A restart that fails for
-  /// any reason but a cancel leaves the person offline too.
+  /// Restarts or stops the session, and checks wait for it. A restart that
+  /// fails for any reason but a cancel leaves the person offline, which
+  /// [failed] reports.
   Future<void> _act(
-    Future<void> Function() action,
-    _Episode episode,
-    NetworkKind network, {
-    bool lost = false,
+    Future<void> Function() action, {
+    void Function()? failed,
   }) async {
     _acting = true;
     _next?.cancel();
-    if (lost) unawaited(_send(episode, network, recovered: false));
     try {
       await action();
     } catch (error) {
-      if (!lost && connectionFailureReason(error) != 'cancelled') {
-        unawaited(_send(episode, network, recovered: false));
-      }
+      if (connectionFailureReason(error) != 'cancelled') failed?.call();
       ygLogger('act on silent session failed (${error.runtimeType})');
     } finally {
       _acting = false;
@@ -284,7 +290,7 @@ final class ConnectionCheck with WidgetsBindingObserver {
       },
       ran: DateTime.now().difference(episode.since),
       network: network,
-      failedChecks: _failures,
+      failedChecks: episode.failed,
       switched: episode.switched,
       recovered: recovered,
     ),
@@ -311,13 +317,25 @@ final class ConnectionCheck with WidgetsBindingObserver {
   }
 }
 
-/// Checks in a row that failed, from the first failure to the next success.
+/// Checks that failed, from the first failure to the next success.
 class _Episode {
   _Episode({required this.since, required this.location});
 
   /// When the session that went silent started.
   final DateTime since;
   final String? location;
+
+  /// The App restarted the session to switch servers.
   bool switched = false;
-  int actAt = ConnectionCheck.failuresToAct;
+
+  /// Failures in a row in the current session, which decide the next step.
+  int inRow = 0;
+
+  /// Every failure of the episode, for the report.
+  int failed = 0;
+
+  void fail() {
+    inRow++;
+    failed++;
+  }
 }

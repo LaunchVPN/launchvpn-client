@@ -51,16 +51,17 @@ class FirstServerPicker {
     final config = profile.config;
     final servers = _candidates(config);
     if (servers.length < (everyServer ? 1 : 2)) return profile;
-    final batches = everyServer
-        ? servers.slices(PingBatchRunner.maxBatchSize).toList()
-        : [servers.shuffled().take(PingBatchRunner.maxBatchSize).toList()];
-    final answer = await Future.any([
-      _fastest(batches),
+    final measured = everyServer
+        ? servers
+        : servers.shuffled().take(PingBatchRunner.maxBatchSize).toList();
+    final batches = (measured.length / PingBatchRunner.maxBatchSize).ceil();
+    final results = await Future.any([
+      _measureAll(measured),
       if (cancelled != null) cancelled.then((_) => null),
-    ]).timeout(_budget * batches.length, onTimeout: () => null);
-    if (answer == null) return profile;
-    final winner = answer.winner;
-    if (winner == null) {
+    ]).timeout(_budget * batches, onTimeout: () => null);
+    if (results == null) return profile;
+    final answered = results.indexed.where((item) => item.$2.success);
+    if (answered.isEmpty) {
       if (everyServer) {
         throw ConnectionResolutionException(
           ConnectionResolutionFailure.insufficientHealthyServers,
@@ -70,6 +71,7 @@ class FirstServerPicker {
       }
       return profile;
     }
+    final winner = measured[minBy(answered, (item) => item.$2.delay)!.$1];
     (config['outbounds'] as List)
       ..remove(winner)
       ..insert(0, winner);
@@ -120,27 +122,22 @@ class FirstServerPicker {
         ('$network'.contains('tcp') && '$network'.contains('udp'));
   }
 
-  /// The fastest server across [batches], or none when every one was
-  /// measured and stayed silent. Null when the check itself failed, which
-  /// must never fail the connection it serves.
-  Future<({Map<String, dynamic>? winner})?> _fastest(
-    List<List<Map<String, dynamic>>> batches,
+  /// One result per server, five at a time, as a native batch allows. Null
+  /// when the check itself failed, which must never fail the connection it
+  /// serves.
+  Future<List<PingBatchResult>?> _measureAll(
+    List<Map<String, dynamic>> servers,
   ) async {
     try {
-      Map<String, dynamic>? winner;
-      var best = 0;
-      for (final servers in batches) {
-        final results = await _measure([
-          for (final server in servers) encodeSingleOutbound(server),
-        ], timeoutSeconds: _timeoutSeconds);
-        for (final (index, result) in results.indexed) {
-          if (result.success && (winner == null || result.delay < best)) {
-            winner = servers[index];
-            best = result.delay;
-          }
-        }
+      final results = <PingBatchResult>[];
+      for (final batch in servers.slices(PingBatchRunner.maxBatchSize)) {
+        results.addAll(
+          await _measure([
+            for (final server in batch) encodeSingleOutbound(server),
+          ], timeoutSeconds: _timeoutSeconds),
+        );
       }
-      return (winner: winner);
+      return results;
     } catch (error) {
       ygLogger('Check first server failed (${error.runtimeType})');
       return null;

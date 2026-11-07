@@ -157,7 +157,7 @@ class HomeState {
   /// A restart after the server went silent reads as one reconnection, until
   /// a check gets through the new session.
   HomeStatus get _reported => switch (view.phase) {
-    _ when _recovering => HomeStatus.reconnecting,
+    _ when _switching => HomeStatus.reconnecting,
     ConnectionPhase.connected =>
       _reached ? HomeStatus.connected : HomeStatus.checking,
     ConnectionPhase.disconnecting => HomeStatus.disconnecting,
@@ -172,8 +172,8 @@ class HomeState {
           : HomeStatus.off,
   };
 
-  bool get _recovering =>
-      (check?.recovering ?? false) &&
+  bool get _switching =>
+      check?.stage == ConnectionCheckStage.switching &&
       view.phase != ConnectionPhase.disconnected &&
       view.phase != ConnectionPhase.failed;
 

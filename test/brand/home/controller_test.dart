@@ -1128,7 +1128,7 @@ void main() {
 
     ConnectionCheckView passed([int delay = 48]) => ConnectionCheckView(
       session: runtime.identity,
-      passed: true,
+      stage: ConnectionCheckStage.reached,
       delayMs: delay,
     );
 
@@ -1152,7 +1152,10 @@ void main() {
     test('a check of an earlier session does not count', () {
       final state = home(
         ConnectionPhase.connected,
-        const ConnectionCheckView(session: 'earlier', passed: true),
+        const ConnectionCheckView(
+          session: 'earlier',
+          stage: ConnectionCheckStage.reached,
+        ),
       );
 
       expect(state.status, HomeStatus.checking);
@@ -1161,7 +1164,7 @@ void main() {
     test('a switch of servers reads as one reconnection', () {
       final recovering = ConnectionCheckView(
         session: runtime.identity,
-        recovering: true,
+        stage: ConnectionCheckStage.switching,
       );
       for (final phase in [
         ConnectionPhase.disconnecting,

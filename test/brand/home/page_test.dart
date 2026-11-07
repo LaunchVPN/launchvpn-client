@@ -715,7 +715,7 @@ void main() {
 
     check.value = ConnectionCheckView(
       session: runtime!.identity,
-      passed: true,
+      stage: ConnectionCheckStage.reached,
       delayMs: 38,
     );
     await tester.pump();
