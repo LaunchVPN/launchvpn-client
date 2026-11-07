@@ -490,7 +490,7 @@ class _Hero extends StatelessWidget {
     final status = state.status;
     final title = switch (status) {
       HomeStatus.off || HomeStatus.failed => l.homeStatusOff,
-      HomeStatus.connecting => l.homeStatusConnecting,
+      HomeStatus.connecting || HomeStatus.checking => l.homeStatusConnecting,
       HomeStatus.reconnecting => l.homeStatusReconnecting,
       HomeStatus.connected => l.homeStatusConnected,
       HomeStatus.disconnecting => l.homeStatusDisconnecting,
@@ -537,6 +537,7 @@ class _Hint extends StatelessWidget {
         state.subscription == null ? l.homeNoSubscription : l.homeHintOff,
       ),
       HomeStatus.connecting => text(l.homeHintConnecting),
+      HomeStatus.checking => text(l.homeHintChecking),
       HomeStatus.reconnecting => text(l.homeHintReconnecting),
       HomeStatus.connected => _ConnectedHint(since: state.connectedSince),
       HomeStatus.disconnecting => const SizedBox.shrink(),

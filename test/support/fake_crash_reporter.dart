@@ -1,10 +1,10 @@
-import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/service/crash_reports/service.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// Stands in for Sentry and tells whether reports would be sent.
 final class FakeCrashReporter implements CrashReporter {
   bool sending = false;
-  final tunnelStops = <TunnelStop>[];
+  final events = <SentryEvent>[];
 
   @override
   Future<void> start() async => sending = true;
@@ -13,5 +13,5 @@ final class FakeCrashReporter implements CrashReporter {
   Future<void> stop() async => sending = false;
 
   @override
-  Future<void> reportTunnelStop(TunnelStop stop) async => tunnelStops.add(stop);
+  Future<void> capture(SentryEvent event) async => events.add(event);
 }

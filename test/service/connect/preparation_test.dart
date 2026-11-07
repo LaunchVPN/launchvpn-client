@@ -181,7 +181,7 @@ void main() {
       await db.coreConfigDao.updateRow(profile);
     }
 
-    test('leads the session with a server that answers', () async {
+    Future<void> saveGroup() async {
       final data = base64Encode(
         utf8.encode(
           jsonEncode({
@@ -205,7 +205,13 @@ void main() {
           }),
         ),
       );
-      await db.coreConfigDao.updateRow(profile.copyWith(data: Value(data)));
+      profile = profile.copyWith(data: Value(data));
+      await db.coreConfigDao.updateRow(profile);
+    }
+
+    test('leads the session with a server that answers', () async {
+      await saveGroup();
+      final data = profile.data;
 
       final runtime = await _providerPreparation(
         db,
@@ -222,6 +228,22 @@ void main() {
       final compiled = jsonDecode(runtime.xrayJson) as Map<String, dynamic>;
       expect((compiled['outbounds'] as List).first['tag'], 'live');
       expect((await db.coreConfigDao.searchRow(profile.id))!.data, data);
+    });
+
+    test('fails a group where no server answers a full check', () async {
+      await saveGroup();
+
+      await expectLater(
+        _providerPreparation(
+          db,
+          firstServer: FirstServerPicker(
+            measure: (outbounds, {required timeoutSeconds}) async => [
+              for (final _ in outbounds) PingBatchResult.failed(),
+            ],
+          ),
+        ).prepare(_providerInput(profile.id), everyServer: true),
+        throwsA(isA<ConnectionResolutionException>()),
+      );
     });
 
     group('HTTP API inbound conflicts', () {

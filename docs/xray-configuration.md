@@ -306,7 +306,7 @@ Home's preset switch also reconnects a provider session, unlike upstream's routi
 
 Apps, on Android only, routes as Smart and sets the platform policy's Android app scope to the
 chosen packages, so upstream's allowed-apps tunnel carries only those apps and the rest bypass the
-VPN. Smart and Everything through VPN set the scope back to all apps and keep the list.
+VPN. LaunchVPN itself is always allowed too, so the App's connection check takes the tunnel. Smart and Everything through VPN set the scope back to all apps and keep the list.
 
 Keep VPN on, on iOS only, sets the platform policy's Apple `alwaysOn`, which upstream compiles into
 a single connect-on-any-network on-demand rule. Settings stores it without a restart, so it reaches
@@ -352,6 +352,12 @@ checked. The check runs after any running tunnel has stopped, so it measures the
 network; a batch that outlives the give-up time may still finish after the tunnel is up, and its
 result is ignored. Starts that reuse the last configuration (widget, Quick Settings tile, automation,
 Apple on-demand) skip preparation, so they keep the server chosen when it was written.
+
+A restart after the running session went silent (see [App behavior](app.md)) measures every
+server of the group instead, five at a time, with the same timeout per batch, so a group with a
+single live server finds it. A group where every server was measured and none answered fails the
+start as `insufficientHealthyServers`, the same issue as servers that did not answer before a
+start. Single-server groups are measured too.
 
 ## Raw JSON
 
