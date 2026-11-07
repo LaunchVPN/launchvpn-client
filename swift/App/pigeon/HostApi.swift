@@ -293,14 +293,10 @@ enum PingOutsideTunnel {
               let configs = payload["configs"] as? [[String: Any]]
         else { throw Failure.noPhysicalInterface }
         let xrays = configs.map { ($0["xrayJson"] as? String).flatMap(object) }
-        var names = Set<String>()
-        for outbound in xrays.flatMap({ $0.map(outbounds) ?? [] }) {
-            _ = servers(outbound) { names.insert($0); return $0 }
-        }
-        let addresses = await resolve(
-            names.filter { IPv4Address($0) == nil && IPv6Address($0) == nil },
-            on: interface.index
-        )
+        let names = xrays.flatMap { $0.map(outbounds) ?? [] }
+            .filter { nameKeeper($0) != nil }
+            .reduce(into: Set<String>()) { $0.formUnion(Self.names($1)) }
+        let addresses = await resolve(names, on: interface.index)
         payload["configs"] = zip(configs, xrays).map { config, xray in
             guard var xray else { return config }
             xray["outbounds"] = outbounds(xray).map {
@@ -336,27 +332,47 @@ enum PingOutsideTunnel {
     private static let namedByServerName: Set = ["tcp", "raw", "ws", "httpupgrade", "xhttp", "splithttp"]
     private static let securitySettings = ["tls": "tlsSettings", "reality": "realitySettings"]
 
+    /// The stream settings of an outbound that can dial an address and keep
+    /// its server's name, and the key of the TLS or Reality settings that keep
+    /// it. Null for one that resolves names its own way: chained through
+    /// another outbound, or with a domain strategy.
+    private static func nameKeeper(_ outbound: [String: Any]) -> (stream: [String: Any], key: String)? {
+        guard let stream = outbound["streamSettings"] as? [String: Any],
+              namedByServerName.contains(stream["network"] as? String ?? "tcp"),
+              let key = (stream["security"] as? String).flatMap({ securitySettings[$0] })
+        else { return nil }
+        let sockopt = stream["sockopt"] as? [String: Any] ?? [:]
+        guard sockopt["dialerProxy"] == nil,
+              (sockopt["domainStrategy"] as? String ?? "AsIs").lowercased() == "asis"
+        else { return nil }
+        return (stream, key)
+    }
+
+    /// The server names an outbound dials, addresses left out.
+    private static func names(_ outbound: [String: Any]) -> Set<String> {
+        var names = Set<String>()
+        _ = servers(outbound) { names.insert($0); return $0 }
+        return names.filter {
+            IPv4Address($0) == nil
+                && IPv6Address($0.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))) == nil
+        }
+    }
+
     /// The outbound dials the address [addresses] found for its server's name.
     /// TLS keeps the name as its server name, which Xray also sends as the
     /// host, so the server sees what it saw before. An outbound that cannot
     /// keep the name dials it as it is.
     private static func dialing(_ outbound: [String: Any], via addresses: [String: String]) -> [String: Any] {
-        guard var stream = outbound["streamSettings"] as? [String: Any],
-              namedByServerName.contains(stream["network"] as? String ?? "tcp"),
-              let key = (stream["security"] as? String).flatMap({ securitySettings[$0] }),
-              // A chained outbound reaches its server through another one.
-              (stream["sockopt"] as? [String: Any])?["dialerProxy"] == nil
-        else { return outbound }
-        var replaced = Set<String>()
-        var dialed = servers(outbound) { name in
-            guard let address = addresses[name] else { return name }
-            replaced.insert(name)
-            return address
-        }
+        guard let keeper = nameKeeper(outbound) else { return outbound }
+        var stream = keeper.stream
+        let key = keeper.key
+        var dialed = servers(outbound) { addresses[$0] ?? $0 }
         var security = stream[key] as? [String: Any] ?? [:]
         if (security["serverName"] as? String ?? "").isEmpty {
-            guard replaced.count == 1 else { return outbound }
-            security["serverName"] = replaced.first
+            // Only the one name the outbound has can stand in for it.
+            let names = Self.names(outbound)
+            guard names.count == 1 else { return outbound }
+            security["serverName"] = names.first
             stream[key] = security
             dialed["streamSettings"] = stream
         }
@@ -385,8 +401,8 @@ enum PingOutsideTunnel {
         return outbound
     }
 
-    /// Addresses by name. A name that does not resolve in time is left out, so
-    /// its outbound resolves it the slow way.
+    /// Addresses by name. A name that does not resolve is left out, so its
+    /// outbound resolves it the slow way.
     private static func resolve(_ names: Set<String>, on interface: UInt32) async -> [String: String] {
         await withTaskGroup(of: (String, String?).self) { group in
             for name in names {
@@ -452,15 +468,22 @@ enum PingOutsideTunnel {
     }
 
     /// Resolves a name through one interface's own DNS servers, the way the
-    /// system resolves for that network without the tunnel.
+    /// system resolves for that network without the tunnel. IPv4 comes first,
+    /// and an IPv6 answer waits a moment for it: one address gets no fallback
+    /// to the other family, as a dial by name does.
     private final class ScopedLookup: @unchecked Sendable {
         private static let timeout = DispatchTimeInterval.seconds(3)
+        /// How long one family's answer waits for the other's.
+        private static let otherFamily = DispatchTimeInterval.milliseconds(300)
 
-        // The start, the answers and the deadline share this queue, so the
-        // state needs no lock. The deadline holds the lookup until it passes.
+        // The start, the answers and the timers share this queue, so the state
+        // needs no lock. Each timer holds the lookup until it fires.
         private let queue = DispatchQueue(label: "com.launchvpn.ping-dns")
         private var service: DNSServiceRef?
         private var answer: CheckedContinuation<String?, Never>?
+        private var ipv6: String?
+        private var noIPv4 = false
+        private var noIPv6 = false
 
         static func address(of name: String, on interface: UInt32) async -> String? {
             let lookup = ScopedLookup()
@@ -471,17 +494,14 @@ enum PingOutsideTunnel {
 
         private func start(_ name: String, _ interface: UInt32, _ continuation: CheckedContinuation<String?, Never>) {
             answer = continuation
-            queue.asyncAfter(deadline: .now() + Self.timeout) { self.finish(nil) }
+            queue.asyncAfter(deadline: .now() + Self.timeout) { self.finish(self.ipv6) }
             let status = DNSServiceGetAddrInfo(
-                &service, 0, interface, 0, name,
+                // Negative answers too, so a name without records ends at once.
+                &service, DNSServiceFlags(kDNSServiceFlagsReturnIntermediates), interface, 0, name,
                 { _, flags, _, error, _, address, _, context in
-                    guard let context,
-                          error == DNSServiceErrorType(kDNSServiceErr_NoError),
-                          flags & DNSServiceFlags(kDNSServiceFlagsAdd) != 0,
-                          let address
-                    else { return }
+                    guard let context else { return }
                     Unmanaged<ScopedLookup>.fromOpaque(context).takeUnretainedValue()
-                        .finish(ScopedLookup.numeric(address))
+                        .receive(error, flags, address)
                 },
                 Unmanaged.passUnretained(self).toOpaque()
             )
@@ -490,7 +510,25 @@ enum PingOutsideTunnel {
             else { return finish(nil) }
         }
 
-        /// The first answer counts, as it would for a connection.
+        private func receive(_ error: DNSServiceErrorType, _ flags: DNSServiceFlags, _ address: UnsafePointer<sockaddr>?) {
+            let ipv4 = address.map { Int32($0.pointee.sa_family) == AF_INET } ?? true
+            switch error {
+            case DNSServiceErrorType(kDNSServiceErr_NoError):
+                guard flags & DNSServiceFlags(kDNSServiceFlagsAdd) != 0,
+                      let address, let text = Self.numeric(address)
+                else { return }
+                if ipv4 { return finish(text) }
+                ipv6 = ipv6 ?? text
+            case DNSServiceErrorType(kDNSServiceErr_NoSuchRecord):
+                if ipv4 { noIPv4 = true } else { noIPv6 = true }
+                if noIPv4 && noIPv6 { return finish(nil) }
+            default:
+                return finish(ipv6)
+            }
+            // The system may not ask for the other family at all.
+            queue.asyncAfter(deadline: .now() + Self.otherFamily) { self.finish(self.ipv6) }
+        }
+
         private func finish(_ address: String?) {
             guard let answer else { return }
             self.answer = nil
