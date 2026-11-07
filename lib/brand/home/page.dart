@@ -129,8 +129,8 @@ class _HomePageState extends State<HomePage> {
       null => (l.homeRefreshed, ToastKind.success),
     };
     // The tabs keep Home alive, muting its tickers while another is shown;
-    // that tab has no header to sit under.
-    final shown = TickerMode.valuesOf(context).enabled;
+    // that tab has no header to sit under. Read once, not depended on.
+    final shown = TickerMode.getValuesNotifier(context).value.enabled;
     showBrandToast(
       context,
       message,
