@@ -56,24 +56,29 @@ object TunnelBypass : DialerController {
     /**
      * The first IPv4 DNS server of the network protected sockets take, the
      * default one under the tunnel. The tunnel's capabilities carry its
-     * transport, which tells it from a network kept up beside it.
+     * transport, which tells it from a network kept up beside it. Of two with
+     * that transport, as while roaming, the one the system validated is the
+     * default.
      */
     @Suppress("DEPRECATION") // One look per core call needs no network callback.
     private fun underlyingDns(context: Context): String? {
         val networks = context.getSystemService(ConnectivityManager::class.java) ?: return null
         val tunnel = networks.activeNetwork?.let(networks::getNetworkCapabilities) ?: return null
         val transports = PHYSICAL_TRANSPORTS.filter(tunnel::hasTransport)
-        for (network in networks.allNetworks) {
-            val capabilities = networks.getNetworkCapabilities(network) ?: continue
-            if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
-                !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
-                transports.none(capabilities::hasTransport)
-            ) continue
-            val dns = networks.getLinkProperties(network)?.dnsServers
-                ?.firstOrNull { it is Inet4Address } ?: continue
-            return "${dns.hostAddress}:53"
-        }
-        return null
+        return networks.allNetworks
+            .mapNotNull { network -> networks.getNetworkCapabilities(network)?.let { network to it } }
+            .filter { (_, capabilities) ->
+                !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
+                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                    transports.any(capabilities::hasTransport)
+            }
+            .sortedByDescending { (_, capabilities) ->
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            }
+            .firstNotNullOfOrNull { (network, _) ->
+                networks.getLinkProperties(network)?.dnsServers?.firstOrNull { it is Inet4Address }
+            }
+            ?.let { "${it.hostAddress}:53" }
     }
 
     private val PHYSICAL_TRANSPORTS = listOf(
