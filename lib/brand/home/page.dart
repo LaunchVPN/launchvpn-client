@@ -128,7 +128,15 @@ class _HomePageState extends State<HomePage> {
       final end? => (l.homeRefreshedUntil(_day(l, end)), ToastKind.success),
       null => (l.homeRefreshed, ToastKind.success),
     };
-    showBrandToast(context, message, kind: kind, top: _belowHeader);
+    // The tabs keep Home alive, muting its tickers while another is shown;
+    // that tab has no header to sit under.
+    final shown = TickerMode.valuesOf(context).enabled;
+    showBrandToast(
+      context,
+      message,
+      kind: kind,
+      top: shown ? _belowHeader : null,
+    );
   }
 
   /// «24 декабря», with the year only when it is not this one.
