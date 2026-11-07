@@ -42,7 +42,8 @@ class _LocationsPageState extends State<LocationsPage> {
 
   /// A tunnel that captures all traffic leaves nothing to measure past it.
   Future<void> _measure({Location? only}) async {
-    if (widget.controller.state.measuresOnlyWithVpnOff) {
+    if (widget.controller.state.measureReadiness ==
+        MeasureReadiness.onlyWithVpnOff) {
       showBrandToast(
         context,
         AppLocalizations.of(context)!.locationsMeasureVpnOff,
@@ -69,7 +70,8 @@ class _LocationsPageState extends State<LocationsPage> {
                   // Opened mid-transition, or a sweep the tunnel stopped:
                   // measured once it can be.
                   listenWhen: (previous, next) =>
-                      !previous.canMeasure && next.canMeasure,
+                      previous.measureReadiness != MeasureReadiness.ready &&
+                      next.measureReadiness == MeasureReadiness.ready,
                   listener: (context, state) =>
                       unawaited(widget.controller.measureLocations()),
                   builder: (context, state) {
@@ -81,7 +83,9 @@ class _LocationsPageState extends State<LocationsPage> {
                               _LocationRow(
                                 // A tunnel that captures all traffic leaves
                                 // the last delays nothing to compare with.
-                                location: state.measuresOnlyWithVpnOff
+                                location:
+                                    state.measureReadiness ==
+                                        MeasureReadiness.onlyWithVpnOff
                                     ? item.withDelay(PingDelayConstants.unknown)
                                     : item,
                                 selected: item.name == state.location?.name,

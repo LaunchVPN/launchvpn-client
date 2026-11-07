@@ -81,6 +81,18 @@ typedef AnnouncementDismissal = Future<void> Function(int subId, String text);
 /// The apps Android lists, as the bridge returns them.
 typedef InstalledApps = Future<List<AndroidAppInfo>> Function();
 
+/// Whether «Локации» can measure now.
+enum MeasureReadiness {
+  /// The tunnel is off, or lets measurements past it.
+  ready,
+
+  /// A connection is coming up or going down; it can once that ends.
+  waiting,
+
+  /// The running tunnel captures all traffic, so no socket gets past it.
+  onlyWithVpnOff,
+}
+
 class HomeState {
   HomeState({
     this.view = const ConnectionView(),
@@ -236,17 +248,15 @@ class HomeState {
 
   /// Measurements dial past a running tunnel, unless it captures all traffic.
   /// One mid-transition would race the tunnel coming up or going down.
-  bool get canMeasure =>
-      request == null &&
-      switch (status) {
-        HomeStatus.off || HomeStatus.failed => true,
-        HomeStatus.checking || HomeStatus.connected => !measuresOnlyWithVpnOff,
-        _ => false,
-      };
-
-  /// The running tunnel captures all traffic, so no socket gets past it.
-  bool get measuresOnlyWithVpnOff =>
-      !_tunnelOff && (view.runtime?.request.tun?.includeAllNetworks ?? false);
+  MeasureReadiness get measureReadiness => switch (status) {
+    _ when request != null => MeasureReadiness.waiting,
+    HomeStatus.off || HomeStatus.failed => MeasureReadiness.ready,
+    HomeStatus.checking || HomeStatus.connected
+        when view.runtime?.request.tun?.includeAllNetworks ?? false =>
+      MeasureReadiness.onlyWithVpnOff,
+    HomeStatus.checking || HomeStatus.connected => MeasureReadiness.ready,
+    _ => MeasureReadiness.waiting,
+  };
 
   late final LocationList locations = LocationList.from(catalog);
 
@@ -709,7 +719,9 @@ class HomeController extends PageCubit<HomeState> {
   /// in a sweep stays in it, and the call returns once all of them are done.
   /// The results reach the screen through the catalog as each is saved.
   Future<void> measureLocations({Location? only}) {
-    if (!state.canMeasure) return Future.value();
+    if (state.measureReadiness != MeasureReadiness.ready) {
+      return Future.value();
+    }
     final ids = only == null
         ? [for (final item in state.locations.all) item.id]
         : [only.id];
@@ -732,7 +744,8 @@ class HomeController extends PageCubit<HomeState> {
     try {
       await _pingLocations(
         state.catalog.servers.where((row) => ids.contains(row.id)).toList(),
-        isCancelled: () => isClosed || !state.canMeasure,
+        isCancelled: () =>
+            isClosed || state.measureReadiness != MeasureReadiness.ready,
       );
     } catch (error) {
       ygLogger('measure locations failed (${error.runtimeType})');

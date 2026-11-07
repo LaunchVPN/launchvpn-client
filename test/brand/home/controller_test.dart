@@ -873,7 +873,7 @@ void main() {
         await controller.measureLocations();
 
         expect(sweeps, hasLength(1));
-        expect(controller.state.measuresOnlyWithVpnOff, isFalse);
+        expect(controller.state.measureReadiness, MeasureReadiness.ready);
       });
 
       test('a tunnel that captures all traffic is measured only off', () async {
@@ -883,7 +883,10 @@ void main() {
         await controller.measureLocations();
 
         expect(sweeps, isEmpty);
-        expect(controller.state.measuresOnlyWithVpnOff, isTrue);
+        expect(
+          controller.state.measureReadiness,
+          MeasureReadiness.onlyWithVpnOff,
+        );
       });
 
       test('measures one location on its own', () async {
