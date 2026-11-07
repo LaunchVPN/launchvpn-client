@@ -380,8 +380,15 @@ The system resolves names through the tunnel while it runs, which added seconds 
 measurement in testing. On Android the App's core therefore resolves through the DNS server of the
 network under the tunnel (libXray `SetDNS`, its sockets protected the same way) while VPN runs, set
 before each core call, and through the system's resolver otherwise. That network is the default one,
-which the tunnel's capabilities name by its transport, so cellular kept up beside Wi-Fi is not used. iOS still resolves server names
-through the tunnel.
+which the tunnel's capabilities name by its transport, so cellular kept up beside Wi-Fi is not used.
+
+libXray has no such resolver on Apple platforms, and a measurement takes only the outbounds of its
+configs, so iOS resolves each server name itself, through the DNS servers of the interface it binds
+(`DNSServiceGetAddrInfo` scoped to that interface, three seconds at most). The outbound then dials
+the address, and the name stays as the TLS or Reality `serverName`, filled in when empty. Xray
+sends that name as the WebSocket, HTTPUpgrade and XHTTP host when the transport sets none, so the
+server sees the same request. Outbounds without TLS or Reality, on other transports, chained
+through `dialerProxy`, or with a name that does not resolve in time dial the name as before.
 
 ## Raw JSON
 
