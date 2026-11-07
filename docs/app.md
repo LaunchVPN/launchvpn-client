@@ -56,15 +56,17 @@ upstream pages kept for merging. They are not reachable in this build.
   скрыт» or a delay. The check opens the address «Локации» measures, with a 4-second limit: the
   App's own traffic takes the tunnel on both platforms, Apps mode included, so it goes the way the
   person's apps do. It runs only while the App is visible: when a session comes up, back in the
-  App, when the network changes and every 30 seconds; without a network it waits for one. The
-  location card then shows the delay of the last check, never the list's older measurement.
-  One failure tries again after 3 seconds. Two in a row restart the session once
+  App, 3 seconds after the network changes and every 30 seconds; without a network it waits for
+  one. The location card then shows the delay of the last check, never the list's older
+  measurement. One failure tries again after 3 seconds. Hiding the App or changing the network
+  starts the count of failures over, so only failures seconds apart count as in a row. Two in a row restart the session once
   (`ConnectionCoordinator.restartSilent`), which measures every server of the group, so a single
   live one leads it; Home reads the restart as one Reconnecting until a check of the new session
   gets through. A group where no server answers that measurement, or a new session that fails two
   checks as well, ends off (`stopSilent`) with the same error screen as servers that did not answer
-  before the start. Each such episode sends one Sentry event, unless crash reports are off: info
-  when the switch kept the connection, a warning when the VPN went off. It holds the location's
+  before the start. A restart that fails for another reason, short of a cancel, leaves the VPN off
+  too. Each such episode sends one Sentry event, unless crash reports are off: info when the
+  switch kept the connection, a warning when the VPN went off. It holds the location's
   name, how long the VPN ran, the network kind and the failed checks, and no server address.
 - A failed attempt replaces the toggle and the cards with an error screen. Its text follows the
   coordinator's issue: servers that did not answer the check, a selection with no servers, or any

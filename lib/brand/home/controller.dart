@@ -273,10 +273,11 @@ class HomeState {
         );
     // A running tunnel shows only what its own check measured, never the
     // list's last delay, which was taken outside the tunnel.
+    final check = this.check;
     if (check == null) return shown;
     return shown.withDelay(
       status == HomeStatus.connected
-          ? check!.delayMs ?? PingDelayConstants.unknown
+          ? check.delayMs ?? PingDelayConstants.unknown
           : PingDelayConstants.unknown,
     );
   }

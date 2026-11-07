@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:onexray/service/connect/tunnel_probe.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-
-/// The network under the VPN, as the event about a silent server tells it.
-enum NetworkKind { none, wifi, cellular, other }
 
 /// How the App handled a server that stopped answering, for Sentry.
 @immutable

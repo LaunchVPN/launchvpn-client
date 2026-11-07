@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -8,18 +7,13 @@ import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/advanced/platform_policy.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/connect/failure.dart';
-import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/connect/tunnel_probe.dart';
 import 'package:onexray/service/crash_reports/server_silence_event.dart';
 import 'package:onexray/service/crash_reports/service.dart';
 import 'package:onexray/service/servers/locations.dart';
 import 'package:onexray/service/shared/app_lifecycle.dart';
-import 'package:onexray/service/shared/ping/state.dart';
-
-/// Opens an address through the tunnel. Returns how long the answer took in
-/// milliseconds, or null when none came.
-typedef ProbeTunnel = Future<int?> Function();
 
 /// What the check knows about the running session.
 @immutable
@@ -114,7 +108,9 @@ final class ConnectionCheck with WidgetsBindingObserver {
   Timer? _next;
   bool _visible = true;
   bool _probing = false;
-  bool _restarting = false;
+
+  /// The check restarts or stops the session; it waits for that to end.
+  bool _acting = false;
   int _failures = 0;
   _Episode? _episode;
 
@@ -123,7 +119,7 @@ final class ConnectionCheck with WidgetsBindingObserver {
     if (_networkSubscription != null) return;
     WidgetsBinding.instance.addObserver(this);
     _visible = isAppVisible(WidgetsBinding.instance.lifecycleState);
-    _networkSubscription = _networkChanges.listen((_) => checkNow());
+    _networkSubscription = _networkChanges.listen((_) => _networkChanged());
     _connection.addListener(_sessionChanged);
     _sessionChanged();
   }
@@ -138,8 +134,8 @@ final class ConnectionCheck with WidgetsBindingObserver {
     final runtime = _running;
     if (runtime == null) {
       _next?.cancel();
-      // The restart passes through these phases; the check resumes after it.
-      if (!_restarting) _forget();
+      // A restart passes through these phases; the check resumes after it.
+      if (!_acting) _forget();
       return;
     }
     if (view.value.session == runtime.identity) return;
@@ -156,11 +152,31 @@ final class ConnectionCheck with WidgetsBindingObserver {
     if (view.value.session != null) view.value = const ConnectionCheckView();
   }
 
+  /// Failures before a pause or on another network say nothing about now, so
+  /// the count starts over, keeping only the switch already made.
+  void _startOver() {
+    final episode = _episode;
+    if (episode == null || !episode.switched) {
+      _failures = 0;
+      _episode = null;
+    } else {
+      _failures = episode.actAt - failuresToAct;
+    }
+  }
+
+  /// A handover drops connections for a moment, so the check waits as long
+  /// as for a retry instead of failing on it.
+  void _networkChanged() {
+    if (_acting) return;
+    _startOver();
+    _schedule(retry);
+  }
+
   /// Checks at once, unless a check is already under way.
   void checkNow() {
     _next?.cancel();
     final runtime = _running;
-    if (runtime == null || !_visible || _probing || _restarting) return;
+    if (runtime == null || !_visible || _probing || _acting) return;
     unawaited(_check(runtime));
   }
 
@@ -180,9 +196,13 @@ final class ConnectionCheck with WidgetsBindingObserver {
     } finally {
       _probing = false;
     }
-    if (_running?.identity != runtime.identity) return;
-    if (network == NetworkKind.none) return;
-    if (delay != null) {
+    if (_running?.identity != runtime.identity) {
+      // A new session came up meanwhile and found this check under way.
+      checkNow();
+    } else if (network == NetworkKind.none) {
+      // Its return is a network change too; this catches a missed one.
+      _schedule(interval);
+    } else if (delay != null) {
       _passed(runtime, delay, network);
     } else {
       _failed(runtime, network);
@@ -220,36 +240,35 @@ final class ConnectionCheck with WidgetsBindingObserver {
         session: runtime.identity,
         recovering: true,
       );
-      unawaited(_switchServers(episode, network));
+      unawaited(_act(_restart, episode, network));
     } else {
-      unawaited(_giveUp(episode, network));
+      unawaited(_act(_stop, episode, network, lost: true));
     }
   }
 
-  Future<void> _switchServers(_Episode episode, NetworkKind network) async {
-    _restarting = true;
+  /// Runs the restart or, with [lost], the stop. A restart that fails for
+  /// any reason but a cancel leaves the person offline too.
+  Future<void> _act(
+    Future<void> Function() action,
+    _Episode episode,
+    NetworkKind network, {
+    bool lost = false,
+  }) async {
+    _acting = true;
+    _next?.cancel();
+    if (lost) unawaited(_send(episode, network, recovered: false));
     try {
-      await _restart();
+      await action();
     } catch (error) {
-      // A cancel or any other failure is not about the servers.
-      if (connectionFailureReason(error) ==
-          ConnectionResolutionFailure.insufficientHealthyServers.name) {
-        await _send(episode, network, recovered: false);
+      if (!lost && connectionFailureReason(error) != 'cancelled') {
+        unawaited(_send(episode, network, recovered: false));
       }
+      ygLogger('act on silent session failed (${error.runtimeType})');
     } finally {
-      _restarting = false;
-      // The new session came up while the restart ran, unchecked.
+      _acting = false;
+      // A new session came up while the restart ran, unchecked.
       _sessionChanged();
       checkNow();
-    }
-  }
-
-  Future<void> _giveUp(_Episode episode, NetworkKind network) async {
-    await _send(episode, network, recovered: false);
-    try {
-      await _stop();
-    } catch (error) {
-      ygLogger('stop silent session failed (${error.runtimeType})');
     }
   }
 
@@ -260,7 +279,7 @@ final class ConnectionCheck with WidgetsBindingObserver {
   }) => _report(
     ServerSilence(
       location: switch (episode.location) {
-        final label? => Location.parse(id: 0, label: label, delay: 0).name,
+        final label? => Location.nameOf(label),
         null => null,
       },
       ran: DateTime.now().difference(episode.since),
@@ -277,6 +296,7 @@ final class ConnectionCheck with WidgetsBindingObserver {
     _visible = isAppVisible(state);
     if (!_visible) {
       _next?.cancel();
+      if (!_acting) _startOver();
     } else if (!wasVisible) {
       checkNow();
     }
@@ -300,43 +320,4 @@ class _Episode {
   final String? location;
   bool switched = false;
   int actAt = ConnectionCheck.failuresToAct;
-}
-
-/// The App's own traffic takes the tunnel on Android and iOS, so a request
-/// from here goes the way the person's apps do, through routing and the
-/// group's balancer. Any HTTP answer means the server got it through.
-Future<int?> probeTunnel() async {
-  const timeout = Duration(seconds: 4);
-  final ping = PingState();
-  await ping.readFromPreferences();
-  final client = HttpClient()..connectionTimeout = timeout;
-  final watch = Stopwatch()..start();
-  try {
-    return await () async {
-      final request = await client.getUrl(Uri.parse(ping.realUrl));
-      request.followRedirects = false;
-      final response = await request.close();
-      await response.drain<void>();
-      return watch.elapsedMilliseconds;
-    }().timeout(timeout);
-  } catch (_) {
-    return null;
-  } finally {
-    client.close(force: true);
-  }
-}
-
-/// Wi-Fi first, as a phone on Wi-Fi with mobile data on uses it.
-Future<NetworkKind> readNetwork() async {
-  try {
-    final kinds = await Connectivity().checkConnectivity();
-    if (kinds.contains(ConnectivityResult.wifi)) return NetworkKind.wifi;
-    if (kinds.contains(ConnectivityResult.mobile)) return NetworkKind.cellular;
-    if (kinds.every((kind) => kind == ConnectivityResult.none)) {
-      return NetworkKind.none;
-    }
-    return NetworkKind.other;
-  } catch (_) {
-    return NetworkKind.other;
-  }
 }

@@ -13,6 +13,7 @@ import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/connect/tunnel_probe.dart';
 import 'package:onexray/service/crash_reports/server_silence_event.dart';
 
 var _sessions = 0;
@@ -39,6 +40,8 @@ ConnectionRuntime _session() {
       ),
     ),
     platform: ConnectionPlatform.android,
+    // Sessions under fake time would otherwise share their start.
+    startedAt: DateTime(2026, 11, 7).add(Duration(seconds: _sessions)),
     request: StartVpnRequest(
       null,
       null,
@@ -222,6 +225,76 @@ void main() {
     });
   });
 
+  test('a switch that failed for another reason is reported as lost', () {
+    run((time, harness) {
+      harness.restartFailure = const ConnectionHostException(
+        'startNotConfirmed',
+      );
+      harness.connection.value = _up(_session());
+      time.flushMicrotasks();
+      time.elapse(ConnectionCheck.retry);
+
+      expect(harness.reports.single.recovered, isFalse);
+    });
+  });
+
+  test('a session that came up during a check is checked next', () {
+    fakeAsync((time) {
+      final connection = ValueNotifier(const ConnectionView());
+      final answer = Completer<int?>();
+      var probes = 0;
+      final check = ConnectionCheck(
+        connection: connection,
+        restart: () async {},
+        stop: () async {},
+        probe: () => probes++ == 0 ? answer.future : Future.value(40),
+        network: () async => NetworkKind.wifi,
+        networkChanges: const Stream.empty(),
+        report: (_) async {},
+      )..start();
+      connection.value = _up(_session());
+      time.flushMicrotasks();
+      final next = _session();
+      connection.value = _up(next);
+      answer.complete(48);
+      time.flushMicrotasks();
+
+      expect(check.view.value.reached(next), isTrue);
+      expect(check.view.value.delayMs, 40);
+      check.dispose();
+    });
+  });
+
+  test('a failure before a pause and one after it are not in a row', () {
+    run((time, harness) {
+      harness.connection.value = _up(_session());
+      time.flushMicrotasks();
+      harness.check.didChangeAppLifecycleState(AppLifecycleState.paused);
+      time.elapse(const Duration(hours: 1));
+
+      harness.check.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      time.flushMicrotasks();
+
+      expect(harness.probes, 2);
+      expect(harness.restarts, 0);
+    });
+  });
+
+  test('a network change waits before checking and starts the count over', () {
+    run((time, harness) {
+      harness.connection.value = _up(_session());
+      time.flushMicrotasks();
+
+      harness.networkChanges.add(null);
+      time.flushMicrotasks();
+      expect(harness.probes, 1);
+      time.elapse(ConnectionCheck.retry);
+
+      expect(harness.probes, 2);
+      expect(harness.restarts, 0);
+    });
+  });
+
   test('a switch the person cancelled is not reported', () {
     run((time, harness) {
       harness.restartFailure = const ConnectionHostException('cancelled');
@@ -248,7 +321,7 @@ void main() {
         ..network = NetworkKind.cellular
         ..answers.add(90);
       harness.networkChanges.add(null);
-      time.flushMicrotasks();
+      time.elapse(ConnectionCheck.retry);
 
       expect(harness.view.reached(session), isTrue);
     });

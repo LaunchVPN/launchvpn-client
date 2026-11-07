@@ -705,13 +705,7 @@ class ConnectionCoordinator with WidgetsBindingObserver {
       const error = ConnectionResolutionException(
         ConnectionResolutionFailure.insufficientHealthyServers,
       );
-      _failureLatched = true;
-      state.value = ConnectionView(
-        phase: ConnectionPhase.failed,
-        traffic: state.value.traffic,
-        issue: error.reason.name,
-        error: error,
-      );
+      await _publishHostFailure(error.reason.name, error: error);
     });
   }
 

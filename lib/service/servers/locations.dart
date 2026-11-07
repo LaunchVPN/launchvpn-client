@@ -34,6 +34,10 @@ class Location {
     );
   }
 
+  /// The name the App shows for a panel [label].
+  static String nameOf(String label) =>
+      Location.parse(id: 0, label: label, delay: 0).name;
+
   static final _flag = RegExp(r'^([\u{1F1E6}-\u{1F1FF}]{2})\s*', unicode: true);
   static final _automaticPrefix = RegExp(r'^AUTO\s*\|\s*');
   static final _separator = RegExp(r'\s*\|\s*');
@@ -89,7 +93,7 @@ class LocationList {
 
   /// The entry for a panel label, whichever of its rows is the current one.
   Location? named(String label) {
-    final name = Location.parse(id: 0, label: label, delay: 0).name;
+    final name = Location.nameOf(label);
     return all.firstWhereOrNull((item) => item.name == name);
   }
 
