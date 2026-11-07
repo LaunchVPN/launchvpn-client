@@ -55,11 +55,15 @@ class FirstServerPicker {
         ? servers
         : servers.shuffled().take(PingBatchRunner.maxBatchSize).toList();
     final batches = (measured.length / PingBatchRunner.maxBatchSize).ceil();
+    var abandoned = false;
     final results = await Future.any([
-      _measureAll(measured),
+      _measureAll(measured, abandoned: () => abandoned),
       if (cancelled != null) cancelled.then((_) => null),
     ]).timeout(_budget * batches, onTimeout: () => null);
-    if (results == null) return profile;
+    if (results == null) {
+      abandoned = true;
+      return profile;
+    }
     final answered = results.indexed.where((item) => item.$2.success);
     if (answered.isEmpty) {
       if (everyServer) {
@@ -124,13 +128,15 @@ class FirstServerPicker {
 
   /// One result per server, five at a time, as a native batch allows. Null
   /// when the check itself failed, which must never fail the connection it
-  /// serves.
+  /// serves, or once [abandoned] says nobody waits for it any more.
   Future<List<PingBatchResult>?> _measureAll(
-    List<Map<String, dynamic>> servers,
-  ) async {
+    List<Map<String, dynamic>> servers, {
+    required bool Function() abandoned,
+  }) async {
     try {
       final results = <PingBatchResult>[];
       for (final batch in servers.slices(PingBatchRunner.maxBatchSize)) {
+        if (abandoned()) return null;
         results.addAll(
           await _measure([
             for (final server in batch) encodeSingleOutbound(server),

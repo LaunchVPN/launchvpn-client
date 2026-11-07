@@ -1149,6 +1149,43 @@ void main() {
       expect(state.location?.delay, 48);
     });
 
+    test('a starting tunnel hides the delay measured outside it', () async {
+      await addSubscription();
+      await db.coreConfigDao.insertRow(
+        CoreConfigCompanion.insert(
+          name: '🇩🇪 Германия',
+          type: CoreConfigType.Remnawave.name,
+          tags: '',
+          delay: 120,
+          subId: 1,
+          data: Value(
+            base64Encode(
+              utf8.encode(
+                jsonEncode({
+                  'outbounds': [
+                    {'tag': 'proxy', 'protocol': 'vless'},
+                  ],
+                }),
+              ),
+            ),
+          ),
+        ),
+      );
+      await settle();
+      HomeState at(ConnectionPhase phase) => controller.state.copyWith(
+        view: ConnectionView(phase: phase),
+        check: const ConnectionCheckView(),
+      );
+
+      expect(at(ConnectionPhase.disconnected).location?.delay, 120);
+      for (final phase in [
+        ConnectionPhase.preparing,
+        ConnectionPhase.connecting,
+      ]) {
+        expect(at(phase).location?.delay, PingDelayConstants.unknown);
+      }
+    });
+
     test('a check of an earlier session does not count', () {
       final state = home(
         ConnectionPhase.connected,

@@ -213,6 +213,25 @@ void main() {
       );
     });
 
+    test('a cancel stops the batches still to come', () async {
+      final cancelled = Completer<void>();
+      final first = Completer<List<PingBatchResult>>();
+      var batches = 0;
+      final picking = FirstServerPicker(
+        measure: (outbounds, {required timeoutSeconds}) {
+          batches++;
+          return first.future;
+        },
+      ).pick(_group(twelve), cancelled: cancelled.future, everyServer: true);
+
+      cancelled.complete();
+      await picking;
+      first.complete([for (var i = 0; i < 5; i++) PingBatchResult.failed()]);
+      await pumpEventQueue();
+
+      expect(batches, 1);
+    });
+
     test('a failed check still lets the session start', () async {
       final picked = await FirstServerPicker(
         measure: (_, {required timeoutSeconds}) =>

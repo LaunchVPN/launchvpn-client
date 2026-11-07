@@ -256,7 +256,21 @@ class HomeState {
   }
 
   /// The location to show: the running one, unless a choice is replacing it.
+  ///
+  /// Once a tunnel is starting, the delay is only what its own check
+  /// measured, never the list's last one, which was taken outside it.
   Location? get location {
+    final shown = _location;
+    final check = this.check;
+    if (shown == null || check == null || _tunnelOff) return shown;
+    return shown.withDelay(
+      status == HomeStatus.connected
+          ? check.delayMs ?? PingDelayConstants.unknown
+          : PingDelayConstants.unknown,
+    );
+  }
+
+  Location? get _location {
     final runtime = view.runtime;
     final running =
         runtime?.profile?.name ?? runtime?.entries.firstOrNull?.name;
@@ -264,22 +278,12 @@ class HomeState {
       return selectedLocation;
     }
     // A refresh may have replaced the running row, or the panel dropped it.
-    final shown =
-        locations.named(running) ??
+    return locations.named(running) ??
         Location.parse(
           id: runtime!.profile?.id ?? runtime.entries.first.id,
           label: running,
           delay: PingDelayConstants.unknown,
         );
-    // A running tunnel shows only what its own check measured, never the
-    // list's last delay, which was taken outside the tunnel.
-    final check = this.check;
-    if (check == null) return shown;
-    return shown.withDelay(
-      status == HomeStatus.connected
-          ? check.delayMs ?? PingDelayConstants.unknown
-          : PingDelayConstants.unknown,
-    );
   }
 
   DateTime? get connectedSince => view.runtime?.startedAt;
