@@ -6,6 +6,7 @@ import 'package:country_flags/country_flags.dart';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/account/controller.dart';
@@ -26,6 +27,7 @@ import 'package:onexray/pages/shared/widgets/button_progress.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/connect/compiler.dart';
+import 'package:onexray/service/connect/connection_check.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/resolver.dart';
@@ -92,6 +94,7 @@ void main() {
     ConnectionPlatform platform = ConnectionPlatform.ios,
     List<AndroidAppInfo> apps = const [],
     AccountService? account,
+    ValueListenable<ConnectionCheckView>? check,
   }) async {
     bus = AppEventBus();
     addTearDown(bus.close);
@@ -136,6 +139,7 @@ void main() {
       platform: platform,
       installedApps: () async => apps,
       deviceLimit: deviceLimit = ValueNotifier(false),
+      connectionCheck: check,
     );
     addTearDown(controller.close);
     final accountController = AccountController(
@@ -685,6 +689,40 @@ void main() {
     expect(find.text('Fastest'), findsOneWidget);
     expect(find.textContaining('00:12:4'), findsOneWidget);
     expect(find.textContaining('IP скрыт'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('a tunnel is connected only once a check gets through it', (
+    tester,
+  ) async {
+    final check = ValueNotifier(const ConnectionCheckView());
+    addTearDown(check.dispose);
+    await pumpHome(tester, check: check);
+    await addSubscription(tester);
+    runtime = _runtime(DateTime.now());
+    status = VpnStatus.connected;
+    await tester.runAsync(() async {
+      await coordinator.refresh();
+      await pumpEventQueue(times: 20);
+    });
+    await tester.pump();
+
+    expect(find.text('Подключение…'), findsOneWidget);
+    expect(find.text('Проверяем связь с сервером'), findsOneWidget);
+    expect(find.textContaining('IP скрыт'), findsNothing);
+    expect(find.textContaining('мс'), findsNothing);
+
+    check.value = ConnectionCheckView(
+      session: runtime!.identity,
+      passed: true,
+      delayMs: 38,
+    );
+    await tester.pump();
+
+    expect(find.text('Подключено'), findsOneWidget);
+    expect(find.textContaining('IP скрыт'), findsOneWidget);
+    expect(find.text('38 мс'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 1));
   });

@@ -11,6 +11,7 @@ import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/pages/shared/page_cubit.dart';
 import 'package:onexray/service/connect/connection_permissions.dart';
 import 'package:onexray/service/advanced/platform_policy.dart';
+import 'package:onexray/service/connect/connection_check.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/shared/apple_widget/service.dart';
 import 'package:onexray/service/connect/keep_vpn_on.dart';
@@ -29,6 +30,9 @@ enum HomeStatus {
   off,
   connecting,
   reconnecting,
+
+  /// The tunnel is up, and no check has got through it yet.
+  checking,
   connected,
   disconnecting,
   failed,
@@ -41,7 +45,8 @@ enum HomeRequest { connect, disconnect, reconnect, saveChoice }
 
 /// Why the last attempt failed, as the error screen tells it.
 enum HomeFailure {
-  /// The servers did not answer the check before connecting.
+  /// No server of the group answered, before the start or after the
+  /// running session went silent.
   serverSilent,
 
   /// The selection has no servers to connect to.
@@ -89,6 +94,7 @@ class HomeState {
     this.expired = false,
     this.refreshing = false,
     this.deviceLimit = false,
+    this.check,
   }) : catalog = catalog ?? ServerCatalog();
 
   final ConnectionView view;
@@ -125,6 +131,10 @@ class HomeState {
   /// The panel refused this device: the subscription has all its devices.
   final bool deviceLimit;
 
+  /// Null where the App does not check the connection, which then counts as
+  /// soon as the tunnel is up.
+  final ConnectionCheckView? check;
+
   /// «Лимит устройств» in place of the toggle, once the tunnel is off. An
   /// ended subscription explains itself first.
   bool get showsDeviceLimit => deviceLimit && _tunnelOff && !showsExpired;
@@ -144,8 +154,12 @@ class HomeState {
   };
 
   /// What the coordinator reports, whatever command is waiting to start.
+  /// A restart after the server went silent reads as one reconnection, until
+  /// a check gets through the new session.
   HomeStatus get _reported => switch (view.phase) {
-    ConnectionPhase.connected => HomeStatus.connected,
+    _ when _recovering => HomeStatus.reconnecting,
+    ConnectionPhase.connected =>
+      _reached ? HomeStatus.connected : HomeStatus.checking,
     ConnectionPhase.disconnecting => HomeStatus.disconnecting,
     ConnectionPhase.preparing => HomeStatus.connecting,
     ConnectionPhase.connecting =>
@@ -156,6 +170,17 @@ class HomeState {
           : _attemptFailed
           ? HomeStatus.failed
           : HomeStatus.off,
+  };
+
+  bool get _recovering =>
+      (check?.recovering ?? false) &&
+      view.phase != ConnectionPhase.disconnected &&
+      view.phase != ConnectionPhase.failed;
+
+  /// Whether a check got through the running session.
+  bool get _reached => switch ((check, view.runtime)) {
+    (final check?, final runtime?) => check.reached(runtime),
+    _ => true,
   };
 
   /// Set while Home shows the error screen instead of the toggle.
@@ -201,6 +226,7 @@ class HomeState {
       const {
         HomeStatus.off,
         HomeStatus.failed,
+        HomeStatus.checking,
         HomeStatus.connected,
       }.contains(status);
 
@@ -238,12 +264,21 @@ class HomeState {
       return selectedLocation;
     }
     // A refresh may have replaced the running row, or the panel dropped it.
-    return locations.named(running) ??
+    final shown =
+        locations.named(running) ??
         Location.parse(
           id: runtime!.profile?.id ?? runtime.entries.first.id,
           label: running,
           delay: PingDelayConstants.unknown,
         );
+    // A running tunnel shows only what its own check measured, never the
+    // list's last delay, which was taken outside the tunnel.
+    if (check == null) return shown;
+    return shown.withDelay(
+      status == HomeStatus.connected
+          ? check!.delayMs ?? PingDelayConstants.unknown
+          : PingDelayConstants.unknown,
+    );
   }
 
   DateTime? get connectedSince => view.runtime?.startedAt;
@@ -265,6 +300,7 @@ class HomeState {
     bool? expired,
     bool? refreshing,
     bool? deviceLimit,
+    ConnectionCheckView? check,
   }) => HomeState(
     view: view ?? this.view,
     catalog: catalog ?? this.catalog,
@@ -277,6 +313,7 @@ class HomeState {
     expired: expired ?? this.expired,
     refreshing: refreshing ?? this.refreshing,
     deviceLimit: deviceLimit ?? this.deviceLimit,
+    check: check ?? this.check,
   );
 
   HomeState _withRequest(HomeRequest? request) => HomeState(
@@ -291,6 +328,7 @@ class HomeState {
     expired: expired,
     refreshing: refreshing,
     deviceLimit: deviceLimit,
+    check: check,
   );
 }
 
@@ -312,7 +350,9 @@ class HomeController extends PageCubit<HomeState> {
     InstalledApps? installedApps,
     ValueListenable<bool>? deviceLimit,
     WidgetContextPublisher? widgetContext,
+    ValueListenable<ConnectionCheckView>? connectionCheck,
   }) : _db = database ?? AppDatabase(),
+       _check = connectionCheck ?? ConnectionCheck.instance?.view,
        _widgetContext = widgetContext ?? AppleWidgetService().setContext,
        installedApps = installedApps ?? AppHostApi().getInstalledApps,
        _platform = platform ?? connectionPlatform,
@@ -329,6 +369,8 @@ class HomeController extends PageCubit<HomeState> {
     _connectionChanged();
     _deviceLimit.addListener(_deviceLimitChanged);
     _deviceLimitChanged();
+    _check?.addListener(_checkChanged);
+    _checkChanged();
   }
 
   final AppDatabase _db;
@@ -343,6 +385,7 @@ class HomeController extends PageCubit<HomeState> {
   final SubscriptionRefresh _refreshSubscription;
   final ValueListenable<bool> _deviceLimit;
   final WidgetContextPublisher _widgetContext;
+  final ValueListenable<ConnectionCheckView>? _check;
   StreamSubscription<ServerCatalog>? _catalog;
   StreamSubscription<void>? _settings;
   Timer? _expiry;
@@ -392,6 +435,10 @@ class HomeController extends PageCubit<HomeState> {
     // A tunnel that came up needs its expiry watched.
     _checkExpiry(state.subscription);
     _stopIfExpired();
+  }
+
+  void _checkChanged() {
+    if (_check case final check?) emit(state.copyWith(check: check.value));
   }
 
   void _deviceLimitChanged() =>
@@ -533,7 +580,8 @@ class HomeController extends PageCubit<HomeState> {
     }
   }
 
-  HomeRequest get _choiceRequest => state.status == HomeStatus.connected
+  HomeRequest get _choiceRequest =>
+      state.view.phase == ConnectionPhase.connected
       ? HomeRequest.reconnect
       : HomeRequest.saveChoice;
 
@@ -694,6 +742,7 @@ class HomeController extends PageCubit<HomeState> {
   Future<void> disposePageResources() async {
     coordinator.state.removeListener(_connectionChanged);
     _deviceLimit.removeListener(_deviceLimitChanged);
+    _check?.removeListener(_checkChanged);
     _expiry?.cancel();
     await _catalog?.cancel();
     await _settings?.cancel();

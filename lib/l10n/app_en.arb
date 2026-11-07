@@ -3156,6 +3156,7 @@
   "homeHintOff": "Tap to connect",
   "homeStatusConnecting": "Connecting…",
   "homeHintConnecting": "Finding the fastest server",
+  "homeHintChecking": "Checking the connection to the server",
   "homeStatusReconnecting": "Reconnecting…",
   "homeHintReconnecting": "Restoring the connection",
   "homeStatusDisconnecting": "Disconnecting…",

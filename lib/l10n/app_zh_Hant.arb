@@ -978,6 +978,7 @@
   "homeHintOff": "點擊連線",
   "homeStatusConnecting": "正在連線…",
   "homeHintConnecting": "正在選擇最快的伺服器",
+  "homeHintChecking": "正在檢查與伺服器的連線",
   "homeStatusReconnecting": "正在重新連線…",
   "homeHintReconnecting": "正在恢復連線",
   "homeStatusDisconnecting": "正在中斷連線…",

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/core/db/database/constants.dart';
@@ -11,6 +12,7 @@ import 'package:onexray/core/db/database/enum.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/service/connect/compiler.dart';
+import 'package:onexray/service/connect/connection_check.dart';
 import 'package:onexray/service/connect/coordinator.dart';
 import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/resolver.dart';
@@ -1114,6 +1116,93 @@ void main() {
         expect(stopCalls, 0);
         expect(controller.state.status, HomeStatus.connected);
       });
+    });
+  });
+
+  group('the connection check', () {
+    HomeState home(ConnectionPhase phase, ConnectionCheckView? check) =>
+        HomeState(
+          view: ConnectionView(phase: phase, runtime: runtime),
+          check: check,
+        );
+
+    ConnectionCheckView passed([int delay = 48]) => ConnectionCheckView(
+      session: runtime.identity,
+      passed: true,
+      delayMs: delay,
+    );
+
+    test('a tunnel no check got through yet is still connecting', () {
+      final state = home(
+        ConnectionPhase.connected,
+        ConnectionCheckView(session: runtime.identity),
+      );
+
+      expect(state.status, HomeStatus.checking);
+      expect(state.location?.delay, PingDelayConstants.unknown);
+    });
+
+    test('a check that got through connects, with its delay', () {
+      final state = home(ConnectionPhase.connected, passed(48));
+
+      expect(state.status, HomeStatus.connected);
+      expect(state.location?.delay, 48);
+    });
+
+    test('a check of an earlier session does not count', () {
+      final state = home(
+        ConnectionPhase.connected,
+        const ConnectionCheckView(session: 'earlier', passed: true),
+      );
+
+      expect(state.status, HomeStatus.checking);
+    });
+
+    test('a switch of servers reads as one reconnection', () {
+      final recovering = ConnectionCheckView(
+        session: runtime.identity,
+        recovering: true,
+      );
+      for (final phase in [
+        ConnectionPhase.disconnecting,
+        ConnectionPhase.preparing,
+        ConnectionPhase.connecting,
+        ConnectionPhase.connected,
+      ]) {
+        expect(home(phase, recovering).status, HomeStatus.reconnecting);
+      }
+      expect(
+        home(ConnectionPhase.disconnected, recovering).status,
+        HomeStatus.off,
+      );
+    });
+
+    test('without a check the tunnel connects as soon as it is up', () {
+      expect(
+        home(ConnectionPhase.connected, null).status,
+        HomeStatus.connected,
+      );
+    });
+
+    test('Home follows the check', () async {
+      final check = ValueNotifier(const ConnectionCheckView());
+      addTearDown(check.dispose);
+      final watching = HomeController(
+        database: db,
+        coordinator: coordinator,
+        platform: _android,
+        connectionCheck: check,
+        widgetContext: ({
+          required location,
+          required preset,
+          required expiresAt,
+        }) async {},
+      );
+      addTearDown(watching.close);
+
+      check.value = passed(61);
+
+      expect(watching.state.check?.delayMs, 61);
     });
   });
 }

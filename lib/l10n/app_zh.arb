@@ -978,6 +978,7 @@
   "homeHintOff": "点击连接",
   "homeStatusConnecting": "正在连接…",
   "homeHintConnecting": "正在选择最快的服务器",
+  "homeHintChecking": "正在检查与服务器的连接",
   "homeStatusReconnecting": "正在重新连接…",
   "homeHintReconnecting": "正在恢复连接",
   "homeStatusDisconnecting": "正在断开…",

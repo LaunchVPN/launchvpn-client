@@ -53,6 +53,15 @@ class Location {
   /// A `PingDelayConstants` value until a measurement succeeds.
   final int delay;
 
+  /// The same location with a newer measurement.
+  Location withDelay(int delay) => Location._(
+    id: id,
+    name: name,
+    countryCode: countryCode,
+    automatic: automatic,
+    delay: delay,
+  );
+
   /// The panel's groups for getting around blocking.
   bool get bypass => automatic && name.contains('Обход');
 }

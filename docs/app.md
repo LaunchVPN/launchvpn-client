@@ -51,6 +51,21 @@ upstream pages kept for merging. They are not reachable in this build.
 - A session falling from connected to connecting reads as a reconnect. No platform emits that
   today on a network change: Android keeps its tunnel up and reports nothing, and the iOS tunnel
   never sets `reasserting`. So after a network change the screen stays connected.
+- On Android and iOS a tunnel counts as connected only once `ConnectionCheck` gets an answer
+  through it. Until then Home shows Connecting with «Проверяем связь с сервером», without «IP
+  скрыт» or a delay. The check opens the address «Локации» measures, with a 4-second limit: the
+  App's own traffic takes the tunnel on both platforms, Apps mode included, so it goes the way the
+  person's apps do. It runs only while the App is visible: when a session comes up, back in the
+  App, when the network changes and every 30 seconds; without a network it waits for one. The
+  location card then shows the delay of the last check, never the list's older measurement.
+  One failure tries again after 3 seconds. Two in a row restart the session once
+  (`ConnectionCoordinator.restartSilent`), which measures every server of the group, so a single
+  live one leads it; Home reads the restart as one Reconnecting until a check of the new session
+  gets through. A group where no server answers that measurement, or a new session that fails two
+  checks as well, ends off (`stopSilent`) with the same error screen as servers that did not answer
+  before the start. Each such episode sends one Sentry event, unless crash reports are off: info
+  when the switch kept the connection, a warning when the VPN went off. It holds the location's
+  name, how long the VPN ran, the network kind and the failed checks, and no server address.
 - A failed attempt replaces the toggle and the cards with an error screen. Its text follows the
   coordinator's issue: servers that did not answer the check, a selection with no servers, or any
   other failure. Only the generic text keeps the toast, which names the specific cause. Retry
