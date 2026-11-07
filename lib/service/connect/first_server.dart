@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/connect/compiler.dart';
+import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/servers/outbound/map.dart';
 import 'package:onexray/service/shared/ping/batch.dart';
 
@@ -37,18 +38,38 @@ class FirstServerPicker {
 
   /// Returns [profile] as it is when no server answers within the budget, or
   /// once [cancelled] completes.
+  ///
+  /// A start measures up to five random servers, so it stays quick. With
+  /// [everyServer], as after the session's server went silent, it measures
+  /// the whole group, batch after batch, so a single live server is found;
+  /// a group where none answers then fails as silent instead of starting.
   Future<ResolvedProfile> pick(
     ResolvedProfile profile, {
     Future<void>? cancelled,
+    bool everyServer = false,
   }) async {
     final config = profile.config;
     final servers = _candidates(config);
-    if (servers.length < 2) return profile;
-    final winner = await Future.any([
-      _fastest(servers.shuffled().take(PingBatchRunner.maxBatchSize).toList()),
+    if (servers.length < (everyServer ? 1 : 2)) return profile;
+    final batches = everyServer
+        ? servers.slices(PingBatchRunner.maxBatchSize).toList()
+        : [servers.shuffled().take(PingBatchRunner.maxBatchSize).toList()];
+    final answer = await Future.any([
+      _fastest(batches),
       if (cancelled != null) cancelled.then((_) => null),
-    ]).timeout(_budget, onTimeout: () => null);
-    if (winner == null) return profile;
+    ]).timeout(_budget * batches.length, onTimeout: () => null);
+    if (answer == null) return profile;
+    final winner = answer.winner;
+    if (winner == null) {
+      if (everyServer) {
+        throw ConnectionResolutionException(
+          ConnectionResolutionFailure.insufficientHealthyServers,
+          requiredCount: 1,
+          availableCount: 0,
+        );
+      }
+      return profile;
+    }
     (config['outbounds'] as List)
       ..remove(winner)
       ..insert(0, winner);
@@ -99,17 +120,27 @@ class FirstServerPicker {
         ('$network'.contains('tcp') && '$network'.contains('udp'));
   }
 
-  /// A failed check must never fail the connection it serves.
-  Future<Map<String, dynamic>?> _fastest(
-    List<Map<String, dynamic>> servers,
+  /// The fastest server across [batches], or none when every one was
+  /// measured and stayed silent. Null when the check itself failed, which
+  /// must never fail the connection it serves.
+  Future<({Map<String, dynamic>? winner})?> _fastest(
+    List<List<Map<String, dynamic>>> batches,
   ) async {
     try {
-      final results = await _measure([
-        for (final server in servers) encodeSingleOutbound(server),
-      ], timeoutSeconds: _timeoutSeconds);
-      final answered = results.indexed.where((item) => item.$2.success);
-      if (answered.isEmpty) return null;
-      return servers[minBy(answered, (item) => item.$2.delay)!.$1];
+      Map<String, dynamic>? winner;
+      var best = 0;
+      for (final servers in batches) {
+        final results = await _measure([
+          for (final server in servers) encodeSingleOutbound(server),
+        ], timeoutSeconds: _timeoutSeconds);
+        for (final (index, result) in results.indexed) {
+          if (result.success && (winner == null || result.delay < best)) {
+            winner = servers[index];
+            best = result.delay;
+          }
+        }
+      }
+      return (winner: winner);
     } catch (error) {
       ygLogger('Check first server failed (${error.runtimeType})');
       return null;

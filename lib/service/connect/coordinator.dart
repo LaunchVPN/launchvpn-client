@@ -8,6 +8,7 @@ import 'package:onexray/core/pigeon/host_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/service/connect/failure.dart';
 import 'package:onexray/service/connect/preparation.dart';
+import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
@@ -74,6 +75,7 @@ class ConnectionCoordinator with WidgetsBindingObserver {
   static final instance = ConnectionCoordinator();
   final AppDatabase db;
   late final PrepareConnection _prepare;
+  late final PrepareConnection _prepareAfterSilence;
   late final Future<HostConnection> Function(ConnectionRuntime, Future<void>)
   _start;
   late final Future<HostConnection> Function() _stop;
@@ -136,13 +138,15 @@ class ConnectionCoordinator with WidgetsBindingObserver {
     _inspect = inspect ?? host.inspect;
     _readTraffic = readTraffic ?? host.query;
     _readRuntime = readRuntime ?? host.readRuntime;
-    _prepare =
-        prepare ??
-        ((configuration, cancelled) => ConnectionPreparation(db: db).prepare(
+    PrepareConnection preparing({bool everyServer = false}) =>
+        (configuration, cancelled) => ConnectionPreparation(db: db).prepare(
           configuration,
           cancelled: cancelled,
           onResolved: reportResolvedNodes,
-        ));
+          everyServer: everyServer,
+        );
+    _prepare = prepare ?? preparing();
+    _prepareAfterSilence = prepare ?? preparing(everyServer: true);
   }
 
   Stream<void> get configurationChanges => db.connectionConfigDao.watch();
@@ -676,6 +680,37 @@ class ConnectionCoordinator with WidgetsBindingObserver {
       }
       return GeoDataService().withFiles(
         () => imported?.save(save) ?? save(() async {}),
+      );
+    });
+  }
+
+  /// Restarts a session whose server stopped answering. Preparation measures
+  /// every server of the group, so the restart leads with a live one, and a
+  /// group where none answers fails as silent and stays off.
+  Future<void> restartSilent() async {
+    final stored = await configuration;
+    await apply(
+      stored,
+      expectedConfiguration: stored.encode(),
+      prepare: _prepareAfterSilence,
+    );
+  }
+
+  /// Turns off a session whose server stays silent and shows it as the same
+  /// failure as a group that did not answer before the start.
+  Future<void> stopSilent() {
+    cancel();
+    return _run(() async {
+      await _stopForMaintenance();
+      const error = ConnectionResolutionException(
+        ConnectionResolutionFailure.insufficientHealthyServers,
+      );
+      _failureLatched = true;
+      state.value = ConnectionView(
+        phase: ConnectionPhase.failed,
+        traffic: state.value.traffic,
+        issue: error.reason.name,
+        error: error,
       );
     });
   }

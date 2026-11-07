@@ -6,6 +6,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/service/connect/compiler.dart';
 import 'package:onexray/service/connect/first_server.dart';
+import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/routing/region_catalog.dart';
 import 'package:onexray/service/connect/settings.dart';
 import 'package:onexray/service/shared/ping/batch.dart';
@@ -170,6 +171,57 @@ void main() {
       expect((compiled['outbounds'] as List).first['tag'], 'live');
     });
   }
+
+  group('after the server went silent', () {
+    final twelve = [for (var i = 1; i <= 12; i++) 's$i'];
+
+    test('every server of the group is measured, batch after batch', () async {
+      final batches = <int>[];
+      await FirstServerPicker(
+        measure: (outbounds, {required timeoutSeconds}) async {
+          batches.add(outbounds.length);
+          return _answering({'s12': 400})(
+            outbounds,
+            timeoutSeconds: timeoutSeconds,
+          );
+        },
+      ).pick(_group(twelve), everyServer: true);
+
+      expect(batches, [5, 5, 2]);
+    });
+
+    test('the one live server of a large group leads it', () async {
+      final picked = await FirstServerPicker(measure: _answering({'s12': 400}))
+          .pick(_group(twelve), everyServer: true);
+
+      expect(_tags(picked).first, 's12');
+    });
+
+    test('a group where no server answers fails as silent', () async {
+      final picking = FirstServerPicker(measure: _answering({}))
+          .pick(_group(['a']), everyServer: true);
+
+      await expectLater(
+        picking,
+        throwsA(
+          isA<ConnectionResolutionException>().having(
+            (error) => error.reason,
+            'reason',
+            ConnectionResolutionFailure.insufficientHealthyServers,
+          ),
+        ),
+      );
+    });
+
+    test('a failed check still lets the session start', () async {
+      final picked = await FirstServerPicker(
+        measure: (_, {required timeoutSeconds}) =>
+            Future.error(StateError('native failure')),
+      ).pick(_group(['a', 'b']), everyServer: true);
+
+      expect(_tags(picked), ['a', 'b', 'direct', 'block']);
+    });
+  });
 
   group('servers worth checking', () {
     test('come from the balancer of the last rule', () async {

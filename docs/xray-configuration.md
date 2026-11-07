@@ -353,6 +353,12 @@ network; a batch that outlives the give-up time may still finish after the tunne
 result is ignored. Starts that reuse the last configuration (widget, Quick Settings tile, automation,
 Apple on-demand) skip preparation, so they keep the server chosen when it was written.
 
+A restart after the running session went silent (see [App behavior](app.md)) measures every
+server of the group instead, five at a time, with the same timeout per batch, so a group with a
+single live server finds it. A group where every server was measured and none answered fails the
+start as `insufficientHealthyServers`, the same issue as servers that did not answer before a
+start. Single-server groups are measured too.
+
 ## Raw JSON
 
 Raw 保存原文，不经过 `XrayJson` 或常规 State，运行只改深副本。

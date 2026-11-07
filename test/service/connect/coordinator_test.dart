@@ -1455,6 +1455,81 @@ void main() {
     );
   });
 
+  group('a session whose server went silent', () {
+    late HostConnection host;
+    late List<String> calls;
+
+    ConnectionCoordinator coordinator({
+      required ConnectionRuntime next,
+      bool silent = false,
+    }) => ConnectionCoordinator(
+      database: db,
+      readRuntime: () async => host.runtime,
+      inspect: (_, {observedStatus}) async => host,
+      prepare: (_, _) async {
+        calls.add('prepare');
+        if (silent) {
+          throw const ConnectionResolutionException(
+            ConnectionResolutionFailure.insufficientHealthyServers,
+          );
+        }
+        return next;
+      },
+      stop: () async {
+        calls.add('stop');
+        return host = const HostConnection(VpnStatus.disconnected);
+      },
+      start: (runtime) async {
+        calls.add('start');
+        return host = HostConnection(VpnStatus.connected, runtime: runtime);
+      },
+    );
+
+    setUp(() {
+      host = HostConnection(VpnStatus.connected, runtime: _runtime('a'));
+      calls = [];
+    });
+
+    test('restarts with the stored choice', () async {
+      final next = _runtime('b');
+      final connection = await _initialize(coordinator(next: next));
+
+      await connection.restartSilent();
+
+      expect(calls, ['stop', 'prepare', 'start']);
+      expect(connection.state.value.phase, ConnectionPhase.connected);
+      expect(connection.state.value.runtime?.identity, next.identity);
+    });
+
+    test('stays off when no server of the group answers', () async {
+      final connection = await _initialize(
+        coordinator(next: _runtime('b'), silent: true),
+      );
+
+      await expectLater(
+        connection.restartSilent(),
+        throwsA(isA<ConnectionResolutionException>()),
+      );
+
+      expect(calls, ['stop', 'prepare', 'stop']);
+      expect(connection.state.value.phase, ConnectionPhase.failed);
+      expect(connection.state.value.issue, 'insufficientHealthyServers');
+      expect(connection.state.value.canDisconnect, isFalse);
+    });
+
+    test('goes off as the same failure when it stays silent', () async {
+      final connection = await _initialize(coordinator(next: _runtime('b')));
+
+      await connection.stopSilent();
+      await connection.refresh();
+
+      expect(calls, ['stop']);
+      expect(connection.state.value.phase, ConnectionPhase.failed);
+      expect(connection.state.value.issue, 'insufficientHealthyServers');
+      expect(connection.state.value.runtime, isNull);
+    });
+  });
+
   for (final stopThrows in [false, true]) {
     test('failed stop prevents all startup work: throws=$stopThrows', () async {
       final old = _runtime('a');
