@@ -232,45 +232,61 @@ class PingService {
 
   /// Measures what the locations screen lists, using only the app's own core.
   /// A provider group takes the delay of its first server that answers, trying
-  /// at most [_locationAttempts] of them, so one sweep stays seconds long. A
-  /// cancelled sweep leaves the last delays of the rows it did not finish.
+  /// at most [_locationAttempts] of them, so one sweep stays seconds long.
+  ///
+  /// The last delays go first, so a sweep that stops, or waits behind another,
+  /// never passes them off as current. A location is saved as soon as one of
+  /// its servers answers or it has none left to try.
   Future<void> pingLocations(
     List<CoreConfigData> rows, {
     bool Function()? isCancelled,
-  }) => _enqueuePing(() async {
+  }) async {
     final db = _database;
-    final pingState = PingState();
-    await pingState.readFromPreferences();
-    final servers = {for (final row in rows) row: _locationServers(row)};
-    final unanswered = <CoreConfigData, PingBatchResult>{
-      for (final row in rows) row: PingBatchResult.failed(),
-    };
-    for (var attempt = 0; attempt < _locationAttempts; attempt++) {
-      final round = unanswered.keys
-          .where((row) => attempt < servers[row]!.length)
-          .toList();
-      for (final slice in round.slices(PingBatchRunner.maxBatchSize)) {
-        if (_pingQueue.isPaused || (isCancelled?.call() ?? false)) return;
-        final results = await (_batchOverride ?? PingBatchRunner.run)([
-          for (final row in slice) PingBatchSource(servers[row]![attempt]),
-        ], pingState);
-        await db.transaction(() async {
-          for (var index = 0; index < results.length; index++) {
-            unanswered[slice[index]] = results[index];
-            if (results[index].success) {
-              await _updateRow(db, slice[index], results[index].delay);
-              unanswered.remove(slice[index]);
-            }
-          }
-        });
-      }
-    }
     await db.transaction(() async {
-      for (final entry in unanswered.entries) {
-        await _updateRow(db, entry.key, _storedDelay(entry.value));
+      for (final row in rows) {
+        await _writeDelay(db, row, PingDelayConstants.unknown);
       }
     });
-  });
+    return _enqueuePing(() async {
+      final pingState = PingState();
+      await pingState.readFromPreferences();
+      final servers = {for (final row in rows) row: _locationServers(row)};
+      final unanswered = <CoreConfigData, PingBatchResult>{
+        for (final row in rows) row: PingBatchResult.failed(),
+      };
+      for (var attempt = 0; unanswered.isNotEmpty; attempt++) {
+        // Out of servers, or out of the attempts a sweep allows.
+        final spent = unanswered.keys
+            .where(
+              (row) =>
+                  attempt >= servers[row]!.length ||
+                  attempt >= _locationAttempts,
+            )
+            .toList();
+        await db.transaction(() async {
+          for (final row in spent) {
+            await _updateRow(db, row, _storedDelay(unanswered.remove(row)!));
+          }
+        });
+        final round = unanswered.keys.toList();
+        for (final slice in round.slices(PingBatchRunner.maxBatchSize)) {
+          if (_pingQueue.isPaused || (isCancelled?.call() ?? false)) return;
+          final results = await (_batchOverride ?? PingBatchRunner.run)([
+            for (final row in slice) PingBatchSource(servers[row]![attempt]),
+          ], pingState);
+          await db.transaction(() async {
+            for (var index = 0; index < results.length; index++) {
+              unanswered[slice[index]] = results[index];
+              if (results[index].success) {
+                await _updateRow(db, slice[index], results[index].delay);
+                unanswered.remove(slice[index]);
+              }
+            }
+          });
+        }
+      }
+    });
+  }
 
   /// Measures servers for a connection about to start. This stays out of the
   /// queue, so it waits for a batch in progress but not for the rest of a sweep.
@@ -319,7 +335,16 @@ class PingService {
   }
 
   Future<void> _updateRow(AppDatabase db, CoreConfigData row, int delay) async {
-    if (delay == PingDelayConstants.unknown || row.data == null) return;
+    if (delay == PingDelayConstants.unknown) return;
+    await _writeDelay(db, row, delay);
+  }
+
+  Future<void> _writeDelay(
+    AppDatabase db,
+    CoreConfigData row,
+    int delay,
+  ) async {
+    if (row.data == null) return;
     // A slow result must not overwrite an edit, favorite, or restored asset.
     await (db.update(db.coreConfig)..where(
           (table) =>

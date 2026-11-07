@@ -6,8 +6,11 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.os.Parcel
+import android.os.ParcelFileDescriptor
+import com.elvishew.xlog.XLog
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import com.launchvpn.app.pigeon.VpnStatus
@@ -21,10 +24,15 @@ class VpnStatusConnection(
         const val ACTION_BIND = "com.launchvpn.app.VPN_STATUS_BIND"
         const val DESCRIPTOR = "com.launchvpn.app.VpnStatus"
         const val READ_STATUS = IBinder.FIRST_CALL_TRANSACTION
+        const val PROTECT = IBinder.FIRST_CALL_TRANSACTION + 1
     }
 
     private var binding: ServiceConnection? = null
     private var service: CompletableDeferred<IBinder>? = null
+
+    /** The service once bound, for core threads that cannot wait for a bind. */
+    @Volatile
+    private var bound: IBinder? = null
     private var pending: CompletableDeferred<Unit>? = null
     private var target: VpnStatus? = null
     private var eventGeneration = 0
@@ -128,7 +136,9 @@ class VpnStatusConnection(
         val connected = CompletableDeferred<IBinder>()
         val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, binder: IBinder) {
-                if (binding === this) connected.complete(binder)
+                if (binding !== this) return
+                bound = binder
+                connected.complete(binder)
             }
             override fun onServiceDisconnected(name: ComponentName) {
                 if (binding !== this) return
@@ -162,10 +172,46 @@ class VpnStatusConnection(
     private fun unbind() {
         val connection = binding
         binding = null
+        bound = null
         service?.takeUnless { it.isCompleted }?.cancel()
         service = null
         if (connection != null) {
             try { context.unbindService(connection) } catch (_: IllegalArgumentException) { }
+        }
+    }
+
+    /**
+     * Takes [socket] past the running tunnel. Only the VPN service may, so the
+     * socket goes to :native. Without a tunnel there is nothing to pass. A
+     * tunnel started elsewhere, such as from the tile, is bound first; one that
+     * cannot be fails the socket rather than measure the tunnel. Core threads
+     * call this, never the main one, which the bind runs on.
+     */
+    fun protect(socket: Int): Boolean {
+        val binder = bound ?: run {
+            if (!VpnController.readVpnRunning(context)) return true
+            try {
+                runBlocking { withContext(Dispatchers.Main) { bind() } }
+            } catch (error: Exception) {
+                XLog.e("Bind the VPN service to protect a socket failed", error)
+                return false
+            }
+        }
+        val request = Parcel.obtain()
+        val reply = Parcel.obtain()
+        return try {
+            ParcelFileDescriptor.fromFd(socket).use { copy ->
+                request.writeInterfaceToken(DESCRIPTOR)
+                request.writeFileDescriptor(copy.fileDescriptor)
+                binder.transact(PROTECT, request, reply, 0) &&
+                    reply.run { readException(); readInt() == 1 }
+            }
+        } catch (error: Exception) {
+            XLog.e("Protect socket from the tunnel failed", error)
+            false
+        } finally {
+            request.recycle()
+            reply.recycle()
         }
     }
 

@@ -232,7 +232,7 @@ void main() {
 
   testWidgets('another device is removed from its sheet', (tester) async {
     await pumpAccount(tester);
-    expect(find.text('УСТРОЙСТВА · 2 ИЗ 5'), findsOneWidget);
+    expect(find.text('Устройства · 2 из 5'), findsOneWidget);
     expect(find.text('Android · это устройство'), findsOneWidget);
 
     // This device has no sheet.
@@ -250,7 +250,7 @@ void main() {
     await settle(tester);
 
     expect(find.text('Pixel 8 удалён, место освободилось'), findsOneWidget);
-    expect(find.text('УСТРОЙСТВА · 1 ИЗ 5'), findsOneWidget);
+    expect(find.text('Устройства · 1 из 5'), findsOneWidget);
     expect(find.text('Pixel 8'), findsNothing);
   });
 

@@ -217,7 +217,7 @@ void main() {
       expect(sizes, [5, 2]);
     });
 
-    test('a cancelled sweep keeps the last delay', () async {
+    test('a sweep forgets the last delays before it starts', () async {
       final germany = await group('Germany', ['de1']);
       await db.coreConfigDao.updateRow(germany.copyWith(delay: 80));
       var runs = 0;
@@ -232,7 +232,36 @@ void main() {
       await service.pingLocations([germany], isCancelled: () => true);
 
       expect(runs, 0);
-      expect((await db.coreConfigDao.searchRow(germany.id))!.delay, 80);
+      expect(
+        (await db.coreConfigDao.searchRow(germany.id))!.delay,
+        PingDelayConstants.unknown,
+      );
+    });
+
+    test('a location out of servers is told at once', () async {
+      final finland = await group('Finland', ['fi1']);
+      final germany = await group('Germany', ['de1', 'de2']);
+      int? finlandMeanwhile;
+      final service = PingService.forTesting(
+        database: db,
+        runBatch: (sources, _) async {
+          if (sources.map(tag).contains('de2')) {
+            finlandMeanwhile = (await db.coreConfigDao.searchRow(finland.id))!
+                .delay;
+          }
+          return [
+            for (final source in sources)
+              tag(source) == 'de2'
+                  ? const PingBatchResult(true, 90, '')
+                  : PingBatchResult.failed(),
+          ];
+        },
+      );
+
+      await service.pingLocations([finland, germany]);
+
+      expect(finlandMeanwhile, PingDelayConstants.error);
+      expect((await db.coreConfigDao.searchRow(germany.id))!.delay, 90);
     });
   });
 

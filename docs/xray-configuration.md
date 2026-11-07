@@ -359,6 +359,40 @@ single live server finds it. A group where every server was measured and none an
 start as `insufficientHealthyServers`, the same issue as servers that did not answer before a
 start. Single-server groups are measured too.
 
+### Measuring past the tunnel
+
+The App's own traffic takes the tunnel on Android and iOS, so a delay measured from the App while
+VPN is on would describe the tunnel, not the server. Measurements therefore dial past it:
+
+- Android runs measurements in the App's process, while the tunnel's core runs in `:native`, where
+  `pingBatch` refuses to run beside the managed core. The App's process registers a dialer
+  controller with its core (`TunnelBypass`); while VPN runs, each socket goes to the VPN service over
+  its status binder, which calls `VpnService.protect` on it. A tunnel this process has not bound
+  yet, such as one started from the tile, is bound first; a socket the service cannot reach fails
+  rather than measure the tunnel. Without VPN the controller passes sockets as they are.
+- iOS binds every outbound of a measurement to the physical interface the system prefers, Wi-Fi
+  before cellular, through Xray's `sockopt.interface` (`IP_BOUND_IF`), while a tunnel is connected.
+  Without such an interface the measurement fails rather than measure the tunnel. A tunnel with
+  `includeAllNetworks` (Capture all traffic) lets no socket past, so Locations does not measure
+  while it runs and shows its locations unmeasured.
+
+The system resolves names through the tunnel while it runs, which added seconds to every
+measurement in testing. On Android the App's core therefore resolves through the DNS server of the
+network under the tunnel (libXray `SetDNS`, its sockets protected the same way) while VPN runs, set
+before each core call, and through the system's resolver otherwise. That network is the default one,
+which the tunnel's capabilities name by its transport, so cellular kept up beside Wi-Fi is not used.
+
+libXray has no such resolver on Apple platforms, and a measurement takes only the outbounds of its
+configs, so iOS resolves each server name itself, through the DNS servers of the interface it binds
+(`DNSServiceGetAddrInfo` scoped to that interface, three seconds at most). An IPv4 address is
+preferred, and an IPv6 answer waits 300 ms for one: a single address gets no fallback to the other
+family, as a dial by name does, and servers answer on IPv4 more often.
+The outbound then dials the address, and the name stays as the TLS or Reality `serverName`, filled
+in when empty and the outbound has only that name. Xray sends that name as the WebSocket,
+HTTPUpgrade and XHTTP host when the transport sets none, so the server sees the same request.
+Outbounds without TLS or Reality, on other transports, chained through `dialerProxy`, with a
+`domainStrategy` of their own, or with a name that does not resolve dial the name as before.
+
 ## Raw JSON
 
 Raw 保存原文，不经过 `XrayJson` 或常规 State，运行只改深副本。

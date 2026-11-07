@@ -55,9 +55,15 @@ v1–v2 创建新结构时不新增退休地区列，v3–v6 删除已有列，�
 Locations measures provider groups with `PingService.pingLocations`, on the same queue and through
 the same native batch as ordinary servers. A group stores the delay of its first server that answers,
 trying at most three, so a sweep of the real panel takes seconds. "No answer" therefore means those
-three were silent, not every server of the group. Opening the screen starts a sweep only while the
-tunnel is down, because a measurement through it would describe the tunnel; starting a connection
-stops the sweep after its current batch. Otherwise the screen shows the last stored delays.
+three were silent, not every server of the group. A sweep first clears the stored delays of its
+locations, so one that waits in the queue or stops never shows them as current, and saves each
+location as soon as a server answers or it has none left to try. Opening the screen sweeps every
+location; a pull sweeps them again and a tap on a delay sweeps that location. A location already in
+a sweep is not queued twice. Measurements leave past a running tunnel (see
+[Xray configuration](xray-configuration.md#measuring-past-the-tunnel)), except on iOS with Capture
+all traffic, where the screen shows its locations unmeasured and says the delay is measured with
+VPN off. Starting or stopping a connection stops a sweep after its current batch; once the tunnel
+is up or down, an open screen measures every location again.
 
 名称、延迟等显示排序是设备偏好，保存后通过共享事件同步，重启沿用；缺失或未知值回到默认。
 显示排序不改写手动顺序，切回默认时使用已保存的位置。手动分组和顺序进入资产备份，显示排序偏好不进入备份。

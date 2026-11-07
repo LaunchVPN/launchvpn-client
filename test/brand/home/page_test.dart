@@ -82,7 +82,8 @@ void main() {
   ConnectionRuntime? runtime;
   late Future<void> Function() prepareFailure;
   var prepares = 0;
-  var sweeps = 0;
+  var sweeps = <List<int>>[];
+  late Future<void> Function() sweep;
   late Future<SubscriptionRefreshResult> Function(SubscriptionData) refresh;
   late ValueNotifier<bool> deviceLimit;
 
@@ -133,7 +134,10 @@ void main() {
     controller = HomeController(
       database: db,
       coordinator: coordinator,
-      pingLocations: (_, {isCancelled}) async => sweeps++,
+      pingLocations: (rows, {isCancelled}) {
+        sweeps.add([for (final row in rows) row.id]);
+        return sweep();
+      },
       dismissAnnounce: db.subscriptionDao.dismissAnnounce,
       refreshSubscription: (row) => refresh(row),
       platform: platform,
@@ -254,7 +258,8 @@ void main() {
     runtime = null;
     prepareFailure = () async {};
     prepares = 0;
-    sweeps = 0;
+    sweeps = [];
+    sweep = () async {};
     refresh = (_) async => const SubscriptionRefreshResult(
       status: SubscriptionUpdateResult.success,
     );
@@ -286,9 +291,9 @@ void main() {
       await pumpGroups(tester);
       await openLocations(tester);
 
-      final above = tester.getTopLeft(find.text('АВТОМАТИЧЕСКИ')).dy;
+      final above = tester.getTopLeft(find.text('Автоматически')).dy;
       final fastest = tester.getTopLeft(find.text('Самые быстрые').last).dy;
-      final others = tester.getTopLeft(find.text('СТРАНЫ И СЕРВИСЫ')).dy;
+      final others = tester.getTopLeft(find.text('Страны и сервисы')).dy;
       final germany = tester.getTopLeft(find.text('Германия')).dy;
       expect(above, lessThan(fastest));
       expect(fastest, lessThan(others));
@@ -316,7 +321,117 @@ void main() {
       await pumpGroups(tester);
       await openLocations(tester);
 
-      expect(sweeps, 1);
+      expect(sweeps, hasLength(1));
+    });
+
+    testWidgets('a delay sits in a pill, a location never measured offers a '
+        'button', (tester) async {
+      await pumpGroups(tester);
+      await openLocations(tester);
+
+      expect(find.text('516 мс'), findsOneWidget);
+      expect(find.bySemanticsLabel('Замерить пинг'), findsOneWidget);
+      // One line per location: the name, without the delay under it.
+      expect(find.text('Германия'), findsOneWidget);
+    });
+
+    testWidgets('a name has the same room whatever its delay shows', (
+      tester,
+    ) async {
+      await pumpGroups(tester);
+      await openLocations(tester);
+
+      double room(String name) => tester
+          .getSize(
+            find
+                .ancestor(of: find.text(name), matching: find.byType(Column))
+                .first,
+          )
+          .width;
+      // A number, no answer and never measured.
+      expect(room('Германия'), room('Англия'));
+      expect(room('Германия'), room('Обход глушилок'));
+    });
+
+    testWidgets('a tap on the delay measures only that location, also from '
+        'a screen reader', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpGroups(tester);
+      await openLocations(tester);
+      final germany = controller.state.locations.named('Германия')!;
+      sweeps.clear();
+
+      await tester.tap(find.text('516 мс'));
+      await tester.pumpAndSettle();
+      tester.semantics.tap(find.semantics.byLabel('516 мс'));
+      await tester.pumpAndSettle();
+
+      expect(sweeps, [
+        [germany.id],
+        [germany.id],
+      ]);
+      handle.dispose();
+    });
+
+    testWidgets('a location being measured shows a wave, not its last delay', (
+      tester,
+    ) async {
+      final running = Completer<void>();
+      sweep = () => running.future;
+      await pumpGroups(tester);
+      await addGroup(tester, '🇵🇱 Польша');
+      await tester.tap(find.byKey(const ValueKey('home-location')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // The two without a delay wave. Германия keeps its own: the stub sweep
+      // never reaches the service, which would forget it first.
+      expect(find.bySemanticsLabel('Замеряем пинг'), findsNWidgets(2));
+      expect(find.text('516 мс'), findsOneWidget);
+
+      running.complete();
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Замеряем пинг'), findsNothing);
+    });
+
+    testWidgets('a list opened while connecting is measured once up', (
+      tester,
+    ) async {
+      await pumpGroups(tester);
+      await openLocations(tester);
+      sweeps.clear();
+      coordinator.state.value = const ConnectionView(
+        phase: ConnectionPhase.connecting,
+      );
+      await tester.pump();
+      await tester.tap(find.text('516 мс'));
+      await tester.pump();
+      expect(sweeps, isEmpty);
+
+      coordinator.state.value = ConnectionView(
+        phase: ConnectionPhase.connected,
+        runtime: _runtime(DateTime(2026, 11, 7)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(sweeps.single, hasLength(4));
+    });
+
+    testWidgets('pulling the list measures every location again', (
+      tester,
+    ) async {
+      await pumpGroups(tester);
+      await openLocations(tester);
+      sweeps.clear();
+
+      await tester.fling(
+        find.text('Самые быстрые').last,
+        const Offset(0, 300),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(sweeps.single, hasLength(4));
     });
 
     testWidgets('marks the selected group for sight and for screen readers', (

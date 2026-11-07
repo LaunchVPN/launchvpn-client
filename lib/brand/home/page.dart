@@ -380,7 +380,7 @@ class _HomePageState extends State<HomePage> {
         location: location,
         // "No answer" would contradict a tunnel that works.
         delay: PingDelayConstants.isSuccessful(location.delay)
-            ? locationDelayLabel(AppLocalizations.of(context)!, location)
+            ? locationDelayLabel(AppLocalizations.of(context)!, location.delay)
             : null,
         onTap: _openLocations,
         trailing: const Icon(

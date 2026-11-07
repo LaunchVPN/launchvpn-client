@@ -3211,6 +3211,9 @@
     }
   },
   "locationsNoAnswer": "No answer",
+  "locationsMeasure": "Measure ping",
+  "locationsMeasuring": "Measuring ping",
+  "locationsMeasureVpnOff": "While “Capture all traffic” is on, ping is measured only with VPN off",
   "settingsConnection": "Connection",
   "settingsPresets": "Mode",
   "settingsConnectOnLaunch": "Connect at launch",

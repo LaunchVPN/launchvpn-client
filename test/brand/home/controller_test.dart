@@ -9,6 +9,7 @@ import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
+import 'package:onexray/core/model/tun_json.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/pigeon/model.dart';
 import 'package:onexray/service/connect/compiler.dart';
@@ -19,27 +20,30 @@ import 'package:onexray/service/connect/resolver.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/runtime_host.dart';
 import 'package:onexray/service/connect/settings.dart';
+import 'package:onexray/service/servers/locations.dart';
 import 'package:onexray/service/servers/subscription/model.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 
-ConnectionRuntime _runtime([ConnectionConfiguration? configuration]) =>
-    ConnectionRuntime.create(
-      configuration: configuration ?? ConnectionConfiguration(),
-      compiled: CompiledConnection(
-        xrayJson: '{}',
-        entries: const [],
-        finalExit: null,
-        nodeTags: const {},
-        profile: ResolvedProfile(
-          id: 7,
-          sourceId: 1,
-          name: 'AUTO | Fastest',
-          config: const {},
-        ),
-      ),
-      platform: ConnectionPlatform.android,
-      request: StartVpnRequest(null, null, '18003', '{}'),
-    );
+ConnectionRuntime _runtime([
+  ConnectionConfiguration? configuration,
+  TunJson? tun,
+]) => ConnectionRuntime.create(
+  configuration: configuration ?? ConnectionConfiguration(),
+  compiled: CompiledConnection(
+    xrayJson: '{}',
+    entries: const [],
+    finalExit: null,
+    nodeTags: const {},
+    profile: ResolvedProfile(
+      id: 7,
+      sourceId: 1,
+      name: 'AUTO | Fastest',
+      config: const {},
+    ),
+  ),
+  platform: ConnectionPlatform.android,
+  request: StartVpnRequest(tun, null, '18003', '{}'),
+);
 
 const _android = ConnectionPlatform.android;
 
@@ -62,6 +66,7 @@ void main() {
   late Future<SubscriptionRefreshResult> Function(SubscriptionData) refresh;
   var status = VpnStatus.disconnected;
   var stopCalls = 0;
+  TunJson? tun;
 
   Future<void> settle() => pumpEventQueue(times: 50);
 
@@ -83,6 +88,7 @@ void main() {
       status: SubscriptionUpdateResult.success,
     );
     stopCalls = 0;
+    tun = null;
     runtime = _runtime();
     statusEvents = StreamController<VpnStatus>.broadcast(sync: true);
     addTearDown(statusEvents.close);
@@ -97,7 +103,7 @@ void main() {
           HostConnection(observedStatus ?? status, runtime: current),
       prepare: (configuration, _) async {
         await prepareFailure();
-        return runtime = _runtime(configuration);
+        return runtime = _runtime(configuration, tun);
       },
       start: (_) => start.future,
       stop: () {
@@ -851,6 +857,8 @@ void main() {
     });
 
     group('ping', () {
+      Location listed(int id) => controller.state.locations.withId(id)!;
+
       test('measures every listed group while off', () async {
         await controller.measureLocations();
 
@@ -859,26 +867,68 @@ void main() {
         ]);
       });
 
-      test('measures nothing while connected', () async {
+      test('measures past a running tunnel', () async {
+        await connectFully();
+
+        await controller.measureLocations();
+
+        expect(sweeps, hasLength(1));
+        expect(controller.state.measureReadiness, MeasureReadiness.ready);
+      });
+
+      test('a tunnel that captures all traffic is measured only off', () async {
+        tun = TunJson.fromJson({'includeAllNetworks': true});
         await connectFully();
 
         await controller.measureLocations();
 
         expect(sweeps, isEmpty);
+        expect(
+          controller.state.measureReadiness,
+          MeasureReadiness.onlyWithVpnOff,
+        );
       });
 
-      test('runs one sweep at a time', () async {
+      test('measures one location on its own', () async {
+        await controller.measureLocations(only: listed(germany));
+
+        expect(sweeps, [
+          [germany],
+        ]);
+      });
+
+      test('shows which locations are being measured', () async {
         final running = Completer<void>();
         sweep = () => running.future;
 
-        unawaited(controller.measureLocations());
-        await controller.measureLocations();
-        expect(sweeps, hasLength(1));
+        unawaited(controller.measureLocations(only: listed(germany)));
+        await settle();
+        expect(controller.state.measuring, {germany});
 
         running.complete();
         await settle();
-        await controller.measureLocations();
-        expect(sweeps, hasLength(2));
+        expect(controller.state.measuring, isEmpty);
+      });
+
+      test('a location being measured is not measured twice', () async {
+        final running = Completer<void>();
+        sweep = () => running.future;
+        unawaited(controller.measureLocations(only: listed(germany)));
+        await settle();
+
+        var done = false;
+        unawaited(controller.measureLocations().then((_) => done = true));
+        await settle();
+        expect(sweeps, [
+          [germany],
+          [fastest],
+        ]);
+
+        // The whole list waits for the location measured before it.
+        expect(done, isFalse);
+        running.complete();
+        await settle();
+        expect(done, isTrue);
       });
 
       test('a sweep stops as soon as the tunnel starts', () async {
@@ -900,6 +950,7 @@ void main() {
 
         expect(sweeps, hasLength(2));
         expect(failures, isEmpty);
+        expect(controller.state.measuring, isEmpty);
       });
     });
   });
