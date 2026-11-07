@@ -390,7 +390,7 @@ data class TunnelStop (
   /** In milliseconds since the epoch. */
   val startedAtMs: Long,
   /**
-   * The stop, or without one the extension's last sign of life, at most a
+   * The stop, or without one the extension's last heartbeat, at most half a
    * minute before it ended.
    */
   val endedAtMs: Long,

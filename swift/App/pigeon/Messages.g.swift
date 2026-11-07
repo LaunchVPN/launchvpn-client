@@ -346,7 +346,7 @@ struct TunnelStop: Hashable, CustomStringConvertible {
   var reason: String? = nil
   /// In milliseconds since the epoch.
   var startedAtMs: Int64
-  /// The stop, or without one the extension's last sign of life, at most a
+  /// The stop, or without one the extension's last heartbeat, at most half a
   /// minute before it ended.
   var endedAtMs: Int64
   /// The last reading; its peak is the highest since the start.
