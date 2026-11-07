@@ -462,7 +462,9 @@ iOS terminates the tunnel extension when it exceeds its memory limit, which drop
 While Xray file logs are on, the extension appends `[Memory]` lines to `error.log`: when the
 tunnel starts, once Xray has started, on stop, and every 30 seconds in between. `headroom` is the
 limit minus the peak footprint the kernel recorded for this process, so it includes spikes between
-lines. It is the value to compare between configurations. With logs off, nothing is written.
+lines. It is the value to compare between configurations. With logs off, no lines are written;
+the same heartbeat (`TunnelRunLog`) still keeps the run's record for crash reports, described in
+[App behavior](app.md).
 
 The App can also ask the running extension for the same reading through `TunnelRequest.memory`,
 without logs, which themselves use memory. In builds installed from TestFlight, About polls it and

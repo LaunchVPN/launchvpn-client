@@ -135,6 +135,40 @@ abstract class TesterHostApi {
   TunnelMemory? readTunnelMemory();
 }
 
+/// How a run of the iOS tunnel extension ended.
+class TunnelStop {
+  TunnelStop({
+    this.reason,
+    required this.startedAtMs,
+    required this.endedAtMs,
+    this.memory,
+  });
+
+  /// `NEProviderStopReason`'s name, such as `noNetworkAvailable`. Null when
+  /// the process ended without a stop: it crashed, or iOS ended it at its
+  /// memory limit.
+  final String? reason;
+
+  /// In milliseconds since the epoch.
+  final int startedAtMs;
+
+  /// The stop, or without one the extension's last heartbeat, at most half a
+  /// minute before it ended.
+  final int endedAtMs;
+
+  /// The last reading; its peak is the highest since the start.
+  final TunnelMemory? memory;
+}
+
+/// The iOS tunnel extension's record of its runs, kept in the App Group.
+@HostApi()
+abstract class TunnelStopsHostApi {
+  /// The runs that ended since the last call, each handed over once. A run
+  /// that may still be going stays for a later call.
+  @asyncCallback
+  List<TunnelStop> takeTunnelStops();
+}
+
 class AndroidAutomationSettings {
   AndroidAutomationSettings({required this.enabled, this.token});
   final bool enabled;

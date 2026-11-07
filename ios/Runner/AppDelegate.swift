@@ -22,6 +22,7 @@ import UIKit
         AppleBackupHostApiSetup.setUp(binaryMessenger: binaryMessenger, api: backupApi)
         AppleWidgetHostApiSetup.setUp(binaryMessenger: binaryMessenger, api: AppleWidgetApi(flutterApi: flutterApi))
         TesterHostApiSetup.setUp(binaryMessenger: binaryMessenger, api: TesterApi())
+        TunnelStopsHostApiSetup.setUp(binaryMessenger: binaryMessenger, api: TunnelStopsApi())
         
         GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     }

@@ -6,6 +6,7 @@ import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/core/tools/platform.dart';
 import 'package:onexray/brand/app.dart';
 import 'package:onexray/service/crash_reports/service.dart';
+import 'package:onexray/service/crash_reports/tunnel_stops.dart';
 import 'package:onexray/service/launch/app_startup.dart';
 import 'package:onexray/service/shared/event_bus/service.dart';
 import 'package:onexray/service/shared/menu/short_cut/service.dart';
@@ -24,6 +25,7 @@ Future<void> main(List<String> _) async {
   await ShortCutService().initialize();
   ShareService().startAppLinks();
   await _initBridge();
+  if (AppPlatform.isIOS) TunnelStopReports.instance.start();
   await AppleWidgetService().initialize();
   final appStartup = AppStartupService();
   await appStartup.prepare();
