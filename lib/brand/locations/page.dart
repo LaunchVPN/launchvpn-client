@@ -296,6 +296,8 @@ class _Delay extends StatelessWidget {
           ? l.locationsMeasure
           : locationDelayLabel(l, delay),
       onTapHint: unmeasured ? null : l.locationsMeasure,
+      // The gesture below is hidden with the rest, so the tap is set here.
+      onTap: measuring ? null : onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

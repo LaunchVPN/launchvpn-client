@@ -354,20 +354,24 @@ void main() {
       expect(room('Германия'), room('Обход глушилок'));
     });
 
-    testWidgets('a tap on the delay measures only that location', (
-      tester,
-    ) async {
+    testWidgets('a tap on the delay measures only that location, also from '
+        'a screen reader', (tester) async {
+      final handle = tester.ensureSemantics();
       await pumpGroups(tester);
       await openLocations(tester);
+      final germany = controller.state.locations.named('Германия')!;
       sweeps.clear();
 
       await tester.tap(find.text('516 мс'));
       await tester.pumpAndSettle();
+      tester.semantics.tap(find.semantics.byLabel('516 мс'));
+      await tester.pumpAndSettle();
 
-      final germany = controller.state.locations.named('Германия')!;
       expect(sweeps, [
         [germany.id],
+        [germany.id],
       ]);
+      handle.dispose();
     });
 
     testWidgets('a location being measured shows a wave, not its last delay', (
@@ -381,8 +385,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // Польша lost its delay to the sweep; Германия keeps its own until the
-      // sweep reaches it, which the real service does by forgetting it first.
+      // The two without a delay wave. Германия keeps its own: the stub sweep
+      // never reaches the service, which would forget it first.
       expect(find.bySemanticsLabel('Замеряем пинг'), findsNWidgets(2));
       expect(find.text('516 мс'), findsOneWidget);
 

@@ -53,14 +53,21 @@ object TunnelBypass : DialerController {
         }
     }
 
-    /** The first IPv4 DNS server of a network with internet that is not a VPN. */
+    /**
+     * The first IPv4 DNS server of the network protected sockets take, the
+     * default one under the tunnel. The tunnel's capabilities carry its
+     * transport, which tells it from a network kept up beside it.
+     */
     @Suppress("DEPRECATION") // One look per core call needs no network callback.
     private fun underlyingDns(context: Context): String? {
         val networks = context.getSystemService(ConnectivityManager::class.java) ?: return null
+        val tunnel = networks.activeNetwork?.let(networks::getNetworkCapabilities) ?: return null
+        val transports = PHYSICAL_TRANSPORTS.filter(tunnel::hasTransport)
         for (network in networks.allNetworks) {
             val capabilities = networks.getNetworkCapabilities(network) ?: continue
             if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
-                !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
+                transports.none(capabilities::hasTransport)
             ) continue
             val dns = networks.getLinkProperties(network)?.dnsServers
                 ?.firstOrNull { it is Inet4Address } ?: continue
@@ -68,4 +75,11 @@ object TunnelBypass : DialerController {
         }
         return null
     }
+
+    private val PHYSICAL_TRANSPORTS = listOf(
+        NetworkCapabilities.TRANSPORT_WIFI,
+        NetworkCapabilities.TRANSPORT_ETHERNET,
+        NetworkCapabilities.TRANSPORT_CELLULAR,
+        NetworkCapabilities.TRANSPORT_BLUETOOTH,
+    )
 }

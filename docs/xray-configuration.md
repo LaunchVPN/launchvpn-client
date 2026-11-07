@@ -379,7 +379,8 @@ VPN is on would describe the tunnel, not the server. Measurements therefore dial
 The system resolves names through the tunnel while it runs, which added seconds to every
 measurement in testing. On Android the App's core therefore resolves through the DNS server of the
 network under the tunnel (libXray `SetDNS`, its sockets protected the same way) while VPN runs, set
-before each core call, and through the system's resolver otherwise. iOS still resolves server names
+before each core call, and through the system's resolver otherwise. That network is the default one,
+which the tunnel's capabilities name by its transport, so cellular kept up beside Wi-Fi is not used. iOS still resolves server names
 through the tunnel.
 
 ## Raw JSON

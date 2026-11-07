@@ -339,7 +339,11 @@ class PingService {
     await _writeDelay(db, row, delay);
   }
 
-  Future<void> _writeDelay(AppDatabase db, CoreConfigData row, int delay) async {
+  Future<void> _writeDelay(
+    AppDatabase db,
+    CoreConfigData row,
+    int delay,
+  ) async {
     if (row.data == null) return;
     // A slow result must not overwrite an edit, favorite, or restored asset.
     await (db.update(db.coreConfig)..where(
