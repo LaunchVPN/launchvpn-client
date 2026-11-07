@@ -3185,6 +3185,17 @@
   "homeExpiredRenew": "Renew",
   "homeExpiredRefresh": "Refresh status",
   "homeExpiredNotRenewed": "Your subscription has not been renewed yet",
+  "homeRefreshing": "Updating subscription",
+  "homeRefreshed": "Subscription updated",
+  "homeRefreshedUntil": "Subscription updated · until {date}",
+  "@homeRefreshedUntil": {
+    "description": "After a pull on Home: the subscription loaded and runs until the date, such as 24 December",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "homeTrialTelegramTitle": "Get your trial with Telegram",
   "homeTrialTelegramBody": "This email needs Telegram for the trial. Link it and your trial starts right away.",
   "homeTrialBuy": "Buy a subscription",

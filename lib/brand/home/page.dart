@@ -2,8 +2,11 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/cupertino.dart'
+    show CupertinoSliverRefreshControl, RefreshIndicatorMode;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:onexray/brand/account/controller.dart';
 import 'package:onexray/brand/account/telegram_link_notice.dart';
@@ -18,6 +21,7 @@ import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/settings/preset_page.dart';
 import 'package:onexray/brand/settings/vpn_apps_page.dart';
 import 'package:onexray/brand/permission/vpn_permission_page.dart';
+import 'package:onexray/brand/pull.dart';
 import 'package:onexray/brand/state_hero.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/brand/toast.dart';
@@ -71,6 +75,9 @@ class _HomePageState extends State<HomePage> {
   static const _contentWithBannerHeight = 578.0;
   static const _minToggleGap = 24.0;
 
+  /// From the header to a toast under it, as in the mockup.
+  static const _toastGap = 32.0;
+
   HomeController get _controller => widget.controller;
 
   late final AppLifecycleListener _lifecycle;
@@ -101,22 +108,41 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _toggle() => _controller.toggle(_run, explain: _explain);
 
-  /// A renewal needs no message: the screen gives way to the toggle. Neither
-  /// does a load that another change, such as a new link, superseded.
+  /// «Обновить статус» and the pull on Home say at the top what the load
+  /// found, under the header. A load that another change, such as a new
+  /// link, superseded says nothing.
   Future<void> _refreshStatus() async {
     final l = AppLocalizations.of(context)!;
-    final result = await _controller.refreshStatus();
-    if (result == null || result.superseded || !mounted) return;
-    if (!result.success) {
-      showBrandToast(
-        context,
+    final refreshed = await _controller.refreshStatus();
+    if (refreshed == null || refreshed.result.superseded || !mounted) return;
+    final result = refreshed.result;
+    final (message, kind) = switch (refreshed.expiresAt) {
+      _ when !result.success => (
         subscriptionFailureMessage(l, result.status, error: result.error),
-        kind: ToastKind.error,
-      );
-    } else if (_controller.state.expired) {
-      showBrandToast(context, l.homeExpiredNotRenewed);
-    }
+        ToastKind.error,
+      ),
+      _ when _controller.state.expired => (
+        l.homeExpiredNotRenewed,
+        ToastKind.info,
+      ),
+      final end? => (l.homeRefreshedUntil(_day(l, end)), ToastKind.success),
+      null => (l.homeRefreshed, ToastKind.success),
+    };
+    showBrandToast(context, message, kind: kind, top: _belowHeader);
   }
+
+  /// «24 декабря», with the year only when it is not this one.
+  static String _day(AppLocalizations l, DateTime date) {
+    final local = date.toLocal();
+    final pattern = local.year == DateTime.now().year ? 'd MMMM' : 'd MMMM y';
+    return DateFormat(pattern, l.localeName).format(local);
+  }
+
+  final _header = GlobalKey();
+
+  /// Where a toast about the subscription starts, under the header.
+  double get _belowHeader =>
+      (_header.currentContext?.size?.height ?? 0) + _toastGap;
 
   Future<bool> _explain() => VpnPermissionPage.show(context);
 
@@ -189,76 +215,45 @@ class _HomePageState extends State<HomePage> {
                                   account.ended && state.subscription == null;
                               final expired =
                                   state.showsExpired || accountEnded;
-                              return CustomScrollView(
-                                slivers: [
-                                  SliverFillRemaining(
-                                    hasScrollBody: false,
-                                    child: Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        BrandSpacing.page,
-                                        8,
-                                        BrandSpacing.page,
-                                        20,
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          _Header(
-                                            // The expired screen's title says it
-                                            // instead; the device limit's mockup
-                                            // leaves it out.
-                                            daysLeft:
-                                                expired ||
-                                                    state.showsDeviceLimit
-                                                ? null
-                                                : state.daysLeft(
-                                                    DateTime.now(),
-                                                  ),
-                                          ),
-                                          if (update != null) ...[
-                                            const SizedBox(height: 20),
-                                            UpdateBanner(
-                                              update: update,
-                                              onUpdate: () => openExternalLink(
-                                                update.releaseUri,
-                                                'release',
-                                              ),
-                                            ),
-                                          ],
-                                          if (accountEnded &&
-                                              account.trialWaitsOnTelegram)
-                                            ..._trialTelegramContent(
-                                              state,
-                                              linking: account.linking,
-                                            )
-                                          else if (expired)
-                                            ..._expiredContent(
-                                              state,
-                                              // Only the account can bring one.
-                                              onRefresh: accountEnded
-                                                  ? (account.refreshing
-                                                        ? null
-                                                        : widget
-                                                              .account
-                                                              .refresh)
-                                                  : (state.refreshing
-                                                        ? null
-                                                        : _refreshStatus),
-                                            )
-                                          else if (state.showsDeviceLimit)
-                                            ..._deviceLimitContent(state)
-                                          else if (state.failure
-                                              case final failure?)
-                                            ..._failureContent(state, failure)
-                                          else
-                                            ..._connectionContent(
-                                              state,
-                                              _toggleGap(
-                                                constraints.maxHeight,
-                                                banner: update != null,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
+                              // «Обновить статус» and the pull. Only the
+                              // account can bring a subscription to an account
+                              // that has none.
+                              final refresh = accountEnded
+                                  ? widget.account.refresh
+                                  : state.subscription == null
+                                  ? null
+                                  : _refreshStatus;
+                              return Column(
+                                children: [
+                                  // The pull happens under the header, which
+                                  // stays where it is.
+                                  Padding(
+                                    key: _header,
+                                    padding: const EdgeInsets.fromLTRB(
+                                      BrandSpacing.page,
+                                      8,
+                                      BrandSpacing.page,
+                                      0,
+                                    ),
+                                    child: _Header(
+                                      // The expired screen's title says it
+                                      // instead; the device limit's mockup
+                                      // leaves it out.
+                                      daysLeft:
+                                          expired || state.showsDeviceLimit
+                                          ? null
+                                          : state.daysLeft(DateTime.now()),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _content(
+                                      constraints,
+                                      state,
+                                      update: update,
+                                      account: account,
+                                      accountEnded: accountEnded,
+                                      expired: expired,
+                                      refresh: refresh,
                                     ),
                                   ),
                                 ],
@@ -271,6 +266,82 @@ class _HomePageState extends State<HomePage> {
       ),
     ),
   );
+
+  /// Everything under the header, which a pull refreshes the subscription
+  /// from while there is one to refresh.
+  Widget _content(
+    BoxConstraints constraints,
+    HomeState state, {
+    required AppUpdateInfo? update,
+    required ({
+      bool ended,
+      bool refreshing,
+      bool trialWaitsOnTelegram,
+      bool linking,
+    })
+    account,
+    required bool accountEnded,
+    required bool expired,
+    required Future<void> Function()? refresh,
+  }) => CustomScrollView(
+    physics: refresh == null ? null : BrandPull.physics,
+    slivers: [
+      // Always here, so the content keeps its place among the slivers.
+      CupertinoSliverRefreshControl(
+        onRefresh: refresh,
+        builder: refresh == null ? _noPull : _RefreshArc.build,
+      ),
+      SliverFillRemaining(
+        hasScrollBody: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            BrandSpacing.page,
+            0,
+            BrandSpacing.page,
+            20,
+          ),
+          child: Column(
+            children: [
+              if (update != null) ...[
+                const SizedBox(height: 20),
+                UpdateBanner(
+                  update: update,
+                  onUpdate: () =>
+                      openExternalLink(update.releaseUri, 'release'),
+                ),
+              ],
+              if (accountEnded && account.trialWaitsOnTelegram)
+                ..._trialTelegramContent(state, linking: account.linking)
+              else if (expired)
+                ..._expiredContent(
+                  state,
+                  onRefresh: account.refreshing || state.refreshing
+                      ? null
+                      : refresh,
+                )
+              else if (state.showsDeviceLimit)
+                ..._deviceLimitContent(state)
+              else if (state.failure case final failure?)
+                ..._failureContent(state, failure)
+              else
+                ..._connectionContent(
+                  state,
+                  _toggleGap(constraints.maxHeight, banner: update != null),
+                ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+
+  static Widget _noPull(
+    BuildContext context,
+    RefreshIndicatorMode mode,
+    double pulledExtent,
+    double refreshTriggerPullDistance,
+    double refreshIndicatorExtent,
+  ) => const SizedBox.shrink();
 
   /// The mockups' state screens: a centered explanation and the ways out, in
   /// place of the toggle and the cards.
@@ -869,4 +940,121 @@ class _PresetSegment extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Under the header while Home is pulled: an arc that closes as the pull
+/// goes on and turns while the subscription loads.
+class _RefreshArc extends StatefulWidget {
+  const _RefreshArc({required this.mode, required this.progress});
+
+  static Widget build(
+    BuildContext context,
+    RefreshIndicatorMode mode,
+    double pulledExtent,
+    double refreshTriggerPullDistance,
+    double refreshIndicatorExtent,
+  ) => _RefreshArc(
+    mode: mode,
+    progress: BrandPull.progress(
+      mode,
+      pulledExtent,
+      refreshTriggerPullDistance,
+    ),
+  );
+
+  final RefreshIndicatorMode mode;
+  final double progress;
+
+  @override
+  State<_RefreshArc> createState() => _RefreshArcState();
+}
+
+class _RefreshArcState extends State<_RefreshArc>
+    with SingleTickerProviderStateMixin {
+  static const _size = 18.0;
+
+  late final _turn = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+
+  bool get _loading => widget.mode == RefreshIndicatorMode.refresh;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _follow();
+  }
+
+  @override
+  void didUpdateWidget(_RefreshArc old) {
+    super.didUpdateWidget(old);
+    _follow();
+  }
+
+  void _follow() {
+    if (_loading && !MediaQuery.disableAnimationsOf(context)) {
+      if (!_turn.isAnimating) unawaited(_turn.repeat());
+    } else {
+      _turn.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _turn.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Opacity(
+      opacity: widget.mode == RefreshIndicatorMode.done ? 0 : widget.progress,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RotationTransition(
+            turns: _turn,
+            child: CustomPaint(
+              size: const Size.square(_size),
+              painter: _ArcPainter(widget.progress),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            AppLocalizations.of(context)!.homeRefreshing,
+            style: BrandText.caption,
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _ArcPainter extends CustomPainter {
+  const _ArcPainter(this.progress);
+
+  /// The mockup's arc leaves a fifth of the circle open.
+  static const _sweep = 0.8 * 2 * pi;
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const stroke = 2.0;
+    canvas.drawArc(
+      (Offset.zero & size).deflate(stroke / 2),
+      -pi / 2,
+      _sweep * progress,
+      false,
+      Paint()
+        ..color = BrandColors.accent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ArcPainter old) => progress != old.progress;
 }

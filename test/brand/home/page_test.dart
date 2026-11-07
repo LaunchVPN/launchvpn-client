@@ -17,6 +17,7 @@ import 'package:onexray/brand/home/update_banner.dart';
 import 'package:onexray/brand/locations/page.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/core/distribution.dart';
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/db/database/constants.dart';
 import 'package:onexray/core/db/database/database.dart';
 import 'package:onexray/core/db/database/enum.dart';
@@ -1307,6 +1308,104 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Приложения'), findsOneWidget);
+  });
+
+  group('pull', () {
+    // In another year, so the toast names the year as well.
+    final renewedUntil = DateTime(DateTime.now().year + 1, 3, 15, 12);
+
+    Future<void> pull(WidgetTester tester) async {
+      await tester.fling(
+        find.byType(ConnectToggle),
+        const Offset(0, 400),
+        1000,
+      );
+      await tester.pump();
+      await tester.runAsync(() => pumpEventQueue(times: 20));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a pull loads the subscription and says until when', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+      var loads = 0;
+      refresh = (row) async {
+        loads++;
+        await db.subscriptionDao.updateRow(
+          row.copyWith(
+            expireTimestamp: Value(renewedUntil.millisecondsSinceEpoch ~/ 1000),
+          ),
+        );
+        return const SubscriptionRefreshResult(
+          status: SubscriptionUpdateResult.success,
+          count: 1,
+        );
+      };
+
+      await pull(tester);
+
+      expect(loads, 1);
+      expect(
+        find.text('Подписка обновлена · до 15 марта ${renewedUntil.year}'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a pull that fails says why', (tester) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+      refresh = (_) async => const SubscriptionRefreshResult(
+        status: SubscriptionUpdateResult.downloadFailed,
+      );
+
+      await pull(tester);
+
+      expect(find.text('Не удалось загрузить подписку'), findsOneWidget);
+    });
+
+    testWidgets('the header stays put while Home is pulled', (tester) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+      final logo = tester.getTopLeft(find.text(Brand.wordmark));
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(ConnectToggle)),
+      );
+      for (var step = 0; step < 6; step++) {
+        await gesture.moveBy(const Offset(0, 30));
+        await tester.pump();
+      }
+
+      expect(find.text('Обновляем подписку'), findsOneWidget);
+      expect(tester.getTopLeft(find.text(Brand.wordmark)), logo);
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('without a subscription there is nothing to pull', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      var loads = 0;
+      refresh = (_) async {
+        loads++;
+        return const SubscriptionRefreshResult(
+          status: SubscriptionUpdateResult.success,
+        );
+      };
+
+      await tester.fling(
+        find.byType(CustomScrollView),
+        const Offset(0, 400),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(loads, 0);
+      expect(find.text('Обновляем подписку'), findsNothing);
+    });
   });
 
   group('Apps', () {

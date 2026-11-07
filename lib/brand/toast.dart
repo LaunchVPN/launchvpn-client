@@ -63,26 +63,32 @@ const _readingTime = Duration(seconds: 3);
 const _wideWidth = 420.0;
 
 /// Shows [message] at the bottom, above the tab bar on a tab, for [duration].
+///
+/// With [top], it shows that far below the status bar instead, as a compact
+/// line: the answer to a pull, where the pull happened.
 void showBrandToast(
   BuildContext context,
   String message, {
   ToastKind kind = ToastKind.info,
   Duration duration = _readingTime,
+  double? top,
 }) => _ShownToast(
   ShadToaster.of(context),
   message,
   kind,
   DateTime.now().add(duration),
+  top,
 ).show();
 
 /// The toast on screen, so it can move when the tab bar comes or goes.
 class _ShownToast {
-  _ShownToast(this.toaster, this.message, this.kind, this.until);
+  _ShownToast(this.toaster, this.message, this.kind, this.until, this.top);
 
   final ShadToasterState toaster;
   final String message;
   final ToastKind kind;
   final DateTime until;
+  final double? top;
 
   static _ShownToast? _current;
 
@@ -97,6 +103,7 @@ class _ShownToast {
 
   void show() {
     _current = this;
+    if (top case final top?) return _showAtTop(top);
     final screen = toaster.context;
     // The system bar's inset even while a closing keyboard still hides it.
     final bottom =
@@ -132,9 +139,49 @@ class _ShownToast {
       ),
     );
   }
+
+  void _showAtTop(double top) {
+    final screen = toaster.context;
+    final width = MediaQuery.sizeOf(screen).width;
+    toaster.show(
+      ShadToast(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconTile(
+              icon: kind.icon,
+              color: kind.color,
+              fill: kind.fill,
+              size: _compactTile,
+              iconSize: 14,
+            ),
+            const SizedBox(width: 10),
+            Flexible(child: Text(message, style: BrandText.notice)),
+          ],
+        ),
+        alignment: Alignment.topCenter,
+        offset: Offset(
+          BrandSpacing.page,
+          MediaQuery.viewPaddingOf(screen).top + top,
+        ),
+        constraints: BoxConstraints(
+          maxWidth: (width - 2 * BrandSpacing.page).clamp(0, _wideWidth),
+        ),
+        mainAxisSize: MainAxisSize.min,
+        backgroundColor: BrandColors.surfaceRaised,
+        border: ShadBorder.all(color: BrandColors.line),
+        radius: BorderRadius.circular(BrandRadii.md),
+        shadows: BrandShadows.toast,
+        padding: const EdgeInsets.fromLTRB(14, 10, 16, 10),
+        closeIcon: const SizedBox.shrink(),
+        duration: until.difference(DateTime.now()),
+      ),
+    );
+  }
 }
 
 const _tile = 32.0;
+const _compactTile = 22.0;
 
 /// One line centres on the tile. The first of more lines starts at the
 /// tile's top, as a paragraph centred on the tile reads as floating.
