@@ -10,12 +10,14 @@ class IconTile extends StatelessWidget {
     required this.color,
     required this.fill,
     this.size = 36,
+    this.iconSize = 18,
   });
 
   final IconData icon;
   final Color color;
   final Color fill;
   final double size;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -26,6 +28,6 @@ class IconTile extends StatelessWidget {
       color: fill,
       borderRadius: BorderRadius.circular(BrandRadii.segment),
     ),
-    child: Icon(icon, size: 18, color: color),
+    child: Icon(icon, size: iconSize, color: color),
   );
 }

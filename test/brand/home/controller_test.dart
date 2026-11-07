@@ -567,7 +567,7 @@ void main() {
 
       expect(refreshing, isTrue);
       expect(controller.state.refreshing, isFalse);
-      expect(result!.success, isTrue);
+      expect(result!.result.success, isTrue);
       expect(controller.state.expired, isTrue);
     });
 
@@ -583,10 +583,31 @@ void main() {
         );
       };
 
-      await controller.refreshStatus();
+      final refreshed = await controller.refreshStatus();
 
+      // Home says until when the renewal runs.
+      expect(
+        refreshed!.expiresAt,
+        DateTime.fromMillisecondsSinceEpoch(future * 1000, isUtc: true),
+      );
       expect(controller.state.expired, isFalse);
       expect(controller.state.status, HomeStatus.connecting);
+      await finishConnecting();
+    });
+
+    test('refreshStatus reports nothing once a link replaced the '
+        'subscription', () async {
+      await addSubscription(expire: past);
+      refresh = (row) async {
+        await db.subscriptionDao.deleteRow(row.id);
+        await addSubscription(expire: future);
+        return const SubscriptionRefreshResult(
+          status: SubscriptionUpdateResult.success,
+          count: 1,
+        );
+      };
+
+      expect(await controller.refreshStatus(), isNull);
       await finishConnecting();
     });
 
@@ -598,7 +619,8 @@ void main() {
 
       final result = await controller.refreshStatus();
 
-      expect(result!.success, isFalse);
+      expect(result!.result.success, isFalse);
+      expect(result.expiresAt, isNull);
       expect(controller.state.expired, isTrue);
       expect(controller.state.status, HomeStatus.off);
     });

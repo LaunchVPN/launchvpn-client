@@ -173,6 +173,15 @@ abstract final class BrandText {
     color: BrandColors.ink,
     fontFeatures: [FontFeature.tabularFigures()],
   );
+
+  /// A compact toast's one line.
+  static const notice = TextStyle(
+    fontFamily: _body,
+    fontWeight: FontWeight.w600,
+    fontSize: 13,
+    height: 18 / 13,
+    color: BrandColors.ink,
+  );
   static const sectionLabel = TextStyle(
     fontFamily: _body,
     fontWeight: FontWeight.w600,

@@ -363,6 +363,13 @@ class HomeState {
   );
 }
 
+/// What a load of the subscription brought, with its end after a success,
+/// unless the panel sets none.
+typedef SubscriptionRefreshed = ({
+  SubscriptionRefreshResult result,
+  DateTime? expiresAt,
+});
+
 /// Hands the iOS Widget what Home shows next to the status.
 typedef WidgetContextPublisher = Future<void> Function({
   required Location? location,
@@ -695,21 +702,28 @@ class HomeController extends PageCubit<HomeState> {
     }
   }
 
-  /// «Обновить статус»: loads the subscription the way the interval update
-  /// does. A failed load keeps the stored data. A renewal connects at once.
-  /// Null when there is nothing to load or a load is already running.
-  Future<SubscriptionRefreshResult?> refreshStatus() async {
+  /// «Обновить статус» and the pull on Home: loads the subscription the way
+  /// the interval update does. A failed load keeps the stored data. A renewal
+  /// connects at once. Null when there is nothing to load, a load is already
+  /// running, or a link replaced the subscription meanwhile, which its own
+  /// import reports.
+  Future<SubscriptionRefreshed?> refreshStatus() async {
     final row = state.subscription;
     if (row == null || state.refreshing) return null;
     emit(state.copyWith(refreshing: true));
     try {
       final result = await _refreshSubscription(row);
-      // The catalog may not have seen the new row yet. A link may have
-      // replaced the subscription meanwhile, and its row decides instead.
-      if (result.success && row.id == state.subscription?.id) {
-        _checkExpiry(await _db.subscriptionDao.searchRow(row.id));
-      }
-      return result;
+      if (row.id != state.subscription?.id) return null;
+      // The catalog may not have seen the new row yet.
+      if (!result.success) return (result: result, expiresAt: null);
+      final fresh = await _db.subscriptionDao.searchRow(row.id);
+      _checkExpiry(fresh);
+      return (
+        result: result,
+        expiresAt: fresh == null
+            ? null
+            : SubscriptionUserInfo.fromSubscription(fresh)?.expiresAt,
+      );
     } finally {
       emit(state.copyWith(refreshing: false));
     }
