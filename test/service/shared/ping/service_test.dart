@@ -246,9 +246,8 @@ void main() {
         database: db,
         runBatch: (sources, _) async {
           if (sources.map(tag).contains('de2')) {
-            finlandMeanwhile = (await db.coreConfigDao.searchRow(
-              finland.id,
-            ))!.delay;
+            finlandMeanwhile = (await db.coreConfigDao.searchRow(finland.id))!
+                .delay;
           }
           return [
             for (final source in sources)
