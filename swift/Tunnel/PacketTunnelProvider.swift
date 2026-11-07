@@ -52,7 +52,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
     private var startContinuation: CheckedContinuation<Void, Error>?
     private var pendingStartSignal = false
     #if os(iOS)
-    private let memoryLog = TunnelMemoryLog()
+    private let runLog = TunnelRunLog()
     #endif
 
     override func startTunnel(
@@ -87,7 +87,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
                 completionHandler(nil)
             } catch {
                 #if os(iOS)
-                memoryLog.stop()
+                runLog.stop(nil)
                 AppleWidgetPublisher.publish(.unknown)
                 #endif
                 completionHandler(error)
@@ -290,6 +290,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
 
     override func stopTunnel(with reason: NEProviderStopReason) async {
         #if os(iOS)
+        runLog.stop(reason)
         AppleWidgetPublisher.publish(.disconnecting)
         #endif
         self.stopXray()
@@ -410,7 +411,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
             throw TunnelError.startXrayFailed(error)
         }
         #if os(iOS)
-        memoryLog.mark("xray started")
+        runLog.mark("xray started")
         #endif
     }
 
@@ -445,7 +446,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         }
         root["env"] = env
         #if os(iOS)
-        memoryLog.start(errorLogPath: (root["log"] as? [String: Any])?["error"] as? String)
+        runLog.start(errorLogPath: (root["log"] as? [String: Any])?["error"] as? String)
         #endif
         let data = try JsonTool.encodeObject(root)
         guard let updatedJson = String(data: data, encoding: .utf8) else {
@@ -459,9 +460,6 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
     }
 
     private func stopXray() {
-        #if os(iOS)
-        memoryLog.stop()
-        #endif
         do {
             let request = try LibXrayInvokeRequest(method: .stopXray).toText()
             let res = request.withCString { p in
