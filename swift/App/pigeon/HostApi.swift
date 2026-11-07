@@ -2,6 +2,7 @@ import Foundation
 import Network
 import NetworkExtension
 import Security
+import dnssd
 #if os(iOS)
 import Flutter
 #elseif os(macOS)
@@ -268,6 +269,7 @@ private enum NativeDevice {
 /// The App's own traffic takes the tunnel, so a measurement from here would
 /// describe the tunnel. A socket bound to the physical interface goes past it,
 /// unless the tunnel captures all traffic, where Locations does not measure.
+/// Server names resolve past it too: through the tunnel they added seconds.
 enum PingOutsideTunnel {
     enum Failure: LocalizedError {
         case noPhysicalInterface
@@ -286,37 +288,116 @@ enum PingOutsideTunnel {
               await tunnelLetsPast()
         else { return requestJson }
         guard let interface = await physicalInterface(),
-              let bound = bound(requestJson, to: interface)
-        else { throw Failure.noPhysicalInterface }
-        return bound
-    }
-
-    /// Every outbound of every measured config dials through [interface].
-    private static func bound(_ requestJson: String, to interface: String) -> String? {
-        guard var request = object(requestJson),
+              var request = object(requestJson),
               var payload = request["payload"] as? [String: Any],
               let configs = payload["configs"] as? [[String: Any]]
-        else { return nil }
-        payload["configs"] = configs.map { config in
-            var config = config
-            if let xrayJson = config["xrayJson"] as? String,
-               var xray = object(xrayJson),
-               let outbounds = xray["outbounds"] as? [[String: Any]] {
-                xray["outbounds"] = outbounds.map { outbound in
-                    var outbound = outbound
-                    var stream = outbound["streamSettings"] as? [String: Any] ?? [:]
-                    var sockopt = stream["sockopt"] as? [String: Any] ?? [:]
-                    sockopt["interface"] = interface
-                    stream["sockopt"] = sockopt
-                    outbound["streamSettings"] = stream
-                    return outbound
-                }
-                config["xrayJson"] = text(xray) ?? xrayJson
+        else { throw Failure.noPhysicalInterface }
+        let xrays = configs.map { ($0["xrayJson"] as? String).flatMap(object) }
+        var names = Set<String>()
+        for outbound in xrays.flatMap({ $0.map(outbounds) ?? [] }) {
+            _ = servers(outbound) { names.insert($0); return $0 }
+        }
+        let addresses = await resolve(
+            names.filter { IPv4Address($0) == nil && IPv6Address($0) == nil },
+            on: interface.index
+        )
+        payload["configs"] = zip(configs, xrays).map { config, xray in
+            guard var xray else { return config }
+            xray["outbounds"] = outbounds(xray).map {
+                dialing(bound($0, to: interface.name), via: addresses)
             }
+            guard let xrayJson = text(xray) else { return config }
+            var config = config
+            config["xrayJson"] = xrayJson
             return config
         }
         request["payload"] = payload
-        return text(request)
+        guard let prepared = text(request) else { throw Failure.noPhysicalInterface }
+        return prepared
+    }
+
+    private static func outbounds(_ xray: [String: Any]) -> [[String: Any]] {
+        xray["outbounds"] as? [[String: Any]] ?? []
+    }
+
+    /// The outbound dials through [interface].
+    private static func bound(_ outbound: [String: Any], to interface: String) -> [String: Any] {
+        var outbound = outbound
+        var stream = outbound["streamSettings"] as? [String: Any] ?? [:]
+        var sockopt = stream["sockopt"] as? [String: Any] ?? [:]
+        sockopt["interface"] = interface
+        stream["sockopt"] = sockopt
+        outbound["streamSettings"] = stream
+        return outbound
+    }
+
+    /// Transports that name the server by the TLS or Reality server name when
+    /// they have no host of their own, as Xray builds them.
+    private static let namedByServerName: Set = ["tcp", "raw", "ws", "httpupgrade", "xhttp", "splithttp"]
+    private static let securitySettings = ["tls": "tlsSettings", "reality": "realitySettings"]
+
+    /// The outbound dials the address [addresses] found for its server's name.
+    /// TLS keeps the name as its server name, which Xray also sends as the
+    /// host, so the server sees what it saw before. An outbound that cannot
+    /// keep the name dials it as it is.
+    private static func dialing(_ outbound: [String: Any], via addresses: [String: String]) -> [String: Any] {
+        guard var stream = outbound["streamSettings"] as? [String: Any],
+              namedByServerName.contains(stream["network"] as? String ?? "tcp"),
+              let key = (stream["security"] as? String).flatMap({ securitySettings[$0] }),
+              // A chained outbound reaches its server through another one.
+              (stream["sockopt"] as? [String: Any])?["dialerProxy"] == nil
+        else { return outbound }
+        var replaced = Set<String>()
+        var dialed = servers(outbound) { name in
+            guard let address = addresses[name] else { return name }
+            replaced.insert(name)
+            return address
+        }
+        var security = stream[key] as? [String: Any] ?? [:]
+        if (security["serverName"] as? String ?? "").isEmpty {
+            guard replaced.count == 1 else { return outbound }
+            security["serverName"] = replaced.first
+            stream[key] = security
+            dialed["streamSettings"] = stream
+        }
+        return dialed
+    }
+
+    /// The outbound with [change] applied to each server address, in any shape
+    /// Xray takes: one address, or a list of servers.
+    private static func servers(_ outbound: [String: Any], _ change: (String) -> String) -> [String: Any] {
+        guard var settings = outbound["settings"] as? [String: Any] else { return outbound }
+        if let address = settings["address"] as? String {
+            settings["address"] = change(address)
+        }
+        for key in ["vnext", "servers"] {
+            guard let list = settings[key] as? [[String: Any]] else { continue }
+            settings[key] = list.map { server in
+                var server = server
+                if let address = server["address"] as? String {
+                    server["address"] = change(address)
+                }
+                return server
+            }
+        }
+        var outbound = outbound
+        outbound["settings"] = settings
+        return outbound
+    }
+
+    /// Addresses by name. A name that does not resolve in time is left out, so
+    /// its outbound resolves it the slow way.
+    private static func resolve(_ names: Set<String>, on interface: UInt32) async -> [String: String] {
+        await withTaskGroup(of: (String, String?).self) { group in
+            for name in names {
+                group.addTask { (name, await ScopedLookup.address(of: name, on: interface)) }
+            }
+            var addresses: [String: String] = [:]
+            for await (name, address) in group {
+                addresses[name] = address
+            }
+            return addresses
+        }
     }
 
     private static func object(_ json: String) -> [String: Any]? {
@@ -338,7 +419,7 @@ enum PingOutsideTunnel {
     }
 
     /// Wi-Fi before cellular, as the system prefers it.
-    private static func physicalInterface() async -> String? {
+    private static func physicalInterface() async -> (name: String, index: UInt32)? {
         await withCheckedContinuation { continuation in
             let monitor = NWPathMonitor(prohibitedInterfaceTypes: [.other, .loopback])
             let answer = Once()
@@ -350,7 +431,7 @@ enum PingOutsideTunnel {
                 let physical = path.availableInterfaces.first {
                     $0.type == .wifi || $0.type == .cellular
                 }
-                continuation.resume(returning: physical?.name)
+                continuation.resume(returning: physical.map { ($0.name, UInt32($0.index)) })
             }
             monitor.start(queue: DispatchQueue(label: "com.launchvpn.ping-path"))
         }
@@ -367,6 +448,64 @@ enum PingOutsideTunnel {
             if taken { return false }
             taken = true
             return true
+        }
+    }
+
+    /// Resolves a name through one interface's own DNS servers, the way the
+    /// system resolves for that network without the tunnel.
+    private final class ScopedLookup: @unchecked Sendable {
+        private static let timeout = DispatchTimeInterval.seconds(3)
+
+        // The start, the answers and the deadline share this queue, so the
+        // state needs no lock. The deadline holds the lookup until it passes.
+        private let queue = DispatchQueue(label: "com.launchvpn.ping-dns")
+        private var service: DNSServiceRef?
+        private var answer: CheckedContinuation<String?, Never>?
+
+        static func address(of name: String, on interface: UInt32) async -> String? {
+            let lookup = ScopedLookup()
+            return await withCheckedContinuation { continuation in
+                lookup.queue.async { lookup.start(name, interface, continuation) }
+            }
+        }
+
+        private func start(_ name: String, _ interface: UInt32, _ continuation: CheckedContinuation<String?, Never>) {
+            answer = continuation
+            queue.asyncAfter(deadline: .now() + Self.timeout) { self.finish(nil) }
+            let status = DNSServiceGetAddrInfo(
+                &service, 0, interface, 0, name,
+                { _, flags, _, error, _, address, _, context in
+                    guard let context,
+                          error == DNSServiceErrorType(kDNSServiceErr_NoError),
+                          flags & DNSServiceFlags(kDNSServiceFlagsAdd) != 0,
+                          let address
+                    else { return }
+                    Unmanaged<ScopedLookup>.fromOpaque(context).takeUnretainedValue()
+                        .finish(ScopedLookup.numeric(address))
+                },
+                Unmanaged.passUnretained(self).toOpaque()
+            )
+            guard status == DNSServiceErrorType(kDNSServiceErr_NoError), let service,
+                  DNSServiceSetDispatchQueue(service, queue) == DNSServiceErrorType(kDNSServiceErr_NoError)
+            else { return finish(nil) }
+        }
+
+        /// The first answer counts, as it would for a connection.
+        private func finish(_ address: String?) {
+            guard let answer else { return }
+            self.answer = nil
+            if let service { DNSServiceRefDeallocate(service) }
+            service = nil
+            answer.resume(returning: address)
+        }
+
+        private static func numeric(_ address: UnsafePointer<sockaddr>) -> String? {
+            var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+            guard getnameinfo(
+                address, socklen_t(address.pointee.sa_len),
+                &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST
+            ) == 0 else { return nil }
+            return String(cString: host)
         }
     }
 }
