@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:onexray/service/connect/tunnel_probe.dart';
+import 'package:onexray/service/crash_reports/scrub.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// How the App handled a server that stopped answering, for Sentry.
@@ -35,7 +36,9 @@ class ServerSilence {
 /// dying stands out. No server address leaves the device.
 SentryEvent serverSilenceEvent(ServerSilence silence) {
   final outcome = silence.recovered ? 'recovered' : 'lost';
-  final location = silence.location ?? 'unknown';
+  // The fingerprint skips the scrubber, so a panel name that holds an
+  // address loses it here.
+  final location = scrubText(silence.location ?? 'unknown');
   return SentryEvent(
     level: silence.recovered ? SentryLevel.info : SentryLevel.warning,
     message: SentryMessage(

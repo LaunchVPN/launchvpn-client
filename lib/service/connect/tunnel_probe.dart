@@ -14,19 +14,24 @@ enum NetworkKind { none, wifi, cellular, other }
 
 /// The App's own traffic takes the tunnel on Android and iOS, so a request
 /// from here goes the way the person's apps do, through routing and the
-/// group's balancer. Any HTTP answer means the server got it through.
+/// group's balancer. Any HTTP answer means the server got it through, so
+/// the headers end the wait and the body is never read.
 Future<int?> probeTunnel() async {
   const timeout = Duration(seconds: 4);
   final ping = PingState();
-  await ping.readFromPreferences();
+  try {
+    await ping.readFromPreferences();
+  } catch (error) {
+    // The default address still tells whether the tunnel works.
+    ygLogger('read ping settings failed (${error.runtimeType})');
+  }
   final client = HttpClient()..connectionTimeout = timeout;
   final watch = Stopwatch()..start();
   try {
     return await () async {
       final request = await client.getUrl(Uri.parse(ping.realUrl));
       request.followRedirects = false;
-      final response = await request.close();
-      await response.drain<void>();
+      await request.close();
       return watch.elapsedMilliseconds;
     }().timeout(timeout);
   } catch (_) {

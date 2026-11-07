@@ -119,6 +119,10 @@ final class ConnectionCheck with WidgetsBindingObserver {
   bool _acting = false;
   _Episode? _episode;
 
+  /// Grows when the count starts over, so a check still under way then
+  /// does not count.
+  int _round = 0;
+
   /// `main` calls it once the coordinator is set up.
   void start() {
     if (_networkSubscription != null) return;
@@ -161,6 +165,7 @@ final class ConnectionCheck with WidgetsBindingObserver {
   /// Failures before a pause or on another network say nothing about now, so
   /// the count starts over, keeping only the switch already made.
   void _startOver() {
+    _round++;
     final episode = _episode;
     if (episode == null || !episode.switched) {
       _episode = null;
@@ -191,6 +196,7 @@ final class ConnectionCheck with WidgetsBindingObserver {
   }
 
   Future<void> _check(ConnectionRuntime runtime) async {
+    final round = _round;
     _probing = true;
     final NetworkKind network;
     final int? delay;
@@ -204,6 +210,10 @@ final class ConnectionCheck with WidgetsBindingObserver {
     if (_running?.identity != runtime.identity) {
       // A new session came up meanwhile and found this check under way.
       checkNow();
+    } else if (round != _round) {
+      // The App was hidden or the network changed meanwhile, so this result
+      // is stale; a check asked for while it ran comes now.
+      _schedule(retry);
     } else if (network == NetworkKind.none) {
       // Its return is a network change too; this catches a missed one.
       _schedule(interval);

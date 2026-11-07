@@ -278,6 +278,44 @@ void main() {
     });
   });
 
+  test('a check under way when the App hides does not count', () {
+    fakeAsync((time) {
+      final connection = ValueNotifier(const ConnectionView());
+      final answer = Completer<int?>();
+      var restarts = 0;
+      var probes = 0;
+      final check = ConnectionCheck(
+        connection: connection,
+        restart: () async => restarts++,
+        stop: () async {},
+        probe: () => switch (probes++) {
+          0 => answer.future,
+          1 => Future.value(null),
+          _ => Future.value(50),
+        },
+        network: () async => NetworkKind.wifi,
+        networkChanges: const Stream.empty(),
+        report: (_) async {},
+      )..start();
+      final session = _session();
+      connection.value = _up(session);
+      time.flushMicrotasks();
+
+      check.didChangeAppLifecycleState(AppLifecycleState.paused);
+      answer.complete(null);
+      time.flushMicrotasks();
+      expect(check.view.value.reached(session), isFalse);
+      // One failure after the return, which alone is not two in a row.
+      check.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      time.flushMicrotasks();
+      expect(restarts, 0);
+
+      time.elapse(ConnectionCheck.retry);
+      expect(check.view.value.reached(session), isTrue);
+      check.dispose();
+    });
+  });
+
   test('a network change waits before checking and starts the count over', () {
     run((time, harness) {
       harness.connection.value = _up(_session());

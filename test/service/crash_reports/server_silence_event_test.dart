@@ -41,4 +41,19 @@ void main() {
     expect(event.fingerprint, ['server-silence', 'lost', 'Германия']);
     expect(event.contexts['connection_check']['failed_checks'], 4);
   });
+
+  test('an address in a location name stays on the device', () {
+    final event = serverSilenceEvent(
+      ServerSilence(
+        location: 'Польша 203.0.113.7',
+        ran: Duration.zero,
+        network: NetworkKind.cellular,
+        failedChecks: 2,
+        switched: true,
+        recovered: false,
+      ),
+    );
+
+    expect(event.fingerprint, ['server-silence', 'lost', 'Польша <ip>']);
+  });
 }
