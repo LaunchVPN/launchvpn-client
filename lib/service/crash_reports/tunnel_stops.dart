@@ -5,6 +5,7 @@ import 'package:onexray/core/pigeon/flutter_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/crash_reports/service.dart';
+import 'package:onexray/service/crash_reports/tunnel_stop_event.dart';
 
 /// Reports the iOS tunnel's runs that iOS ended, so a VPN that went off on
 /// its own leaves a reason in Sentry. A stop by the user, from the App, the
@@ -19,7 +20,7 @@ final class TunnelStopReports with WidgetsBindingObserver {
 
   static final instance = TunnelStopReports(
     take: TunnelStopsHostApi().takeTunnelStops,
-    report: CrashReports.instance.reportTunnelStop,
+    report: (stop) => CrashReports.instance.report(tunnelStopEvent(stop)),
     statuses: AppFlutterApi().vpnStatusController.stream,
   );
 

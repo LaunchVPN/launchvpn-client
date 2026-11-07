@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/ffi/windows/mode.dart';
 import 'package:onexray/service/advanced/platform_policy.dart';
 import 'package:onexray/service/connect/dialing.dart';
@@ -283,6 +284,7 @@ void main() {
       tun.allowAppList!.clear();
       expect(policy.toTun(ConnectionPlatform.android).allowAppList, [
         'com.example.included',
+        Brand.androidId,
       ]);
       expect(
         PlatformPolicy.fromJson(policy.toJson()).toJson(),
@@ -304,7 +306,7 @@ void main() {
         expect(tun.perAppVPNMode, scope == 'included' ? 'allow' : 'disallow');
         expect(
           tun.allowAppList,
-          scope == 'included' ? ['com.example.included'] : [],
+          scope == 'included' ? ['com.example.included', Brand.androidId] : [],
         );
         expect(
           tun.disallowAppList,

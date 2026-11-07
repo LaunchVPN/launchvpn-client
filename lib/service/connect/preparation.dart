@@ -163,6 +163,7 @@ class ConnectionPreparation {
     RoutingConfiguration? customDraft,
     Map<int, ResolvedServer> serverDrafts = const {},
     void Function(Set<int>)? onResolved,
+    bool everyServer = false,
   }) async {
     var configuration = input;
     var settings = input.connection;
@@ -354,7 +355,11 @@ class ConnectionPreparation {
       );
     }
     if (profile != null) {
-      profile = await _firstServer.pick(profile, cancelled: cancelled);
+      profile = await _firstServer.pick(
+        profile,
+        cancelled: cancelled,
+        everyServer: everyServer,
+      );
     }
     final ports = await allocateRuntimePorts(
       userInbounds.cast<Map<String, dynamic>>(),

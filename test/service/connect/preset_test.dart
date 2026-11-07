@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/service/connect/preset.dart';
 import 'package:onexray/service/connect/runtime.dart';
 import 'package:onexray/service/connect/settings.dart';
@@ -20,7 +21,7 @@ void main() {
     ]);
   });
 
-  test('Apps sends only the chosen apps through the tunnel', () {
+  test('Apps sends only the chosen apps and LaunchVPN through the tunnel', () {
     final next = ConnectionPreset.apps.applyTo(
       stored.withVpnApps([
         'org.telegram.messenger',
@@ -33,6 +34,7 @@ void main() {
     expect(tun.allowAppList, [
       'org.telegram.messenger',
       'com.google.android.youtube',
+      Brand.androidId,
     ]);
     expect(
       ConnectionPreset.of(next, platform: _android),

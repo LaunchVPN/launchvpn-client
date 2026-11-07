@@ -978,6 +978,7 @@
   "homeHintOff": "Нажмите, чтобы подключиться",
   "homeStatusConnecting": "Подключение…",
   "homeHintConnecting": "Выбираем самый быстрый сервер",
+  "homeHintChecking": "Проверяем связь с сервером",
   "homeStatusReconnecting": "Переподключение…",
   "homeHintReconnecting": "Восстанавливаем соединение",
   "homeStatusDisconnecting": "Отключение…",

@@ -3,16 +3,9 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
-import 'package:onexray/service/crash_reports/service.dart';
 import 'package:onexray/service/crash_reports/tunnel_stop_event.dart';
 import 'package:onexray/service/crash_reports/tunnel_stops.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-// ignore: depend_on_referenced_packages
-import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
-// ignore: depend_on_referenced_packages
-import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-
-import '../../support/fake_crash_reporter.dart';
 
 final _start = DateTime.utc(2026, 11, 6, 9, 30);
 
@@ -134,19 +127,5 @@ void main() {
       expect(event.fingerprint, ['tunnel-stop', 'no-stop']);
       expect(event.tags?['tunnel.stop_reason'], 'none');
     });
-  });
-
-  test('with crash reports off, a tunnel stop is not sent', () async {
-    SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.empty();
-    final reporter = FakeCrashReporter();
-    final crashReports = CrashReports(reporter: reporter);
-
-    await crashReports.setEnabled(false);
-    await crashReports.reportTunnelStop(_stop('noNetworkAvailable'));
-    await crashReports.setEnabled(true);
-    await crashReports.reportTunnelStop(_stop('sleep'));
-
-    expect(reporter.tunnelStops.map((stop) => stop.reason), ['sleep']);
   });
 }

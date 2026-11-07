@@ -1,17 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/constants/preferences.dart';
-import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/crash_reports/scrub.dart';
-import 'package:onexray/service/crash_reports/tunnel_stop_event.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// Where crash reports go: Sentry in the App, a stand-in in tests.
 abstract interface class CrashReporter {
   Future<void> start();
   Future<void> stop();
-  Future<void> reportTunnelStop(TunnelStop stop);
+  Future<void> capture(SentryEvent event);
 }
 
 /// «Отчёты о сбоях»: on by default, off by the switch in Settings. While off,
@@ -35,12 +33,13 @@ final class CrashReports {
 
   Future<bool> get enabled => PreferencesKey().readCrashReports();
 
-  /// Sends how a tunnel run ended, unless reports are off.
-  Future<void> reportTunnelStop(TunnelStop stop) async {
+  /// Sends an event the App builds itself, such as how a tunnel run ended,
+  /// unless reports are off. The scrubber still sees it.
+  Future<void> report(SentryEvent event) async {
     try {
-      if (await enabled) await _reporter.reportTunnelStop(stop);
+      if (await enabled) await _reporter.capture(event);
     } catch (error) {
-      ygLogger('report tunnel stop failed (${error.runtimeType})');
+      ygLogger('report event failed (${error.runtimeType})');
     }
   }
 
@@ -81,8 +80,7 @@ final class SentryCrashReporter implements CrashReporter {
   Future<void> stop() => Sentry.close();
 
   @override
-  Future<void> reportTunnelStop(TunnelStop stop) =>
-      Sentry.captureEvent(tunnelStopEvent(stop));
+  Future<void> capture(SentryEvent event) => Sentry.captureEvent(event);
 
   static void _configure(SentryFlutterOptions options) {
     options
