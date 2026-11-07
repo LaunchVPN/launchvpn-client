@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/ffi/windows/model.dart';
 import 'package:onexray/core/ffi/windows/mode.dart';
 import 'package:onexray/core/model/tun_json.dart';
@@ -186,7 +187,10 @@ final class PlatformPolicy {
       }
       tun.addAll({
         'perAppVPNMode': scope == 'included' ? 'allow' : 'disallow',
-        'allowAppList': scope == 'included' ? included : <String>[],
+        // The App's own check of the connection must take the tunnel too.
+        'allowAppList': scope == 'included'
+            ? {...included, Brand.androidId}.toList()
+            : <String>[],
         'disallowAppList': scope == 'excluded'
             ? android['excludedAppPackageNames']
             : <String>[],
