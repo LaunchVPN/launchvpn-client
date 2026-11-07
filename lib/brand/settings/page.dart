@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/home/controller.dart';
+import 'package:onexray/brand/section_label.dart';
 import 'package:onexray/brand/settings/about_page.dart';
 import 'package:onexray/brand/settings/controller.dart';
 import 'package:onexray/brand/settings/language_page.dart';
@@ -116,7 +117,7 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
             children: [
               Text(l.prototypeSettings, style: BrandText.screenTitle),
               const SizedBox(height: 16),
-              SettingsSectionLabel(l.settingsConnection),
+              SectionLabel(l.settingsConnection),
               SettingsCard(
                 children: [
                   BlocBuilder<HomeController, HomeState>(
@@ -182,7 +183,7 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
                 ],
               ),
               const SizedBox(height: 24),
-              SettingsSectionLabel(l.settingsApp),
+              SectionLabel(l.settingsApp),
               SettingsCard(
                 children: [
                   BlocBuilder<AppEventBus, AppEventBusState>(
@@ -220,7 +221,7 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
                 ],
               ),
               const SizedBox(height: 24),
-              SettingsSectionLabel(l.settingsMore),
+              SectionLabel(l.settingsMore),
               SettingsCard(
                 children: [
                   BlocBuilder<SettingsController, SettingsState>(

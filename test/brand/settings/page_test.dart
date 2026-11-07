@@ -322,7 +322,7 @@ void main() {
       await pumpApp(tester);
       await openTab(tester, 2);
 
-      expect(find.text('ПРИЛОЖЕНИЕ'), findsOneWidget);
+      expect(find.text('Приложение'), findsOneWidget);
       expect(find.text('За 3 дня и за 1 день'), findsOneWidget);
       expect(toggled(tester), Tristate.isTrue);
     });
@@ -608,9 +608,9 @@ void main() {
       await tester.tap(find.text(title));
       await settle(tester);
 
-      expect(find.text('ЧЕРЕЗ VPN · 1'), findsOneWidget);
+      expect(find.text('Через VPN · 1'), findsOneWidget);
       expect(find.text('LaunchVPN'), findsNothing);
-      expect(top(tester, 'Госуслуги'), lessThan(top(tester, 'ОСТАЛЬНЫЕ')));
+      expect(top(tester, 'Госуслуги'), lessThan(top(tester, 'Остальные')));
       expect(top(tester, 'Telegram'), lessThan(top(tester, 'YouTube')));
 
       await tester.enterText(find.byType(TextField), 'tele');
@@ -808,7 +808,7 @@ void main() {
       expect(find.text('Smart'), findsOneWidget);
 
       await openTab(tester, 2);
-      expect(find.text('CONNECTION'), findsOneWidget);
+      expect(find.text('Connection'), findsOneWidget);
       expect(find.text('Connect at launch'), findsOneWidget);
       expect(find.text('Language'), findsOneWidget);
       expect(find.text('Same as system'), findsOneWidget);
@@ -877,7 +877,7 @@ void main() {
       await openTab(tester, 2);
       await tester.scrollUntilVisible(find.text('О приложении'), 100);
 
-      expect(find.text('ЕЩЁ'), findsOneWidget);
+      expect(find.text('Ещё'), findsOneWidget);
       expect(find.text('Версия 1.0.0'), findsOneWidget);
     });
 

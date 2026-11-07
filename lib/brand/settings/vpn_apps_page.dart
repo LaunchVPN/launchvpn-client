@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/home/controller.dart';
+import 'package:onexray/brand/section_label.dart';
 import 'package:onexray/brand/settings/row.dart';
 import 'package:onexray/brand/settings/vpn_apps_controller.dart';
 import 'package:onexray/brand/text_field.dart';
@@ -184,7 +185,7 @@ class _VpnAppsPageState extends State<VpnAppsPage> {
   }) => [
     SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: BrandSpacing.page),
-      sliver: SliverToBoxAdapter(child: SettingsSectionLabel(label)),
+      sliver: SliverToBoxAdapter(child: SectionLabel(label)),
     ),
     SliverPadding(
       padding: EdgeInsets.fromLTRB(

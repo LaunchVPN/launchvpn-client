@@ -123,7 +123,10 @@ upstream pages kept for merging. They are not reachable in this build.
   included, under Countries and services. The flag emoji becomes an image and is removed from the
   name. A tap stores the group as a fixed selection and returns Home; a running tunnel reconnects at
   once, as with a preset. Until the user chooses, the selection stays automatic, which is the first
-  group.
+  group. Each row shows its delay in a pill with a dot: green up to 300 ms, yellow up to a second,
+  red above that or with no answer. A location never measured shows only a button that measures
+  it, and one being measured shows three dots in a wave. Pulling the list down measures every
+  location again under the LaunchVPN mark; see [data management](data-management.md) for the sweep.
 - Settings has Connection, App and More sections. Mode opens a screen above the tabs with the same
   presets as Home, through the same `HomeController`, so both tabs show one value and a choice while
   connected reconnects and reads as a reconnect on Home. A tap returns to Settings. On Android,

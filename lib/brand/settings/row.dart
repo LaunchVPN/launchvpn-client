@@ -207,16 +207,3 @@ class SettingsRow extends StatelessWidget {
     ),
   );
 }
-
-/// The small capitals above a card.
-class SettingsSectionLabel extends StatelessWidget {
-  const SettingsSectionLabel(this.text, {super.key});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 4, 8),
-    child: Text(text.toUpperCase(), style: BrandText.sectionLabel),
-  );
-}

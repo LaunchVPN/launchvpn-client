@@ -16,6 +16,9 @@ abstract final class BrandColors {
   static const accent = Color(0xFF9C5EEF);
   static const accentSoft = Color(0xFF3B1B62);
 
+  /// A control on an [accentSoft] card.
+  static const accentSoftRaised = Color(0x14FFFFFF);
+
   /// The tinted circle behind an icon and its outline.
   static const accentBadge = Color(0x249C5EEF);
   static const accentBadgeLine = Color(0x669C5EEF);
@@ -160,12 +163,21 @@ abstract final class BrandText {
     height: 22 / 17,
     color: BrandColors.ink,
   );
+
+  /// Delays line up in a column, so their digits are all one width.
+  static const delay = TextStyle(
+    fontFamily: _body,
+    fontWeight: FontWeight.w600,
+    fontSize: 13,
+    height: 18 / 13,
+    color: BrandColors.ink,
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
   static const sectionLabel = TextStyle(
     fontFamily: _body,
-    fontWeight: FontWeight.w700,
-    fontSize: 11,
-    height: 14 / 11,
-    letterSpacing: 0.66,
+    fontWeight: FontWeight.w600,
+    fontSize: 13,
+    height: 14 / 13,
     color: BrandColors.muted,
   );
   static const selectedPreset = TextStyle(

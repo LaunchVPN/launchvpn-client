@@ -95,6 +95,7 @@ class HomeState {
     this.refreshing = false,
     this.deviceLimit = false,
     this.check,
+    this.measuring = const {},
   }) : catalog = catalog ?? ServerCatalog();
 
   final ConnectionView view;
@@ -134,6 +135,9 @@ class HomeState {
   /// Null where the App does not check the connection, which then counts as
   /// soon as the tunnel is up.
   final ConnectionCheckView? check;
+
+  /// The locations «Локации» is measuring or has queued, by row ID.
+  final Set<int> measuring;
 
   /// «Лимит устройств» in place of the toggle, once the tunnel is off. An
   /// ended subscription explains itself first.
@@ -230,10 +234,19 @@ class HomeState {
         HomeStatus.connected,
       }.contains(status);
 
-  /// A measurement taken through a running tunnel would describe the tunnel.
+  /// Measurements dial past a running tunnel, unless it captures all traffic.
+  /// One mid-transition would race the tunnel coming up or going down.
   bool get canMeasure =>
       request == null &&
-      const {HomeStatus.off, HomeStatus.failed}.contains(status);
+      switch (status) {
+        HomeStatus.off || HomeStatus.failed => true,
+        HomeStatus.checking || HomeStatus.connected => !measuresOnlyWithVpnOff,
+        _ => false,
+      };
+
+  /// The running tunnel captures all traffic, so no socket gets past it.
+  bool get measuresOnlyWithVpnOff =>
+      !_tunnelOff && (view.runtime?.request.tun?.includeAllNetworks ?? false);
 
   late final LocationList locations = LocationList.from(catalog);
 
@@ -306,6 +319,7 @@ class HomeState {
     bool? refreshing,
     bool? deviceLimit,
     ConnectionCheckView? check,
+    Set<int>? measuring,
   }) => HomeState(
     view: view ?? this.view,
     catalog: catalog ?? this.catalog,
@@ -319,6 +333,7 @@ class HomeState {
     refreshing: refreshing ?? this.refreshing,
     deviceLimit: deviceLimit ?? this.deviceLimit,
     check: check ?? this.check,
+    measuring: measuring ?? this.measuring,
   );
 
   HomeState _withRequest(HomeRequest? request) => HomeState(
@@ -334,6 +349,7 @@ class HomeState {
     refreshing: refreshing,
     deviceLimit: deviceLimit,
     check: check,
+    measuring: measuring,
   );
 }
 
@@ -394,7 +410,9 @@ class HomeController extends PageCubit<HomeState> {
   StreamSubscription<ServerCatalog>? _catalog;
   StreamSubscription<void>? _settings;
   Timer? _expiry;
-  bool _measuring = false;
+
+  /// The sweep each location is in, until it ends.
+  final _sweeps = <int, Future<void>>{};
 
   /// An expiry this close gets a timer, and so does a running tunnel, which
   /// checks again at least this often. Otherwise a later expiry is checked
@@ -687,21 +705,46 @@ class HomeController extends PageCubit<HomeState> {
     }
   }
 
-  /// Measures the listed locations unless the tunnel is up. The results reach
-  /// the screen through the catalog as each batch is saved.
-  Future<void> measureLocations() async {
-    if (_measuring || !state.canMeasure) return;
-    _measuring = true;
+  /// Measures [only] that location, or every listed one. A location already
+  /// in a sweep stays in it, and the call returns once all of them are done.
+  /// The results reach the screen through the catalog as each is saved.
+  Future<void> measureLocations({Location? only}) {
+    if (!state.canMeasure) return Future.value();
+    final ids = only == null
+        ? [for (final item in state.locations.all) item.id]
+        : [only.id];
+    final fresh = {
+      for (final id in ids)
+        if (!_sweeps.containsKey(id)) id,
+    };
+    if (fresh.isNotEmpty) {
+      final done = Completer<void>();
+      for (final id in fresh) {
+        _sweeps[id] = done.future;
+      }
+      _showMeasuring();
+      unawaited(_sweep(fresh).whenComplete(done.complete));
+    }
+    return Future.wait({for (final id in ids) ?_sweeps[id]});
+  }
+
+  Future<void> _sweep(Set<int> ids) async {
     try {
-      final listed = {for (final item in state.locations.all) item.id};
       await _pingLocations(
-        state.catalog.servers.where((row) => listed.contains(row.id)).toList(),
+        state.catalog.servers.where((row) => ids.contains(row.id)).toList(),
         isCancelled: () => isClosed || !state.canMeasure,
       );
     } catch (error) {
       ygLogger('measure locations failed (${error.runtimeType})');
     } finally {
-      _measuring = false;
+      ids.forEach(_sweeps.remove);
+      _showMeasuring();
+    }
+  }
+
+  void _showMeasuring() {
+    if (!isClosed) {
+      emit(state.copyWith(measuring: Set.unmodifiable(_sweeps.keys)));
     }
   }
 

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/account/controller.dart';
+import 'package:onexray/brand/section_label.dart';
 import 'package:onexray/brand/account/devices.dart';
 import 'package:onexray/brand/account/telegram_link_notice.dart';
 import 'package:onexray/brand/external_link.dart';
@@ -184,7 +185,7 @@ class _AccountPageState extends State<AccountPage> {
                   ],
                   if (devices != null && devices.items.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                    SettingsSectionLabel(switch (state.deviceLimit) {
+                    SectionLabel(switch (state.deviceLimit) {
                       final max? => l.accountDevices(devices.items.length, max),
                       null => l.accountDevicesUnlimited(devices.items.length),
                     }),
