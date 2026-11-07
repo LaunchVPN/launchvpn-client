@@ -595,6 +595,22 @@ void main() {
       await finishConnecting();
     });
 
+    test('refreshStatus reports nothing once a link replaced the '
+        'subscription', () async {
+      await addSubscription(expire: past);
+      refresh = (row) async {
+        await db.subscriptionDao.deleteRow(row.id);
+        await addSubscription(expire: future);
+        return const SubscriptionRefreshResult(
+          status: SubscriptionUpdateResult.success,
+          count: 1,
+        );
+      };
+
+      expect(await controller.refreshStatus(), isNull);
+      await finishConnecting();
+    });
+
     test('a failed refreshStatus keeps the subscription expired', () async {
       await addSubscription(expire: past);
       refresh = (_) async => const SubscriptionRefreshResult(
