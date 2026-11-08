@@ -72,4 +72,34 @@ void main() {
       await finger.up();
     });
   }
+
+  testWidgets('a control inside another answers alone', (tester) async {
+    const inner = Key('inner');
+    await tester.pumpWidget(
+      Center(
+        child: Pressable(
+          onTap: () {},
+          child: SizedBox.square(
+            key: key,
+            dimension: 200,
+            child: Center(
+              child: Pressable(
+                onTap: () {},
+                child: const SizedBox.square(key: inner, dimension: 100),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final finger = await tester.startGesture(
+      tester.getCenter(find.byKey(inner)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(width(tester), 200);
+    expect(tester.getRect(find.byKey(inner)).width, moreOrLessEquals(97));
+    await finger.up();
+  });
 }

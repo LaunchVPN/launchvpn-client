@@ -290,8 +290,7 @@ class _Delay extends StatelessWidget {
       // The gesture below is hidden with the rest, so the tap is set here.
       onTap: measuring ? null : onTap,
       excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: Pressable(
         onTap: measuring ? null : onTap,
         child: Container(
           height: _height,

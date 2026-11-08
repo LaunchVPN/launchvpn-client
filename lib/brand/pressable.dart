@@ -4,6 +4,8 @@ import 'package:onexray/brand/theme.dart';
 /// Taps [child] into [onTap], and shrinks it a little while a finger holds it,
 /// so a tap answers at once. A quick tap still plays the whole press. Without
 /// [onTap], or when the system asks for less motion, [child] keeps its size.
+/// A [Pressable] inside another answers alone: the outer one keeps its size
+/// while the inner one holds the finger.
 class Pressable extends StatefulWidget {
   const Pressable({super.key, required this.onTap, required this.child});
 
@@ -29,6 +31,9 @@ class _PressableState extends State<Pressable>
   );
   bool _held = false;
 
+  /// While a [Pressable] inside holds the finger.
+  bool _innerHeld = false;
+
   @override
   void didUpdateWidget(Pressable old) {
     super.didUpdateWidget(old);
@@ -42,7 +47,7 @@ class _PressableState extends State<Pressable>
   }
 
   void _hold(bool held) {
-    _held = held && !BrandMotion.reduced(context);
+    _held = held && !_innerHeld && !BrandMotion.reduced(context);
     _follow();
   }
 
@@ -56,16 +61,34 @@ class _PressableState extends State<Pressable>
     });
   }
 
+  /// Tells the [Pressable]s around this one whether it holds the finger. The
+  /// pointer reaches this before their tap-down, which comes only once the
+  /// press outlasts a tap.
+  void _holdOuter(bool held) {
+    for (
+      var outer = context.findAncestorStateOfType<_PressableState>();
+      outer != null;
+      outer = outer.context.findAncestorStateOfType<_PressableState>()
+    ) {
+      outer._innerHeld = held;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final enabled = widget.onTap != null;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      onTapDown: enabled ? (_) => _hold(true) : null,
-      onTapUp: enabled ? (_) => _hold(false) : null,
-      onTapCancel: enabled ? () => _hold(false) : null,
-      child: ScaleTransition(scale: _scale, child: widget.child),
+    return Listener(
+      onPointerDown: enabled ? (_) => _holdOuter(true) : null,
+      onPointerUp: enabled ? (_) => _holdOuter(false) : null,
+      onPointerCancel: enabled ? (_) => _holdOuter(false) : null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onTapDown: enabled ? (_) => _hold(true) : null,
+        onTapUp: enabled ? (_) => _hold(false) : null,
+        onTapCancel: enabled ? () => _hold(false) : null,
+        child: ScaleTransition(scale: _scale, child: widget.child),
+      ),
     );
   }
 }
