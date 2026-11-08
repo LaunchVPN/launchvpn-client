@@ -16,6 +16,9 @@ abstract final class BrandColors {
   static const accent = Color(0xFF9C5EEF);
   static const accentSoft = Color(0xFF3B1B62);
 
+  /// [accentSoft] at the height of a pulse, a third of the way to [accent].
+  static const accentSoftLit = Color(0xFF582F8C);
+
   /// A control on an [accentSoft] card.
   static const accentSoftRaised = Color(0x14FFFFFF);
 
@@ -101,6 +104,9 @@ abstract final class BrandMotion {
 
   /// Opening, closing and moving: fast start, long settle.
   static const smoothOut = Cubic(0.22, 1, 0.36, 1);
+
+  /// A pulse, and text swapping in place.
+  static const inOut = Curves.easeInOut;
 
   /// A pop that overshoots a little.
   static const bounce = Cubic(0.34, 1.36, 0.64, 1);
