@@ -1414,6 +1414,79 @@ void main() {
       await tester.pumpAndSettle();
     });
 
+    testWidgets('the cards stay put while the toggle follows the pull', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+      await addGroup(tester, '🇩🇪 Германия', delay: 516);
+      final loaded = Completer<SubscriptionRefreshResult>();
+      refresh = (_) => loaded.future;
+      final card = find.byKey(const ValueKey('home-location'));
+      final presets = find.text('Умный');
+      final cardTop = tester.getTopLeft(card);
+      final presetsTop = tester.getTopLeft(presets);
+      final toggleTop = tester.getTopLeft(find.byType(ConnectToggle));
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(ConnectToggle)),
+      );
+      for (var step = 0; step < 6; step++) {
+        await gesture.moveBy(const Offset(0, 30));
+        await tester.pump();
+      }
+      expect(
+        tester.getTopLeft(find.byType(ConnectToggle)).dy,
+        isNot(toggleTop.dy),
+      );
+      expect(tester.getTopLeft(card), cardTop);
+      // Taps land where the card shows.
+      expect(card.hitTestable(), findsOneWidget);
+
+      // Loading holds the indicator's place.
+      await gesture.up();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Обновляем подписку'), findsOneWidget);
+      expect(tester.getTopLeft(card), cardTop);
+      expect(tester.getTopLeft(presets), presetsTop);
+
+      loaded.complete(
+        const SubscriptionRefreshResult(
+          status: SubscriptionUpdateResult.success,
+        ),
+      );
+      await tester.runAsync(() => pumpEventQueue(times: 20));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(card), cardTop);
+      expect(tester.getTopLeft(presets), presetsTop);
+    });
+
+    testWidgets('a long pull pushes the cards instead of covering them', (
+      tester,
+    ) async {
+      useScreen(tester, 480);
+      await pumpHome(tester);
+      await addSubscription(tester);
+      await addGroup(tester, '🇩🇪 Германия', delay: 516);
+      final card = find.byKey(const ValueKey('home-location'));
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(ConnectToggle)),
+      );
+      for (var step = 0; step < 12; step++) {
+        await gesture.moveBy(const Offset(0, 50));
+        await tester.pump();
+      }
+
+      expect(
+        tester.getBottomLeft(find.byType(ConnectToggle)).dy,
+        lessThanOrEqualTo(tester.getTopLeft(card).dy),
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
     testWidgets('without a subscription there is nothing to pull', (
       tester,
     ) async {
