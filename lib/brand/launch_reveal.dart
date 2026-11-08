@@ -178,17 +178,8 @@ class _LaunchRevealState extends State<LaunchReveal>
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (leaving != null)
-                  KeyedSubtree(
-                    key: ValueKey(_page - 1),
-                    child: IgnorePointer(
-                      child: ExcludeSemantics(child: leaving),
-                    ),
-                  ),
-                KeyedSubtree(
-                  key: ValueKey(_page),
-                  child: FadeTransition(opacity: _arriving, child: child),
-                ),
+                if (leaving != null) _shown(_page - 1, leaving, leaving: true),
+                _shown(_page, child),
               ],
             ),
           );
@@ -251,6 +242,22 @@ class _LaunchRevealState extends State<LaunchReveal>
   }
 
   static const _markSize = 64.0;
+
+  /// The [page]th page, wrapped alike whether it arrives or leaves, so it
+  /// keeps its state as it gives way.
+  Widget _shown(int page, Widget child, {bool leaving = false}) => KeyedSubtree(
+    key: ValueKey(page),
+    child: IgnorePointer(
+      ignoring: leaving,
+      child: ExcludeSemantics(
+        excluding: leaving,
+        child: FadeTransition(
+          opacity: leaving ? kAlwaysCompleteAnimation : _arriving,
+          child: child,
+        ),
+      ),
+    ),
+  );
 }
 
 /// Where the launch mark lands. [child] is the mark itself, drawn with the

@@ -132,19 +132,23 @@ void main() {
     Widget other(String text, {Key? key}) =>
         ColoredBox(key: key, color: BrandColors.bg, child: Text(text));
 
-    testWidgets('fades in over the one it replaces', (tester) async {
+    testWidgets('fades in over the one it replaces, which stays as it was', (
+      tester,
+    ) async {
       await pump(tester, page());
       await tester.pumpAndSettle();
+      await tester.tap(find.text('0'));
+      await tester.pump();
 
       await pump(tester, other('tabs'));
       await tester.pump(LaunchReveal.duration ~/ 2);
 
-      expect(shownOpacity(tester, find.text('0')), 1);
+      expect(shownOpacity(tester, find.text('1')), 1);
       expect(shownOpacity(tester, find.text('tabs')), inExclusiveRange(0, 1));
-      expect(find.text('0').hitTestable(), findsNothing);
+      expect(find.text('1').hitTestable(), findsNothing);
 
       await tester.pumpAndSettle();
-      expect(find.text('0'), findsNothing);
+      expect(find.text('1'), findsNothing);
       expect(shownOpacity(tester, find.text('tabs')), 1);
     });
 

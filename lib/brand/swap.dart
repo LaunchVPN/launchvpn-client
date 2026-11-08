@@ -53,19 +53,22 @@ class BrandSwap extends StatelessWidget {
     switchOutCurve: curve,
     layoutBuilder: (current, previous) =>
         Stack(alignment: alignment, children: [...previous, ?current]),
-    transitionBuilder: (child, animation) => FadeTransition(
-      opacity: animation,
-      child: AnimatedBuilder(
-        animation: animation,
-        builder: (context, child) => Transform.translate(
-          // A child on its way out moves on past its place, not back.
-          offset:
-              shift *
-              (1 - animation.value) *
-              (animation.status.isForwardOrCompleted ? 1 : -1),
+    transitionBuilder: (child, animation) => _Leaving(
+      animation: animation,
+      child: FadeTransition(
+        opacity: animation,
+        child: AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) => Transform.translate(
+            // A child on its way out moves on past its place, not back.
+            offset:
+                shift *
+                (1 - animation.value) *
+                (animation.status.isForwardOrCompleted ? 1 : -1),
+            child: child,
+          ),
           child: child,
         ),
-        child: child,
       ),
     ),
     child: child,
@@ -91,16 +94,42 @@ class BrandReveal extends StatelessWidget {
     switchOutCurve: BrandMotion.smoothOut,
     layoutBuilder: (current, previous) => Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [...previous, ?current],
     ),
-    transitionBuilder: (child, animation) => FadeTransition(
-      opacity: animation,
-      child: SizeTransition(
-        sizeFactor: animation,
-        alignment: Alignment.topCenter,
-        child: child,
+    transitionBuilder: (child, animation) => _Leaving(
+      animation: animation,
+      child: FadeTransition(
+        opacity: animation,
+        child: SizeTransition(
+          sizeFactor: animation,
+          alignment: AlignmentDirectional.topStart,
+          child: child,
+        ),
       ),
     ),
-    child: child ?? const SizedBox(width: double.infinity),
+    child: child ?? const SizedBox.shrink(),
+  );
+}
+
+/// Keeps taps and screen readers off [child] while [animation] takes it away,
+/// so only what replaces it answers.
+class _Leaving extends StatelessWidget {
+  const _Leaving({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: animation,
+    builder: (context, child) {
+      final leaving = !animation.status.isForwardOrCompleted;
+      return IgnorePointer(
+        ignoring: leaving,
+        child: ExcludeSemantics(excluding: leaving, child: child),
+      );
+    },
+    child: child,
   );
 }

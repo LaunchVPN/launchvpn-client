@@ -52,21 +52,24 @@ class _ConnectToggleState extends State<ConnectToggle>
     _follow();
   }
 
+  /// Whether the track breathes, rather than settling back or still.
+  bool _pulsing = false;
+
   /// Breathes while the connection changes, and settles back once it has.
   void _follow() {
     final pulses =
         widget.state == ConnectToggleState.transitioning &&
         !BrandMotion.reduced(context);
-    if (pulses) {
-      if (!_pulse.isAnimating) unawaited(_pulse.repeat(reverse: true));
-    } else if (_pulse.value > 0) {
-      unawaited(
-        _pulse.animateBack(
-          0,
-          duration: BrandMotion.of(context, BrandMotion.fast),
-        ),
-      );
-    }
+    if (pulses == _pulsing) return;
+    _pulsing = pulses;
+    unawaited(
+      pulses
+          ? _pulse.repeat(reverse: true)
+          : _pulse.animateBack(
+              0,
+              duration: BrandMotion.of(context, BrandMotion.fast),
+            ),
+    );
   }
 
   @override
@@ -103,7 +106,7 @@ class _ConnectToggleState extends State<ConnectToggle>
             curve: BrandMotion.smoothOut,
             builder: (context, fill, track) => AnimatedBuilder(
               animation: _pulse,
-              builder: (context, track) => DecoratedBox(
+              builder: (context, child) => DecoratedBox(
                 decoration: BoxDecoration(
                   color: Color.lerp(
                     fill,
@@ -112,7 +115,7 @@ class _ConnectToggleState extends State<ConnectToggle>
                   ),
                   borderRadius: shape,
                 ),
-                child: track,
+                child: child,
               ),
               child: track,
             ),

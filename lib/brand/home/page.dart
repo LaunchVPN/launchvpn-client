@@ -330,7 +330,7 @@ class _HomePageState extends State<HomePage> {
                   child: switch (_Screen.of(
                     state,
                     accountEnded: accountEnded,
-                    expired: expired,
+                    subscriptionEnded: expired,
                     trialWaitsOnTelegram: account.trialWaitsOnTelegram,
                   )) {
                     _Screen.trialTelegram => _trialTelegramContent(
@@ -546,11 +546,11 @@ enum _Screen {
   static _Screen of(
     HomeState state, {
     required bool accountEnded,
-    required bool expired,
+    required bool subscriptionEnded,
     required bool trialWaitsOnTelegram,
   }) => switch (state) {
     _ when accountEnded && trialWaitsOnTelegram => trialTelegram,
-    _ when expired => _Screen.expired,
+    _ when subscriptionEnded => expired,
     HomeState(showsDeviceLimit: true) => deviceLimit,
     HomeState(failure: _?) => failure,
     _ => connection,
@@ -1005,6 +1005,7 @@ class _PresetSwitch extends StatelessWidget {
               child: AnimatedOpacity(
                 opacity: index < 0 ? 0 : 1,
                 duration: duration,
+                curve: BrandMotion.smoothOut,
                 child: AnimatedAlign(
                   duration: duration,
                   curve: BrandMotion.smoothOut,
