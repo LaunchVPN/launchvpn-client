@@ -43,7 +43,10 @@ upstream pages kept for merging. They are not reachable in this build.
   toasts match. Manrope and Unbounded are bundled with their licenses in `assets/fonts/`.
 - Our screens tell outcomes with `showBrandToast`: a success, error or info icon on a tinted
   tile, at the bottom and above the tab bar while the tabs show (`ToastArea`). One line centres
-  on the tile; a longer text starts at its top. Questions and waits are bottom sheets from
+  on the tile; a longer text starts at its top. A toast rises 8 px into place as it fades in over
+  400 ms and fades back down in 350 ms; the compact one at the top drops from above the same way.
+  When the tabs come or go, a toast on screen glides to its new height instead of showing again.
+  Questions and waits are bottom sheets from
   `lib/brand/sheet.dart`, never centred dialogs: a confirmation with a red action, a notice, a
   one-field prompt above the keyboard, and a progress sheet that cannot be closed.
 - Home's toggle follows `ConnectionCoordinator`. A tap connects, cancels our own connection in

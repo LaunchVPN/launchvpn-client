@@ -27,9 +27,8 @@ class ToastArea extends StatefulWidget {
   final double bottom;
   final Widget child;
 
-  /// The latest area still showing, or none.
-  static double get _bottom =>
-      _ToastAreaState._shown.lastOrNull?.widget.bottom ?? 0;
+  /// What the latest area still showing keeps clear, or none.
+  static final _bottom = ValueNotifier(0.0);
 
   @override
   State<ToastArea> createState() => _ToastAreaState();
@@ -42,15 +41,28 @@ class _ToastAreaState extends State<ToastArea> {
   void initState() {
     super.initState();
     _shown.add(this);
-    _ShownToast.moveAfterFrame();
+    _settleAfterFrame();
+  }
+
+  @override
+  void didUpdateWidget(ToastArea old) {
+    super.didUpdateWidget(old);
+    if (widget.bottom != old.bottom) _settleAfterFrame();
   }
 
   @override
   void dispose() {
     _shown.remove(this);
-    _ShownToast.moveAfterFrame();
+    _settleAfterFrame();
     super.dispose();
   }
+
+  /// Once the screen that added or removed an area has built, so a toast on
+  /// screen moves with it.
+  static void _settleAfterFrame() =>
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ToastArea._bottom.value = _shown.lastOrNull?.widget.bottom ?? 0;
+      });
 
   @override
   Widget build(BuildContext context) => widget.child;
@@ -63,122 +75,121 @@ const _readingTime = Duration(seconds: 3);
 const _wideWidth = 420.0;
 
 /// Shows [message] at the bottom, above the tab bar on a tab, for [duration].
+/// It rises into place as it fades in, and sinks back as it fades out.
 ///
 /// With [top], it shows that far below the status bar instead, as a compact
-/// line: the answer to a pull, where the pull happened.
+/// line that drops into place: the answer to a pull, where the pull happened.
 void showBrandToast(
   BuildContext context,
   String message, {
   ToastKind kind = ToastKind.info,
   Duration duration = _readingTime,
   double? top,
-}) => _ShownToast(
-  ShadToaster.of(context),
-  message,
-  kind,
-  DateTime.now().add(duration),
-  top,
-).show();
-
-/// The toast on screen, so it can move when the tab bar comes or goes.
-class _ShownToast {
-  _ShownToast(this.toaster, this.message, this.kind, this.until, this.top);
-
-  final ShadToasterState toaster;
-  final String message;
-  final ToastKind kind;
-  final DateTime until;
-  final double? top;
-
-  static _ShownToast? _current;
-
-  /// Shows it again at the new height for the time it has left, once the
-  /// screen that added or removed a [ToastArea] has built.
-  static void moveAfterFrame() =>
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final toast = _current;
-        if (toast == null || !toast.toaster.mounted) return;
-        if (toast.until.isAfter(DateTime.now())) toast.show();
-      });
-
-  void show() {
-    _current = this;
-    if (top case final top?) return _showAtTop(top);
-    final screen = toaster.context;
-    // The system bar's inset even while a closing keyboard still hides it.
-    final bottom =
-        MediaQuery.viewPaddingOf(screen).bottom + ToastArea._bottom + 16;
-    final width = MediaQuery.sizeOf(screen).width;
-    toaster.show(
-      ShadToast(
-        title: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            IconTile(
-              icon: kind.icon,
-              color: kind.color,
-              fill: kind.fill,
-              size: _tile,
+}) {
+  final toaster = ShadToaster.of(context);
+  final screen = toaster.context;
+  final width = (MediaQuery.sizeOf(screen).width - 2 * BrandSpacing.page).clamp(
+    0.0,
+    _wideWidth,
+  );
+  // Where it comes from and goes back to: below its place, or above at the top.
+  final away = Offset(0, top == null ? BrandMotion.step : -BrandMotion.step);
+  final arrive = BrandMotion.of(screen, BrandMotion.slow);
+  final leave = BrandMotion.of(screen, BrandMotion.medium);
+  final inset = MediaQuery.viewPaddingOf(screen);
+  final compact = top != null;
+  toaster.show(
+    ShadToast(
+      title: compact
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconTile(
+                  icon: kind.icon,
+                  color: kind.color,
+                  fill: kind.fill,
+                  size: _compactTile,
+                  iconSize: 14,
+                ),
+                const SizedBox(width: 10),
+                Flexible(child: Text(message, style: BrandText.notice)),
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IconTile(
+                  icon: kind.icon,
+                  color: kind.color,
+                  fill: kind.fill,
+                  size: _tile,
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: _ToastMessage(message)),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(child: _ToastMessage(message)),
-          ],
-        ),
-        alignment: Alignment.bottomCenter,
-        offset: Offset(BrandSpacing.page, bottom),
-        constraints: BoxConstraints.tightFor(
-          width: (width - 2 * BrandSpacing.page).clamp(0, _wideWidth),
-        ),
-        backgroundColor: BrandColors.surfaceRaised,
-        border: ShadBorder.none,
-        radius: BorderRadius.circular(BrandRadii.card),
-        shadows: BrandShadows.toast,
-        padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
-        closeIcon: const SizedBox.shrink(),
-        duration: until.difference(DateTime.now()),
+      alignment: compact ? Alignment.topCenter : Alignment.bottomCenter,
+      // The system bar's inset even while a closing keyboard still hides it.
+      // At the bottom, [_clearOfArea] adds the tab bar.
+      offset: Offset(
+        BrandSpacing.page,
+        compact ? inset.top + top : inset.bottom + 16,
       ),
-    );
-  }
-
-  void _showAtTop(double top) {
-    final screen = toaster.context;
-    final width = MediaQuery.sizeOf(screen).width;
-    toaster.show(
-      ShadToast(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconTile(
-              icon: kind.icon,
-              color: kind.color,
-              fill: kind.fill,
-              size: _compactTile,
-              iconSize: 14,
-            ),
-            const SizedBox(width: 10),
-            Flexible(child: Text(message, style: BrandText.notice)),
-          ],
+      constraints: compact
+          ? BoxConstraints(maxWidth: width)
+          : BoxConstraints.tightFor(width: width),
+      mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+      backgroundColor: BrandColors.surfaceRaised,
+      border: compact
+          ? ShadBorder.all(color: BrandColors.line)
+          : ShadBorder.none,
+      radius: BorderRadius.circular(compact ? BrandRadii.md : BrandRadii.card),
+      shadows: BrandShadows.toast,
+      padding: compact
+          ? const EdgeInsets.fromLTRB(14, 10, 16, 10)
+          : const EdgeInsets.fromLTRB(12, 12, 16, 12),
+      closeIcon: const SizedBox.shrink(),
+      duration: duration,
+      animateIn: [
+        FadeEffect(duration: arrive, curve: BrandMotion.smoothOut),
+        MoveEffect(begin: away, end: Offset.zero),
+        if (!compact) _clearOfArea,
+      ],
+      animateOut: [
+        FadeEffect(
+          begin: 1,
+          end: 0,
+          duration: leave,
+          curve: BrandMotion.smoothOut,
         ),
-        alignment: Alignment.topCenter,
-        offset: Offset(
-          BrandSpacing.page,
-          MediaQuery.viewPaddingOf(screen).top + top,
-        ),
-        constraints: BoxConstraints(
-          maxWidth: (width - 2 * BrandSpacing.page).clamp(0, _wideWidth),
-        ),
-        mainAxisSize: MainAxisSize.min,
-        backgroundColor: BrandColors.surfaceRaised,
-        border: ShadBorder.all(color: BrandColors.line),
-        radius: BorderRadius.circular(BrandRadii.md),
-        shadows: BrandShadows.toast,
-        padding: const EdgeInsets.fromLTRB(14, 10, 16, 10),
-        closeIcon: const SizedBox.shrink(),
-        duration: until.difference(DateTime.now()),
-      ),
-    );
-  }
+        MoveEffect(begin: Offset.zero, end: away),
+        if (!compact) _clearOfArea,
+        // The toaster plays both on one controller and, when their lengths
+        // differ, restarts it on a hide, which then never takes the toast
+        // away. The exit fades in [leave] and lasts as long as the entrance.
+        CustomEffect(duration: arrive, builder: (_, _, child) => child),
+      ],
+    ),
+  );
 }
+
+/// Lifts a bottom toast over the latest [ToastArea], gliding as one comes or
+/// goes, without the toast showing again.
+final _clearOfArea = CustomEffect(
+  duration: Duration.zero,
+  builder: (context, _, child) => ValueListenableBuilder(
+    valueListenable: ToastArea._bottom,
+    builder: (context, bottom, child) => TweenAnimationBuilder(
+      tween: Tween(end: bottom),
+      duration: BrandMotion.of(context, BrandMotion.fast),
+      curve: BrandMotion.smoothOut,
+      builder: (context, lift, child) =>
+          Transform.translate(offset: Offset(0, -lift), child: child),
+      child: child,
+    ),
+    child: child,
+  ),
+);
 
 const _tile = 32.0;
 const _compactTile = 22.0;
