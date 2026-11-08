@@ -1,6 +1,7 @@
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/icon_tile.dart';
+import 'package:onexray/brand/pressable.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/service/settings/app_update/service.dart';
@@ -26,16 +27,16 @@ class UpdateBanner extends StatelessWidget {
     final l = AppLocalizations.of(context)!;
     return Semantics(
       onTapHint: l.homeUpdateAction,
-      child: Material(
-        color: BrandColors.surface,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          // Concentric with the tile's corners.
-          borderRadius: BorderRadius.circular(BrandRadii.segment + _inset),
-          side: const BorderSide(color: BrandColors.line),
-        ),
-        child: InkWell(
-          onTap: onUpdate,
+      child: Pressable(
+        onTap: onUpdate,
+        child: Material(
+          color: BrandColors.surface,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            // Concentric with the tile's corners.
+            borderRadius: BorderRadius.circular(BrandRadii.segment + _inset),
+            side: const BorderSide(color: BrandColors.line),
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: _tile + 2 * _inset),
             child: Padding(

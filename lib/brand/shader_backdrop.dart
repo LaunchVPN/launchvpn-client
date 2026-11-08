@@ -79,7 +79,7 @@ class _ShaderBackdropState extends State<ShaderBackdrop> {
   void _sync() {
     final moves =
         _veil != null &&
-        !MediaQuery.disableAnimationsOf(context) &&
+        !BrandMotion.reduced(context) &&
         TickerMode.valuesOf(context).enabled &&
         _appVisible;
     if (moves == _ticker.isActive) return;

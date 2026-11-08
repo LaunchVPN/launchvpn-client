@@ -79,6 +79,52 @@ abstract final class BrandSpacing {
   static const page = 24.0;
 }
 
+/// The one motion scale, after transitions.dev's tokens. A screen picks the
+/// step its motion plays, such as [fast] for a control changing state, and
+/// passes it through [of]. Motion that is not a duration, such as a loop or a
+/// press, asks [reduced] instead.
+abstract final class BrandMotion {
+  /// A close, a press.
+  static const quick = Duration(milliseconds: 150);
+
+  /// A control changing state.
+  static const fast = Duration(milliseconds: 250);
+
+  /// A surface leaving, a reveal.
+  static const medium = Duration(milliseconds: 350);
+
+  /// A surface arriving.
+  static const slow = Duration(milliseconds: 400);
+
+  /// A moment of emphasis.
+  static const verySlow = Duration(milliseconds: 500);
+
+  /// Opening, closing and moving: fast start, long settle.
+  static const smoothOut = Cubic(0.22, 1, 0.36, 1);
+
+  /// A pop that overshoots a little.
+  static const bounce = Cubic(0.34, 1.36, 0.64, 1);
+
+  /// A springy return.
+  static const bounceStrong = Cubic(0.34, 3.85, 0.64, 1);
+
+  /// How far motion travels: a nudge, a step, a reveal.
+  static const nudge = 4.0;
+  static const step = 8.0;
+  static const reveal = 12.0;
+
+  /// The size of a control under a finger.
+  static const press = 0.97;
+
+  /// Whether the system asks for less motion.
+  static bool reduced(BuildContext context) =>
+      MediaQuery.disableAnimationsOf(context);
+
+  /// [duration], or none when the system asks for less motion.
+  static Duration of(BuildContext context, Duration duration) =>
+      reduced(context) ? Duration.zero : duration;
+}
+
 abstract final class BrandText {
   static const _display = FontFamily.unbounded;
   static const _body = FontFamily.manrope;

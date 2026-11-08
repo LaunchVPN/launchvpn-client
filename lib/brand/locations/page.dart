@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/mark.dart';
+import 'package:onexray/brand/pressable.dart';
 import 'package:onexray/brand/pull.dart';
 import 'package:onexray/brand/section_label.dart';
 import 'package:onexray/brand/theme.dart';
@@ -289,8 +290,7 @@ class _Delay extends StatelessWidget {
       // The gesture below is hidden with the rest, so the tap is set here.
       onTap: measuring ? null : onTap,
       excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: Pressable(
         onTap: measuring ? null : onTap,
         child: Container(
           height: _height,
@@ -335,7 +335,7 @@ class _WaveDotsState extends State<_WaveDots>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (BrandMotion.reduced(context)) {
       _wave.stop();
     } else if (!_wave.isAnimating) {
       unawaited(_wave.repeat());
@@ -439,7 +439,7 @@ class _PullMarkState extends State<_PullMark>
   }
 
   void _follow() {
-    if (_launched && !MediaQuery.disableAnimationsOf(context)) {
+    if (_launched && !BrandMotion.reduced(context)) {
       if (!_flight.isAnimating) unawaited(_flight.repeat());
     } else {
       _flight
@@ -471,8 +471,8 @@ class _PullMarkState extends State<_PullMark>
           animation: _flight,
           builder: (context, child) => TweenAnimationBuilder<double>(
             tween: Tween(end: _launched ? 1 : 0),
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
+            duration: BrandMotion.of(context, BrandMotion.fast),
+            curve: BrandMotion.smoothOut,
             builder: (context, lift, child) => Transform.translate(
               offset: Offset(
                 0,
@@ -519,8 +519,7 @@ class LocationCard extends StatelessWidget {
       enabled: onTap != null,
       selected: selected,
       label: delay == null ? location.name : '${location.name}, $delay',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: Pressable(
         onTap: onTap,
         child: Container(
           width: double.infinity,

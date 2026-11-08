@@ -1,5 +1,6 @@
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:onexray/brand/pressable.dart';
 import 'package:onexray/brand/theme.dart';
 
 /// The back button and title of a screen opened above the tabs.
@@ -21,7 +22,7 @@ class BrandTopBar extends StatelessWidget {
         Semantics(
           button: true,
           label: MaterialLocalizations.of(context).backButtonTooltip,
-          child: GestureDetector(
+          child: Pressable(
             onTap: () => Navigator.of(context).maybePop(),
             child: Container(
               width: 40,

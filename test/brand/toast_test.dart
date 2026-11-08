@@ -13,6 +13,8 @@ void main() {
     String message, {
     ToastKind kind = ToastKind.info,
     double? bottom,
+    double? top,
+    bool settle = true,
   }) async {
     tester.view
       ..physicalSize = const Size(1170, 2532)
@@ -22,7 +24,8 @@ void main() {
       builder: (context) => Scaffold(
         body: Center(
           child: TextButton(
-            onPressed: () => showBrandToast(context, message, kind: kind),
+            onPressed: () =>
+                showBrandToast(context, message, kind: kind, top: top),
             child: const Text('show'),
           ),
         ),
@@ -40,8 +43,74 @@ void main() {
       ),
     );
     await tester.tap(find.text('show'));
-    await tester.pumpAndSettle();
+    if (settle) await tester.pumpAndSettle();
   }
+
+  /// How opaque the toast shows through every fade above it.
+  double opacity(WidgetTester tester) {
+    if (find.byType(ShadToast).evaluate().isEmpty) return 0;
+    final above = find.ancestor(
+      of: find.byType(ShadToast),
+      matching: find.byWidgetPredicate(
+        (widget) => widget is FadeTransition || widget is Opacity,
+      ),
+    );
+    return tester
+        .widgetList(above)
+        .fold(
+          1.0,
+          (shown, widget) =>
+              shown *
+              switch (widget) {
+                FadeTransition(:final opacity) => opacity.value,
+                Opacity(:final opacity) => opacity,
+                _ => 1.0,
+              },
+        );
+  }
+
+  Rect toast(WidgetTester tester) => tester.getRect(find.byType(ShadToast));
+
+  testWidgets('a toast rises into place as it fades in', (tester) async {
+    await show(tester, 'Готово', settle: false);
+    await tester.pump();
+    await tester.pump();
+    final start = toast(tester);
+    final faded = opacity(tester);
+    await tester.pump(const Duration(milliseconds: 300));
+    final late = opacity(tester);
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(faded, lessThan(0.05));
+    expect(late, lessThan(1));
+    expect(opacity(tester), 1);
+    final rest = toast(tester);
+    await tester.pumpAndSettle();
+    expect(toast(tester), rest);
+    expect(start.bottom - rest.bottom, moreOrLessEquals(8));
+  });
+
+  testWidgets('a toast at the top drops into place', (tester) async {
+    await show(tester, 'Готово', top: 56, settle: false);
+    await tester.pump();
+    final start = toast(tester);
+    await tester.pumpAndSettle();
+
+    expect(toast(tester).top - start.top, moreOrLessEquals(8));
+  });
+
+  testWidgets('a toast fades out in 350 ms once read', (tester) async {
+    await show(tester, 'Готово');
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 340));
+    expect(opacity(tester), allOf(greaterThan(0), lessThan(1)));
+
+    await tester.pump(const Duration(milliseconds: 10));
+    expect(opacity(tester), lessThan(0.01));
+    await tester.pumpAndSettle();
+    expect(find.byType(ShadToast), findsNothing);
+  });
 
   testWidgets('each kind shows its icon', (tester) async {
     for (final (kind, icon) in [
@@ -84,7 +153,7 @@ void main() {
     expect(text.center.dy, moreOrLessEquals(tile.center.dy, epsilon: 1));
   });
 
-  testWidgets('a toast moves above the tab bar when the tabs appear', (
+  testWidgets('a toast moves above the tab bar without showing again', (
     tester,
   ) async {
     final tabs = ValueNotifier(false);
@@ -122,13 +191,17 @@ void main() {
     await tester.pumpAndSettle();
 
     tabs.value = true;
-    await tester.pumpAndSettle();
+    final bottoms = [toast(tester).bottom];
+    for (var frame = 0; frame < 10; frame++) {
+      await tester.pump(const Duration(milliseconds: 50));
+      bottoms.add(toast(tester).bottom);
+      expect(opacity(tester), 1, reason: 'the entrance does not play again');
+    }
 
-    expect(find.text('Готово'), findsOneWidget);
-    expect(
-      tester.getRect(find.byType(ShadToast)).bottom,
-      lessThanOrEqualTo(2532 / 3 - 80),
-    );
+    for (var frame = 1; frame < bottoms.length; frame++) {
+      expect(bottoms[frame], lessThanOrEqualTo(bottoms[frame - 1]));
+    }
+    expect(bottoms.last, lessThanOrEqualTo(2532 / 3 - 80));
   });
 
   testWidgets('more lines start at the tile', (tester) async {

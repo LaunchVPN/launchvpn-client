@@ -1,6 +1,7 @@
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/icon_tile.dart';
+import 'package:onexray/brand/pressable.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadSwitch;
 
@@ -164,8 +165,7 @@ class SettingsRow extends StatelessWidget {
     toggled: toggled,
     label: subtitle == null ? title : '$title, $subtitle',
     value: value,
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    child: Pressable(
       onTap: onTap,
       child: ExcludeSemantics(
         child: ConstrainedBox(

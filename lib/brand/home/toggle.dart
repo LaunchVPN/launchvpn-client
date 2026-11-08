@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/mark.dart';
+import 'package:onexray/brand/pressable.dart';
 import 'package:onexray/brand/theme.dart';
 
 enum ConnectToggleState { off, transitioning, on }
@@ -24,9 +25,7 @@ class ConnectToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final duration = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 220);
+    final duration = BrandMotion.of(context, BrandMotion.fast);
     final off = state == ConnectToggleState.off;
     return Semantics(
       container: true,
@@ -34,13 +33,12 @@ class ConnectToggle extends StatelessWidget {
       enabled: onPressed != null,
       toggled: state == ConnectToggleState.on,
       label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: Pressable(
         onTap: onPressed,
         child: ExcludeSemantics(
           child: AnimatedContainer(
             duration: duration,
-            curve: Curves.easeOutCubic,
+            curve: BrandMotion.smoothOut,
             width: _width,
             height: _height,
             padding: const EdgeInsets.all(8),
@@ -57,7 +55,7 @@ class ConnectToggle extends StatelessWidget {
             ),
             child: AnimatedAlign(
               duration: duration,
-              curve: Curves.easeOutCubic,
+              curve: BrandMotion.smoothOut,
               alignment: switch (state) {
                 ConnectToggleState.off => Alignment.centerLeft,
                 ConnectToggleState.transitioning => Alignment.center,
@@ -65,6 +63,7 @@ class ConnectToggle extends StatelessWidget {
               },
               child: AnimatedContainer(
                 duration: duration,
+                curve: BrandMotion.smoothOut,
                 width: _knob,
                 height: _knob,
                 alignment: Alignment.center,
