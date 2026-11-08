@@ -238,11 +238,14 @@ class _LaunchRevealState extends State<LaunchReveal>
     key: ValueKey(page),
     child: IgnorePointer(
       ignoring: leaving,
-      child: ExcludeSemantics(
+      child: ExcludeFocus(
         excluding: leaving,
-        child: FadeTransition(
-          opacity: leaving ? kAlwaysCompleteAnimation : _progress,
-          child: child,
+        child: ExcludeSemantics(
+          excluding: leaving,
+          child: FadeTransition(
+            opacity: leaving ? kAlwaysCompleteAnimation : _progress,
+            child: child,
+          ),
         ),
       ),
     ),

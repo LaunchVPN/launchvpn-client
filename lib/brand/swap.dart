@@ -119,8 +119,8 @@ class BrandReveal extends StatelessWidget {
   );
 }
 
-/// Keeps taps and screen readers off [child] while [animation] takes it away,
-/// so only what replaces it answers.
+/// Keeps taps, focus and screen readers off [child] while [animation] takes
+/// it away, so only what replaces it answers.
 class _Leaving extends StatelessWidget {
   const _Leaving({required this.animation, required this.child});
 
@@ -134,7 +134,10 @@ class _Leaving extends StatelessWidget {
       final leaving = !animation.status.isForwardOrCompleted;
       return IgnorePointer(
         ignoring: leaving,
-        child: ExcludeSemantics(excluding: leaving, child: child),
+        child: ExcludeFocus(
+          excluding: leaving,
+          child: ExcludeSemantics(excluding: leaving, child: child),
+        ),
       );
     },
     child: child,

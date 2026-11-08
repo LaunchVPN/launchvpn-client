@@ -6,10 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/app.dart';
+import 'package:onexray/brand/login/controller.dart';
+import 'package:onexray/brand/login/page.dart';
 import 'package:onexray/brand/router.dart';
 import 'package:onexray/brand/shader_backdrop.dart';
 import 'package:onexray/brand/theme.dart';
+import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/service/account/service.dart';
+import 'package:onexray/service/settings/language/locale.dart';
 import 'package:onexray/service/shared/share/service.dart';
 
 import '../../support/fake_account_api.dart';
@@ -434,6 +438,44 @@ void main() {
     }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
   });
 
+  testWidgets('«Вход» over the tabs closes once, however often the account '
+      'says it is signed in', (tester) async {
+    final signedIn = StreamController<bool>.broadcast();
+    addTearDown(signedIn.close);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ru'),
+        localizationsDelegates: AppLocalePolicy.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => LoginPage.showOverTabs(
+              context,
+              account: account,
+              mode: LoginMode.signIn,
+              signedIn: signedIn.stream,
+            ),
+            child: const Text('tabs'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('tabs'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(LoginPage), findsOneWidget);
+
+    // A sign-in, then the refresh that follows it, while «Вход» leaves.
+    signedIn.add(true);
+    await tester.pump();
+    signedIn.add(true);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(LoginPage), findsNothing);
+    expect(find.text('tabs'), findsOneWidget);
+  });
+
   group('create account', () {
     Future<void> enterCode(WidgetTester tester, String code) async {
       await tester.enterText(
@@ -565,6 +607,19 @@ void main() {
         expect(shownOpacity(tester, form), inExclusiveRange(0, 1));
         expect(tester.getTopLeft(code).dx, greaterThan(rest));
         expect(tester.getTopLeft(form).dx, lessThan(rest));
+        // Typing reaches no field on its way out.
+        expect(
+          tester
+              .widget<EditableText>(
+                find.descendant(
+                  of: find.widgetWithText(TextField, 'Код из 6 цифр'),
+                  matching: find.byType(EditableText),
+                ),
+              )
+              .focusNode
+              .hasFocus,
+          isFalse,
+        );
 
         await tester.pump(BrandMotion.fast);
         expect(code, findsNothing);
