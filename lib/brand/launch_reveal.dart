@@ -16,7 +16,7 @@ class LaunchReveal extends StatefulWidget {
 
   /// A spinner joins the mark only when loading takes this long.
   static const spinnerDelay = Duration(seconds: 1);
-  static const duration = Duration(milliseconds: 300);
+  static const duration = BrandMotion.medium;
 
   @override
   State<LaunchReveal> createState() => _LaunchRevealState();
@@ -30,7 +30,7 @@ class _LaunchRevealState extends State<LaunchReveal>
   );
   late final _progress = CurvedAnimation(
     parent: _controller,
-    curve: Curves.easeOutCubic,
+    curve: BrandMotion.smoothOut,
   );
   final _flight = _Flight();
   final _stack = GlobalKey();
@@ -181,7 +181,7 @@ class _LaunchRevealState extends State<LaunchReveal>
                 top: center.bottom + 24,
                 child: AnimatedOpacity(
                   opacity: _spinner && !_revealing ? 1 : 0,
-                  duration: const Duration(milliseconds: 200),
+                  duration: BrandMotion.of(context, BrandMotion.quick),
                   child: const Center(
                     child: SizedBox.square(
                       dimension: 20,

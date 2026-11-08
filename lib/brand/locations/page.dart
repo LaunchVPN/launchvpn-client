@@ -471,8 +471,8 @@ class _PullMarkState extends State<_PullMark>
           animation: _flight,
           builder: (context, child) => TweenAnimationBuilder<double>(
             tween: Tween(end: _launched ? 1 : 0),
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
+            duration: BrandMotion.of(context, BrandMotion.fast),
+            curve: BrandMotion.smoothOut,
             builder: (context, lift, child) => Transform.translate(
               offset: Offset(
                 0,
