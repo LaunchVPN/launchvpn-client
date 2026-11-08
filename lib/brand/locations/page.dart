@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/mark.dart';
+import 'package:onexray/brand/pressable.dart';
 import 'package:onexray/brand/pull.dart';
 import 'package:onexray/brand/section_label.dart';
 import 'package:onexray/brand/theme.dart';
@@ -519,8 +520,7 @@ class LocationCard extends StatelessWidget {
       enabled: onTap != null,
       selected: selected,
       label: delay == null ? location.name : '${location.name}, $delay',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: Pressable(
         onTap: onTap,
         child: Container(
           width: double.infinity,

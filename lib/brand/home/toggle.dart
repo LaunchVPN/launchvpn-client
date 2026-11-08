@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/mark.dart';
+import 'package:onexray/brand/pressable.dart';
 import 'package:onexray/brand/theme.dart';
 
 enum ConnectToggleState { off, transitioning, on }
@@ -32,8 +33,7 @@ class ConnectToggle extends StatelessWidget {
       enabled: onPressed != null,
       toggled: state == ConnectToggleState.on,
       label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: Pressable(
         onTap: onPressed,
         child: ExcludeSemantics(
           child: AnimatedContainer(

@@ -18,6 +18,7 @@ import 'package:onexray/brand/external_link.dart';
 import 'package:onexray/brand/locations/page.dart';
 import 'package:onexray/brand/launch_reveal.dart';
 import 'package:onexray/brand/mark.dart';
+import 'package:onexray/brand/pressable.dart';
 import 'package:onexray/brand/settings/preset_page.dart';
 import 'package:onexray/brand/settings/vpn_apps_page.dart';
 import 'package:onexray/brand/permission/vpn_permission_page.dart';
@@ -943,8 +944,7 @@ class _PresetSegment extends StatelessWidget {
     enabled: onTap != null,
     selected: selected,
     label: label,
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    child: Pressable(
       onTap: onTap,
       child: ExcludeSemantics(
         child: Container(
