@@ -24,6 +24,7 @@ import 'package:onexray/brand/settings/vpn_apps_page.dart';
 import 'package:onexray/brand/permission/vpn_permission_page.dart';
 import 'package:onexray/brand/pull.dart';
 import 'package:onexray/brand/state_hero.dart';
+import 'package:onexray/brand/swap.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/brand/toast.dart';
 import 'package:onexray/core/brand.dart';
@@ -319,24 +320,33 @@ class _HomePageState extends State<HomePage> {
                       openExternalLink(update.releaseUri, 'release'),
                 ),
               ],
-              if (accountEnded && account.trialWaitsOnTelegram)
-                ..._trialTelegramContent(state, linking: account.linking)
-              else if (expired)
-                ..._expiredContent(
-                  state,
-                  onRefresh: account.refreshing || state.refreshing
-                      ? null
-                      : refresh,
-                )
-              else if (state.showsDeviceLimit)
-                ..._deviceLimitContent(state)
-              else if (state.failure case final failure?)
-                ..._failureContent(state, failure)
-              else
-                ..._connectionContent(
-                  state,
-                  _toggleGap(constraints.maxHeight, banner: update != null),
+              Expanded(
+                child: BrandSwap.screen(
+                  child: switch (_Screen.of(
+                    state,
+                    accountEnded: accountEnded,
+                    expired: expired,
+                    trialWaitsOnTelegram: account.trialWaitsOnTelegram,
+                  )) {
+                    _Screen.trialTelegram => _trialTelegramContent(
+                      state,
+                      linking: account.linking,
+                    ),
+                    _Screen.expired => _expiredContent(
+                      state,
+                      onRefresh: account.refreshing || state.refreshing
+                          ? null
+                          : refresh,
+                    ),
+                    _Screen.deviceLimit => _deviceLimitContent(state),
+                    _Screen.failure => _failureContent(state, state.failure!),
+                    _Screen.connection => _connectionContent(
+                      state,
+                      _toggleGap(constraints.maxHeight, banner: update != null),
+                    ),
+                  },
                 ),
+              ),
             ],
           ),
         ),
@@ -354,11 +364,14 @@ class _HomePageState extends State<HomePage> {
 
   /// The mockups' state screens: a centered explanation and the ways out, in
   /// place of the toggle and the cards.
-  List<Widget> _stateContent(Widget hero, Widget actions) => [
-    Expanded(child: Center(child: hero)),
-    const SizedBox(height: 12),
-    actions,
-  ];
+  Widget _stateContent(_Screen screen, Widget hero, Widget actions) => Column(
+    key: ValueKey(screen),
+    children: [
+      Expanded(child: Center(child: hero)),
+      const SizedBox(height: 12),
+      actions,
+    ],
+  );
 
   /// The error screen offers only the panel's support: null without its link.
   VoidCallback? _contactSupport(HomeState state) =>
@@ -367,23 +380,21 @@ class _HomePageState extends State<HomePage> {
         _ => () => openSupport(state.subscription),
       };
 
-  List<Widget> _failureContent(HomeState state, HomeFailure failure) =>
-      _stateContent(
-        _FailureHero(failure),
-        _FailureActions(
-          onRetry: _toggle,
-          onChangeLocation: _openLocations,
-          onContactSupport: _contactSupport(state),
-        ),
-      );
+  Widget _failureContent(HomeState state, HomeFailure failure) => _stateContent(
+    _Screen.failure,
+    _FailureHero(failure),
+    _FailureActions(
+      onRetry: _toggle,
+      onChangeLocation: _openLocations,
+      onContactSupport: _contactSupport(state),
+    ),
+  );
 
-  List<Widget> _expiredContent(
-    HomeState state, {
-    required VoidCallback? onRefresh,
-  }) {
+  Widget _expiredContent(HomeState state, {required VoidCallback? onRefresh}) {
     final l = AppLocalizations.of(context)!;
     final renews = widget.distribution == AppDistribution.apk;
     return _stateContent(
+      _Screen.expired,
       StateHero.warning(
         icon: LucideIcons.calendar,
         title: l.homeExpiredTitle,
@@ -401,10 +412,11 @@ class _HomePageState extends State<HomePage> {
 
   /// A new account the trial waits on Telegram for: its email is at a
   /// domain anyone can make endless addresses on.
-  List<Widget> _trialTelegramContent(HomeState state, {required bool linking}) {
+  Widget _trialTelegramContent(HomeState state, {required bool linking}) {
     final l = AppLocalizations.of(context)!;
     final buys = widget.distribution == AppDistribution.apk;
     return _stateContent(
+      _Screen.trialTelegram,
       StateHero.accent(
         icon: LucideIcons.send,
         title: l.homeTrialTelegramTitle,
@@ -441,7 +453,8 @@ class _HomePageState extends State<HomePage> {
     if (mounted) await tellTelegramLink(context, outcome);
   }
 
-  List<Widget> _deviceLimitContent(HomeState state) => _stateContent(
+  Widget _deviceLimitContent(HomeState state) => _stateContent(
+    _Screen.deviceLimit,
     DeviceLimitHero(account: widget.account),
     DeviceLimitActions(
       account: widget.account,
@@ -449,57 +462,83 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
-  List<Widget> _connectionContent(HomeState state, double toggleGap) => [
-    SizedBox(height: toggleGap),
-    _Hero(state: state, onToggle: _toggle),
-    const SizedBox(height: 24),
-    // Only the toggle follows a pull; the cards stay under the finger.
-    Expanded(
-      child: PinnedOnPull(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (state.location case final location?)
-              LocationCard(
-                key: const ValueKey('home-location'),
-                location: location,
-                // "No answer" would contradict a tunnel that works.
-                delay: PingDelayConstants.isSuccessful(location.delay)
-                    ? locationDelayLabel(
-                        AppLocalizations.of(context)!,
-                        location.delay,
-                      )
-                    : null,
-                onTap: _openLocations,
-                trailing: const Icon(
-                  LucideIcons.chevronRight,
-                  size: 20,
-                  color: BrandColors.muted,
+  Widget _connectionContent(HomeState state, double toggleGap) => Column(
+    key: const ValueKey(_Screen.connection),
+    children: [
+      SizedBox(height: toggleGap),
+      _Hero(state: state, onToggle: _toggle),
+      const SizedBox(height: 24),
+      // Only the toggle follows a pull; the cards stay under the finger.
+      Expanded(
+        child: PinnedOnPull(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (state.location case final location?)
+                LocationCard(
+                  key: const ValueKey('home-location'),
+                  location: location,
+                  // "No answer" would contradict a tunnel that works.
+                  delay: PingDelayConstants.isSuccessful(location.delay)
+                      ? locationDelayLabel(
+                          AppLocalizations.of(context)!,
+                          location.delay,
+                        )
+                      : null,
+                  onTap: _openLocations,
+                  trailing: const Icon(
+                    LucideIcons.chevronRight,
+                    size: 20,
+                    color: BrandColors.muted,
+                  ),
                 ),
-              ),
-            if (state.subscription != null) ...[
-              const SizedBox(height: 20),
-              _PresetSwitch(
-                presets: _controller.presets,
-                selected: state.preset,
-                onSelect: state.canChangeConnection
-                    ? (preset) =>
-                          choosePreset(context, _controller, preset, _run)
-                    : null,
-              ),
+              if (state.subscription != null) ...[
+                const SizedBox(height: 20),
+                _PresetSwitch(
+                  presets: _controller.presets,
+                  selected: state.preset,
+                  onSelect: state.canChangeConnection
+                      ? (preset) =>
+                            choosePreset(context, _controller, preset, _run)
+                      : null,
+                ),
+              ],
+              if (state.announcement case final text?) ...[
+                const SizedBox(height: 20),
+                _AnnouncementBanner(
+                  text: text,
+                  onClose: _controller.dismissAnnouncement,
+                ),
+              ],
             ],
-            if (state.announcement case final text?) ...[
-              const SizedBox(height: 20),
-              _AnnouncementBanner(
-                text: text,
-                onClose: _controller.dismissAnnouncement,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
-    ),
-  ];
+    ],
+  );
+}
+
+/// What Home shows under the header, each giving way to the next with
+/// [BrandSwap.screen].
+enum _Screen {
+  trialTelegram,
+  expired,
+  deviceLimit,
+  failure,
+  connection;
+
+  static _Screen of(
+    HomeState state, {
+    required bool accountEnded,
+    required bool expired,
+    required bool trialWaitsOnTelegram,
+  }) => switch (state) {
+    _ when accountEnded && trialWaitsOnTelegram => trialTelegram,
+    _ when expired => _Screen.expired,
+    HomeState(showsDeviceLimit: true) => deviceLimit,
+    HomeState(failure: _?) => failure,
+    _ => connection,
+  };
 }
 
 class _Header extends StatelessWidget {
@@ -606,7 +645,14 @@ class _Hero extends StatelessWidget {
           onPressed: state.canToggle ? onToggle : null,
         ),
         const SizedBox(height: 24),
-        Text(title, textAlign: TextAlign.center, style: BrandText.screenTitle),
+        BrandSwap.text(
+          child: Text(
+            title,
+            key: ValueKey(title),
+            textAlign: TextAlign.center,
+            style: BrandText.screenTitle,
+          ),
+        ),
         const SizedBox(height: 6),
         _Hint(state: state),
       ],
@@ -622,23 +668,32 @@ class _Hint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    Widget text(String value, {Color? color}) => Text(
-      value,
-      textAlign: TextAlign.center,
-      style: BrandText.hint.copyWith(color: color),
-    );
-    return switch (state.status) {
+    final message = switch (state.status) {
       // A failed attempt shows the error screen instead.
-      HomeStatus.off || HomeStatus.failed => text(
+      HomeStatus.off || HomeStatus.failed =>
         state.subscription == null ? l.homeNoSubscription : l.homeHintOff,
-      ),
-      HomeStatus.connecting => text(l.homeHintConnecting),
-      HomeStatus.checking => text(l.homeHintChecking),
-      HomeStatus.reconnecting => text(l.homeHintReconnecting),
-      HomeStatus.connected => _ConnectedHint(since: state.connectedSince),
-      HomeStatus.disconnecting => const SizedBox.shrink(),
-      HomeStatus.uncertain => text(l.homeHintUncertain),
+      HomeStatus.connecting => l.homeHintConnecting,
+      HomeStatus.checking => l.homeHintChecking,
+      HomeStatus.reconnecting => l.homeHintReconnecting,
+      HomeStatus.uncertain => l.homeHintUncertain,
+      HomeStatus.connected || HomeStatus.disconnecting => null,
     };
+    return BrandSwap.text(
+      child: switch (state.status) {
+        // Its clock ticks every second, which is not a change to swap.
+        HomeStatus.connected => _ConnectedHint(
+          key: const ValueKey(HomeStatus.connected),
+          since: state.connectedSince,
+        ),
+        _ when message != null => Text(
+          message,
+          key: ValueKey(message),
+          textAlign: TextAlign.center,
+          style: BrandText.hint,
+        ),
+        _ => const SizedBox.shrink(),
+      },
+    );
   }
 }
 
@@ -778,7 +833,7 @@ class _SupportLink extends StatelessWidget {
 
 /// Counts from the session's own start, so reopening the app keeps the time.
 class _ConnectedHint extends StatefulWidget {
-  const _ConnectedHint({required this.since});
+  const _ConnectedHint({super.key, required this.since});
 
   final DateTime? since;
 

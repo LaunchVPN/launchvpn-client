@@ -5,6 +5,8 @@ import 'package:onexray/brand/theme.dart';
 import 'package:onexray/brand/toast.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../support/opacity.dart';
+
 void main() {
   /// A phone screen whose button shows [message] as [kind], inside a
   /// [ToastArea] of [bottom] when given.
@@ -47,27 +49,10 @@ void main() {
   }
 
   /// How opaque the toast shows through every fade above it.
-  double opacity(WidgetTester tester) {
-    if (find.byType(ShadToast).evaluate().isEmpty) return 0;
-    final above = find.ancestor(
-      of: find.byType(ShadToast),
-      matching: find.byWidgetPredicate(
-        (widget) => widget is FadeTransition || widget is Opacity,
-      ),
-    );
-    return tester
-        .widgetList(above)
-        .fold(
-          1.0,
-          (shown, widget) =>
-              shown *
-              switch (widget) {
-                FadeTransition(:final opacity) => opacity.value,
-                Opacity(:final opacity) => opacity,
-                _ => 1.0,
-              },
-        );
-  }
+  double opacity(WidgetTester tester) =>
+      find.byType(ShadToast).evaluate().isEmpty
+      ? 0
+      : shownOpacity(tester, find.byType(ShadToast));
 
   Rect toast(WidgetTester tester) => tester.getRect(find.byType(ShadToast));
 
