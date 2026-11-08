@@ -24,7 +24,10 @@ upstream pages kept for merging. They are not reachable in this build.
   Android. `LaunchReveal` in the shell draws the same mark at the same place until the first page is
   ready, adding a spinner only after a second. Then the page fades in while the mark flies into its
   `LaunchMarkLanding`, the header's logo on Home or the tile on «Вход», and fades where it is when
-  the page has none, as the start-up error does. With system animations off the page shows at once.
+  the page has none, as the start-up error does. A later page of another kind, such as the tabs
+  after «Вход», fades in over the one it replaces, and «Вход» opened over the tabs leaves with its
+  route's transition once the sign-in it waits for comes. With system animations off the page shows
+  at once.
 - Phone builds carry none of upstream's artwork: `pubspec.yaml` limits its logo and icons to
   desktop, and iOS builds only the primary icon. The desktop folders, `msix_config`, that artwork
   and internal identifiers such as the `onexray` package name stay, because removing them would
@@ -48,6 +51,17 @@ upstream pages kept for merging. They are not reachable in this build.
   through `Pressable`: they shrink to 97% under a finger for 150 ms, a quick tap included, and keep
   still when disabled or under reduced motion. The delay pill on a location card answers alone,
   without its card.
+- States change through `lib/brand/swap.dart`. `BrandSwap` swaps a keyed child for the next with
+  both showing: Home's status and hint leave upward as the new text comes from 4 px below in
+  150 ms, Home's error, ended subscription, Telegram and device limit screens rise 8 px as they
+  fade in over 400 ms and leave in 350 ms, the days pill fades over a placeholder that keeps its
+  place, the delay pill's dots cross into the delay in place, and «Вход»'s form and code slide 8 px
+  with their title, the code from the end and the form from the start, in 250 ms. `BrandReveal`
+  opens and closes room for the update banner, the announcement and error text below a field in
+  250 ms while what sits below moves along. The toggle's track pulses every two seconds while the
+  connection changes and the knob lands on with a small overshoot. The preset highlight slides and
+  the chosen location card changes color in 250 ms, and the pull indicators fade out in 150 ms as
+  the refresh ends. A wrong email code shakes its field 6 px and back. Nothing blurs, which costs too much on weaker Android phones.
 - Our screens tell outcomes with `showBrandToast`: a success, error or info icon on a tinted
   tile, at the bottom and above the tab bar while the tabs show (`ToastArea`). One line centres
   on the tile; a longer text starts at its top. A toast rises 8 px into place as it fades in over
