@@ -435,6 +435,10 @@ class HomeController extends PageCubit<HomeState> {
   /// for it to end.
   final _asked = <int>{};
 
+  /// Ends once a sweep has taken what is asked now and measured it, or it is
+  /// dropped.
+  Completer<void>? _askedDone;
+
   /// Locations a sweep saved a delay for that the catalog does not list yet.
   final _unlisted = <int>{};
 
@@ -741,18 +745,20 @@ class HomeController extends PageCubit<HomeState> {
     }
   }
 
-  /// Measures [only] that location, or every listed one, and returns once the
-  /// sweeps they are in end. A location already in a sweep stays in it.
+  /// Measures [only] that location, or every listed one, and returns once
+  /// they are measured. A location already in a sweep stays in it.
   /// Mid-transition they wait for it to end, and a tunnel that captures all
   /// traffic leaves nothing to measure. The results reach the screen through
   /// the catalog as each is saved.
   Future<void> measureLocations({Location? only}) {
-    final ids = only == null
-        ? [for (final item in state.locations.all) item.id]
-        : [only.id];
-    _asked.addAll(ids);
+    _asked.addAll(
+      only == null
+          ? [for (final item in state.locations.all) item.id]
+          : [only.id],
+    );
+    final done = _askedDone ??= Completer();
     _measureAsked();
-    return Future.wait({for (final id in ids) ?_sweeps[id]});
+    return done.future;
   }
 
   /// Starts one sweep for what was asked. A location already in a sweep is
@@ -764,7 +770,6 @@ class HomeController extends PageCubit<HomeState> {
         break;
       case MeasureReadiness.ready:
         final fresh = _asked.where((id) => !_sweeps.containsKey(id)).toSet();
-        _asked.clear();
         if (fresh.isNotEmpty) {
           final done = Completer<void>();
           for (final id in fresh) {
@@ -773,7 +778,14 @@ class HomeController extends PageCubit<HomeState> {
           _unlisted.removeAll(fresh);
           unawaited(_sweep(fresh).whenComplete(done.complete));
         }
+        _askedDone?.complete(
+          Future.wait({for (final id in _asked) ?_sweeps[id]}).then((_) {}),
+        );
+        _askedDone = null;
+        _asked.clear();
       case MeasureReadiness.onlyWithVpnOff:
+        _askedDone?.complete();
+        _askedDone = null;
         _asked.clear();
     }
     _showMeasuring();
