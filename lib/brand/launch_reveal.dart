@@ -7,7 +7,8 @@ import 'package:onexray/brand/theme.dart';
 /// The launch screen inside the App: the mark in the middle, where the native
 /// launch screens draw it, until [child] is ready. Then [child] fades in while
 /// the mark flies into the [LaunchMarkLanding] that [child] shows, or fades
-/// where it is when there is none. Later changes of [child] show at once.
+/// where it is when there is none. Later, another kind of page fades in over
+/// the one it replaces, as the tabs do after «Вход».
 class LaunchReveal extends StatefulWidget {
   const LaunchReveal({super.key, required this.child});
 
@@ -23,7 +24,7 @@ class LaunchReveal extends StatefulWidget {
 }
 
 class _LaunchRevealState extends State<LaunchReveal>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final _controller = AnimationController(
     vsync: this,
     duration: LaunchReveal.duration,
@@ -33,6 +34,21 @@ class _LaunchRevealState extends State<LaunchReveal>
     curve: BrandMotion.smoothOut,
   );
   final _flight = _Flight();
+
+  /// A later page fading in over [_leaving], the one it replaces.
+  late final _arrival = AnimationController(
+    vsync: this,
+    duration: LaunchReveal.duration,
+    value: 1,
+  );
+  late final _arriving = CurvedAnimation(
+    parent: _arrival,
+    curve: BrandMotion.smoothOut,
+  );
+  Widget? _leaving;
+
+  /// Counts pages, so each keeps its place in the tree as it gives way.
+  int _page = 0;
   final _stack = GlobalKey();
   Timer? _spinnerTimer;
   bool _spinner = false;
@@ -66,9 +82,23 @@ class _LaunchRevealState extends State<LaunchReveal>
           setState(() => _landing = _measureLanding());
         }
       });
+    } else if (_revealed &&
+        old.child != null &&
+        !Widget.canUpdate(old.child!, widget.child!)) {
+      _arrive(old.child!);
     } else {
       _reveal();
     }
+  }
+
+  /// Fades the new page in over [leaving], which then goes.
+  void _arrive(Widget leaving) {
+    _page++;
+    if (BrandMotion.reduced(context)) return;
+    _leaving = leaving;
+    _arrival.forward(from: 0).whenCompleteOrCancel(() {
+      if (mounted && _arrival.isCompleted) setState(() => _leaving = null);
+    });
   }
 
   @override
@@ -76,6 +106,8 @@ class _LaunchRevealState extends State<LaunchReveal>
     _spinnerTimer?.cancel();
     _progress.dispose();
     _controller.dispose();
+    _arriving.dispose();
+    _arrival.dispose();
     _flight.dispose();
     super.dispose();
   }
@@ -90,6 +122,8 @@ class _LaunchRevealState extends State<LaunchReveal>
 
   void _restart() {
     _run++;
+    _leaving = null;
+    _arrival.value = 1;
     _controller.value = 0;
     _revealing = false;
     _revealed = false;
@@ -136,9 +170,28 @@ class _LaunchRevealState extends State<LaunchReveal>
   @override
   Widget build(BuildContext context) {
     final child = widget.child;
+    final leaving = _leaving;
     final content = child == null
         ? null
-        : _FlightScope(flight: _flight, child: child);
+        : _FlightScope(
+            flight: _flight,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (leaving != null)
+                  KeyedSubtree(
+                    key: ValueKey(_page - 1),
+                    child: IgnorePointer(
+                      child: ExcludeSemantics(child: leaving),
+                    ),
+                  ),
+                KeyedSubtree(
+                  key: ValueKey(_page),
+                  child: FadeTransition(opacity: _arriving, child: child),
+                ),
+              ],
+            ),
+          );
     // One tree throughout, so [child] keeps its state once the mark is gone.
     return LayoutBuilder(
       builder: (context, constraints) {

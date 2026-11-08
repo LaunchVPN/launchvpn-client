@@ -44,7 +44,8 @@ class LoginPage extends StatefulWidget {
   final ShareService? links;
 
   /// «Вход» over the tabs in [mode], closed by the sign-in it exists for:
-  /// the first true from [signedIn].
+  /// the first true from [signedIn]. On top it leaves as it came, with the
+  /// route's own transition.
   static Future<void> showOverTabs(
     BuildContext context, {
     required AccountService account,
@@ -57,7 +58,11 @@ class LoginPage extends StatefulWidget {
       builder: (_) => LoginPage(account: account, mode: mode, links: links),
     );
     final closing = signedIn.where((value) => value).listen((_) {
-      if (route.isActive) navigator.removeRoute(route);
+      if (route.isCurrent) {
+        navigator.pop();
+      } else if (route.isActive) {
+        navigator.removeRoute(route);
+      }
     });
     try {
       await navigator.push(route);
