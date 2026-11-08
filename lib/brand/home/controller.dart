@@ -148,7 +148,7 @@ class HomeState {
   /// soon as the tunnel is up.
   final ConnectionCheckView? check;
 
-  /// The locations «Локации» is measuring or has queued, by row ID.
+  /// The locations «Локации» shows as being measured, by row ID.
   final Set<int> measuring;
 
   /// «Лимит устройств» in place of the toggle, once the tunnel is off. An
@@ -431,6 +431,17 @@ class HomeController extends PageCubit<HomeState> {
   /// The sweep each location is in, until it ends.
   final _sweeps = <int, Future<void>>{};
 
+  /// Locations asked for that no sweep has taken yet. Mid-transition they wait
+  /// for it to end.
+  final _asked = <int>{};
+
+  /// Ends once a sweep has taken what is asked now and measured it, or it is
+  /// dropped.
+  Completer<void>? _askedDone;
+
+  /// Locations a sweep saved a delay for that the catalog does not list yet.
+  final _unlisted = <int>{};
+
   /// An expiry this close gets a timer, and so does a running tunnel, which
   /// checks again at least this often. Otherwise a later expiry is checked
   /// when the subscription refreshes or the App returns.
@@ -457,6 +468,11 @@ class HomeController extends PageCubit<HomeState> {
         },
       ),
     );
+    if (_asked.isNotEmpty &&
+        next.measureReadiness != MeasureReadiness.waiting) {
+      // The new state is not current until this returns.
+      scheduleMicrotask(_measureAsked);
+    }
   }
 
   void _connectionChanged() {
@@ -487,7 +503,7 @@ class HomeController extends PageCubit<HomeState> {
   Future<void> initialize() async {
     _catalog ??= ServerCatalog.watch(_db).listen(
       (catalog) {
-        emit(state.copyWith(catalog: catalog));
+        _showMeasuring(catalog: catalog);
         _checkExpiry(catalog.sources.lastOrNull);
       },
       onError: (Object error) =>
@@ -729,50 +745,101 @@ class HomeController extends PageCubit<HomeState> {
     }
   }
 
-  /// Measures [only] that location, or every listed one. A location already
-  /// in a sweep stays in it, and the call returns once all of them are done.
-  /// The results reach the screen through the catalog as each is saved.
+  /// Measures [only] that location, or every listed one, and returns once
+  /// they are measured. A location already in a sweep stays in it.
+  /// Mid-transition they wait for it to end, and a tunnel that captures all
+  /// traffic leaves nothing to measure. The results reach the screen through
+  /// the catalog as each is saved.
   Future<void> measureLocations({Location? only}) {
-    if (state.measureReadiness != MeasureReadiness.ready) {
-      return Future.value();
+    _asked.addAll(
+      only == null
+          ? [for (final item in state.locations.all) item.id]
+          : [only.id],
+    );
+    final done = _askedDone ??= Completer();
+    _measureAsked();
+    return done.future;
+  }
+
+  /// Starts one sweep for what was asked. A location already in a sweep is
+  /// left to it: one a transition stops asks again for what it left.
+  void _measureAsked() {
+    if (isClosed) return;
+    switch (state.measureReadiness) {
+      case MeasureReadiness.waiting:
+        break;
+      case MeasureReadiness.ready:
+        final fresh = _asked.where((id) => !_sweeps.containsKey(id)).toSet();
+        if (fresh.isNotEmpty) {
+          final done = Completer<void>();
+          for (final id in fresh) {
+            _sweeps[id] = done.future;
+          }
+          _unlisted.removeAll(fresh);
+          unawaited(_sweep(fresh).whenComplete(done.complete));
+        }
+        _askedDone?.complete(
+          Future.wait({for (final id in _asked) ?_sweeps[id]}).then((_) {}),
+        );
+        _askedDone = null;
+        _asked.clear();
+      case MeasureReadiness.onlyWithVpnOff:
+        _askedDone?.complete();
+        _askedDone = null;
+        _asked.clear();
     }
-    final ids = only == null
-        ? [for (final item in state.locations.all) item.id]
-        : [only.id];
-    final fresh = {
-      for (final id in ids)
-        if (!_sweeps.containsKey(id)) id,
-    };
-    if (fresh.isNotEmpty) {
-      final done = Completer<void>();
-      for (final id in fresh) {
-        _sweeps[id] = done.future;
-      }
-      _showMeasuring();
-      unawaited(_sweep(fresh).whenComplete(done.complete));
-    }
-    return Future.wait({for (final id in ids) ?_sweeps[id]});
+    _showMeasuring();
   }
 
   Future<void> _sweep(Set<int> ids) async {
+    var stopped = false;
     try {
       await _pingLocations(
         state.catalog.servers.where((row) => ids.contains(row.id)).toList(),
-        isCancelled: () =>
-            isClosed || state.measureReadiness != MeasureReadiness.ready,
+        isCancelled: () => stopped =
+            stopped ||
+            isClosed ||
+            state.measureReadiness != MeasureReadiness.ready,
       );
     } catch (error) {
       ygLogger('measure locations failed (${error.runtimeType})');
-    } finally {
-      ids.forEach(_sweeps.remove);
-      _showMeasuring();
     }
+    try {
+      final saved = {
+        for (final row in await _db.coreConfigDao.allActiveServerRows())
+          if (ids.contains(row.id) && row.delay != PingDelayConstants.unknown)
+            row.id,
+      };
+      _unlisted.addAll(saved);
+      if (stopped) _asked.addAll(ids.difference(saved));
+    } catch (error) {
+      ygLogger('read measured locations failed (${error.runtimeType})');
+    }
+    ids.forEach(_sweeps.remove);
+    _measureAsked();
   }
 
-  void _showMeasuring() {
-    if (!isClosed) {
-      emit(state.copyWith(measuring: Set.unmodifiable(_sweeps.keys)));
-    }
+  /// A location shows it is being measured while it waits for a sweep, and in
+  /// one until the catalog lists its new delay. A sweep forgets the last delay
+  /// a moment after it starts, so until then that one still shows.
+  void _showMeasuring({ServerCatalog? catalog}) {
+    if (isClosed) return;
+    final unmeasured = {
+      for (final row in (catalog ?? state.catalog).servers)
+        if (row.delay == PingDelayConstants.unknown) row.id,
+    };
+    // Listed, or gone from the catalog.
+    _unlisted.retainAll(unmeasured);
+    emit(
+      state.copyWith(
+        catalog: catalog,
+        measuring: Set.unmodifiable({
+          ..._asked,
+          ..._unlisted,
+          ..._sweeps.keys.where(unmeasured.contains),
+        }),
+      ),
+    );
   }
 
   /// Connects from off, cancels a connection in progress, otherwise disconnects.

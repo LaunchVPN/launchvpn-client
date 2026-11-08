@@ -399,6 +399,30 @@ void main() {
       tester,
     ) async {
       await pumpGroups(tester);
+      coordinator.state.value = const ConnectionView(
+        phase: ConnectionPhase.connecting,
+      );
+      await tester.pump();
+      // The dots never settle.
+      await tester.tap(find.byKey(const ValueKey('home-location')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(sweeps, isEmpty);
+      expect(find.bySemanticsLabel('Замеряем пинг'), findsNWidgets(4));
+
+      coordinator.state.value = ConnectionView(
+        phase: ConnectionPhase.connected,
+        runtime: _runtime(DateTime(2026, 11, 7)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(sweeps.single, hasLength(4));
+    });
+
+    testWidgets('a tap while connecting measures that location once up', (
+      tester,
+    ) async {
+      await pumpGroups(tester);
       await openLocations(tester);
       sweeps.clear();
       coordinator.state.value = const ConnectionView(
@@ -408,6 +432,8 @@ void main() {
       await tester.tap(find.text('516 мс'));
       await tester.pump();
       expect(sweeps, isEmpty);
+      expect(find.text('516 мс'), findsNothing);
+      expect(find.bySemanticsLabel('Замеряем пинг'), findsOneWidget);
 
       coordinator.state.value = ConnectionView(
         phase: ConnectionPhase.connected,
@@ -415,7 +441,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(sweeps.single, hasLength(4));
+      expect(sweeps.single, hasLength(1));
     });
 
     testWidgets('pulling the list measures every location again', (
