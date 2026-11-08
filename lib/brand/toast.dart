@@ -92,12 +92,17 @@ void showBrandToast(
     0.0,
     _wideWidth,
   );
+  final compact = top != null;
   // Where it comes from and goes back to: below its place, or above at the top.
-  final away = Offset(0, top == null ? BrandMotion.step : -BrandMotion.step);
+  final away = Offset(0, compact ? -BrandMotion.step : BrandMotion.step);
   final arrive = BrandMotion.of(screen, BrandMotion.slow);
   final leave = BrandMotion.of(screen, BrandMotion.medium);
+  // The toaster plays the entrance and the exit on one controller and, when
+  // their lengths differ, restarts it on a hide, which then never takes the
+  // toast away. So the exit fades in [leave] but both last [arrive], and both
+  // keep one shape, so the toast is not rebuilt as it starts to leave.
+  final span = CustomEffect(duration: arrive, builder: (_, _, child) => child);
   final inset = MediaQuery.viewPaddingOf(screen);
-  final compact = top != null;
   toaster.show(
     ShadToast(
       title: compact
@@ -154,6 +159,7 @@ void showBrandToast(
         FadeEffect(duration: arrive, curve: BrandMotion.smoothOut),
         MoveEffect(begin: away, end: Offset.zero),
         if (!compact) _clearOfArea,
+        span,
       ],
       animateOut: [
         FadeEffect(
@@ -164,10 +170,7 @@ void showBrandToast(
         ),
         MoveEffect(begin: Offset.zero, end: away),
         if (!compact) _clearOfArea,
-        // The toaster plays both on one controller and, when their lengths
-        // differ, restarts it on a hide, which then never takes the toast
-        // away. The exit fades in [leave] and lasts as long as the entrance.
-        CustomEffect(duration: arrive, builder: (_, _, child) => child),
+        span,
       ],
     ),
   );

@@ -1017,7 +1017,7 @@ class _RefreshArcState extends State<_RefreshArc>
   }
 
   void _follow() {
-    if (_loading && !MediaQuery.disableAnimationsOf(context)) {
+    if (_loading && !BrandMotion.reduced(context)) {
       if (!_turn.isAnimating) unawaited(_turn.repeat());
     } else {
       _turn.stop();

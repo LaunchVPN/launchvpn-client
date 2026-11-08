@@ -106,7 +106,7 @@ class _LaunchRevealState extends State<LaunchReveal>
     final run = ++_run;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || run != _run) return;
-      if (MediaQuery.disableAnimationsOf(context)) {
+      if (BrandMotion.reduced(context)) {
         _controller.value = 1;
         return _finish();
       }

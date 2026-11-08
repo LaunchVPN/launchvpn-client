@@ -5,10 +5,11 @@ import 'package:onexray/brand/pressable.dart';
 void main() {
   const key = Key('target');
 
-  /// A 200 px square that taps into [taps], with less motion when [reduced].
+  /// A 200 px square that counts its taps in [onTap], with less motion when
+  /// [reduced].
   Future<void> pump(
     WidgetTester tester, {
-    required List<int> taps,
+    VoidCallback? onTap,
     bool enabled = true,
     bool reduced = false,
   }) => tester.pumpWidget(
@@ -16,7 +17,7 @@ void main() {
       data: MediaQueryData(disableAnimations: reduced),
       child: Center(
         child: Pressable(
-          onTap: enabled ? () => taps.add(1) : null,
+          onTap: enabled ? onTap ?? () {} : null,
           child: const SizedBox.square(key: key, dimension: 200),
         ),
       ),
@@ -28,12 +29,10 @@ void main() {
   testWidgets('a control shrinks under a finger and comes back', (
     tester,
   ) async {
-    final taps = <int>[];
-    await pump(tester, taps: taps);
+    var taps = 0;
+    await pump(tester, onTap: () => taps++);
 
-    final finger = await tester.startGesture(
-      tester.getCenter(find.byKey(key)),
-    );
+    final finger = await tester.startGesture(tester.getCenter(find.byKey(key)));
     await tester.pumpAndSettle();
     final held = width(tester);
     await finger.up();
@@ -41,12 +40,11 @@ void main() {
 
     expect(held, moreOrLessEquals(194));
     expect(width(tester), 200);
-    expect(taps, hasLength(1));
+    expect(taps, 1);
   });
 
   testWidgets('a quick tap still shows the press', (tester) async {
-    final taps = <int>[];
-    await pump(tester, taps: taps);
+    await pump(tester);
 
     await tester.tap(find.byKey(key));
     var smallest = width(tester);
@@ -64,7 +62,7 @@ void main() {
     ('a control under reduced motion', true, true),
   ]) {
     testWidgets('$name keeps its size under a finger', (tester) async {
-      await pump(tester, taps: [], enabled: enabled, reduced: reduced);
+      await pump(tester, enabled: enabled, reduced: reduced);
 
       final finger = await tester.startGesture(
         tester.getCenter(find.byKey(key)),

@@ -42,7 +42,7 @@ class _PressableState extends State<Pressable>
   }
 
   void _hold(bool held) {
-    _held = held && !MediaQuery.disableAnimationsOf(context);
+    _held = held && !BrandMotion.reduced(context);
     _follow();
   }
 
@@ -57,12 +57,15 @@ class _PressableState extends State<Pressable>
   }
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    behavior: HitTestBehavior.opaque,
-    onTap: widget.onTap,
-    onTapDown: widget.onTap == null ? null : (_) => _hold(true),
-    onTapUp: widget.onTap == null ? null : (_) => _hold(false),
-    onTapCancel: widget.onTap == null ? null : () => _hold(false),
-    child: ScaleTransition(scale: _scale, child: widget.child),
-  );
+  Widget build(BuildContext context) {
+    final enabled = widget.onTap != null;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap,
+      onTapDown: enabled ? (_) => _hold(true) : null,
+      onTapUp: enabled ? (_) => _hold(false) : null,
+      onTapCancel: enabled ? () => _hold(false) : null,
+      child: ScaleTransition(scale: _scale, child: widget.child),
+    );
+  }
 }

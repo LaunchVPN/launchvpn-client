@@ -42,8 +42,8 @@ upstream pages kept for merging. They are not reachable in this build.
   `BrandTheme.palette` also feeds upstream's Material and Shad themes, so shared dialogs and
   toasts match. Manrope and Unbounded are bundled with their licenses in `assets/fonts/`.
 - Motion takes its durations, curves and distances from `BrandMotion` in the theme, after
-  transitions.dev's scale, and `BrandMotion.of` drops a transition to nothing when the system asks
-  for less motion. Location cards, settings rows, preset segments and the connect toggle tap
+  transitions.dev's scale. When the system asks for less motion, `BrandMotion.of` drops a
+  transition to nothing, and loops and presses that ask `BrandMotion.reduced` hold still. Location cards, settings rows, preset segments and the connect toggle tap
   through `Pressable`: they shrink to 97% under a finger for 150 ms, a quick tap included, and
   keep still when disabled or under reduced motion.
 - Our screens tell outcomes with `showBrandToast`: a success, error or info icon on a tinted
@@ -51,9 +51,9 @@ upstream pages kept for merging. They are not reachable in this build.
   on the tile; a longer text starts at its top. A toast rises 8 px into place as it fades in over
   400 ms and fades back down in 350 ms; the compact one at the top drops from above the same way.
   When the tabs come or go, a toast on screen glides to its new height instead of showing again.
-  Questions and waits are bottom sheets from
-  `lib/brand/sheet.dart`, never centred dialogs: a confirmation with a red action, a notice, a
-  one-field prompt above the keyboard, and a progress sheet that cannot be closed.
+  Questions and waits are bottom sheets from `lib/brand/sheet.dart`, never centred dialogs: a
+  confirmation with a red action, a notice, a one-field prompt above the keyboard, and a progress
+  sheet that cannot be closed.
 - Home's toggle follows `ConnectionCoordinator`. A tap connects, cancels our own connection in
   progress, or disconnects, which also stops a start from outside the app.
 - A session falling from connected to connecting reads as a reconnect. No platform emits that

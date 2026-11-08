@@ -336,7 +336,7 @@ class _WaveDotsState extends State<_WaveDots>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (BrandMotion.reduced(context)) {
       _wave.stop();
     } else if (!_wave.isAnimating) {
       unawaited(_wave.repeat());
@@ -440,7 +440,7 @@ class _PullMarkState extends State<_PullMark>
   }
 
   void _follow() {
-    if (_launched && !MediaQuery.disableAnimationsOf(context)) {
+    if (_launched && !BrandMotion.reduced(context)) {
       if (!_flight.isAnimating) unawaited(_flight.repeat());
     } else {
       _flight
