@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/error_text.dart';
 import 'package:onexray/brand/login/code_controller.dart';
 import 'package:onexray/brand/login/footer_link.dart';
+import 'package:onexray/brand/shake.dart';
 import 'package:onexray/brand/text_field.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
@@ -41,6 +42,9 @@ class _EmailCodeViewState extends State<EmailCodeView> {
   );
   final _code = TextEditingController();
 
+  /// Counts wrong codes, each of which shakes the field.
+  var _wrongCodes = 0;
+
   @override
   void dispose() {
     unawaited(_controller.close());
@@ -59,8 +63,13 @@ class _EmailCodeViewState extends State<EmailCodeView> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return BlocBuilder<EmailCodeController, EmailCodeState>(
+    return BlocConsumer<EmailCodeController, EmailCodeState>(
       bloc: _controller,
+      listenWhen: (before, after) =>
+          before.verifying &&
+          !after.verifying &&
+          after.error == EmailCodeError.wrongCode,
+      listener: (_, _) => setState(() => _wrongCodes++),
       builder: (context, state) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -71,28 +80,31 @@ class _EmailCodeViewState extends State<EmailCodeView> {
             style: BrandText.hint,
           ),
           const SizedBox(height: 24),
-          AutofillGroup(
-            child: BrandTextField(
-              icon: LucideIcons.keyRound,
-              hint: l.codeHint,
-              controller: _code,
-              enabled: !state.verifying,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.done,
-              autofillHints: const [AutofillHints.oneTimeCode],
-              // A pasted «123 456» or «Код: 123456» keeps only its digits.
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(_codeLength),
-              ],
-              onSubmitted: (_) => _verify(),
+          Shake(
+            trigger: _wrongCodes,
+            child: AutofillGroup(
+              child: BrandTextField(
+                icon: LucideIcons.keyRound,
+                hint: l.codeHint,
+                controller: _code,
+                enabled: !state.verifying,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                // A pasted «123 456» or «Код: 123456» keeps only its digits.
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(_codeLength),
+                ],
+                onSubmitted: (_) => _verify(),
+              ),
             ),
           ),
-          if (state.error case final error?) ...[
-            const SizedBox(height: 12),
-            ErrorText(_errorMessage(l, error, state.attemptsLeft)),
-          ],
+          ErrorText(switch (state.error) {
+            null => null,
+            final error => _errorMessage(l, error, state.attemptsLeft),
+          }),
           const SizedBox(height: 12),
           ListenableBuilder(
             listenable: _code,

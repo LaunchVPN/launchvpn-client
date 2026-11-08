@@ -45,6 +45,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../support/fake_account_api.dart';
 import '../../support/fake_url_launcher.dart';
+import '../../support/opacity.dart';
 
 const _largeScale = 3.0;
 
@@ -88,9 +89,17 @@ void main() {
   late Future<SubscriptionRefreshResult> Function(SubscriptionData) refresh;
   late ValueNotifier<bool> deviceLimit;
 
+  /// Lets a change Home has heard of play out: a frame to rebuild, which
+  /// starts the motion, and the motion itself.
+  Future<void> letMotionEnd(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(BrandMotion.slow);
+  }
+
   Future<void> pumpHome(
     WidgetTester tester, {
     double scale = 1,
+    bool reduced = false,
     AppDistribution distribution = AppDistribution.current,
     Locale locale = const Locale('ru'),
     ConnectionPlatform platform = ConnectionPlatform.ios,
@@ -160,8 +169,10 @@ void main() {
         localizationsDelegates: AppLocalePolicy.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(textScaler: TextScaler.linear(scale)),
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(scale),
+            disableAnimations: reduced,
+          ),
           child: ShadTheme(
             data: BrandTheme.shad(TextScaler.linear(scale)),
             child: ShadToaster(child: child!),
@@ -201,6 +212,7 @@ void main() {
       await pumpEventQueue(times: 20);
     });
     await tester.pump();
+    await letMotionEnd(tester);
   }
 
   Future<int> addGroup(
@@ -232,7 +244,7 @@ void main() {
       await pumpEventQueue(times: 20);
       return id;
     });
-    await tester.pump();
+    await letMotionEnd(tester);
     return id!;
   }
 
@@ -430,7 +442,7 @@ void main() {
       );
       await tester.pump();
       await tester.tap(find.text('516 мс'));
-      await tester.pump();
+      await letMotionEnd(tester);
       expect(sweeps, isEmpty);
       expect(find.text('516 мс'), findsNothing);
       expect(find.bySemanticsLabel('Замеряем пинг'), findsOneWidget);
@@ -538,12 +550,14 @@ void main() {
         await pumpEventQueue(times: 20);
       });
       await tester.pump();
+      await letMotionEnd(tester);
     }
 
     Future<void> close(WidgetTester tester) async {
       await tester.tap(find.byTooltip('Закрыть объявление'));
       await tester.runAsync(() => pumpEventQueue(times: 20));
       await tester.pump();
+      await letMotionEnd(tester);
     }
 
     testWidgets('shows what the panel sent below the presets', (tester) async {
@@ -675,6 +689,7 @@ void main() {
         ),
       );
       await tester.pump();
+      await letMotionEnd(tester);
     }
 
     testWidgets(
@@ -752,9 +767,81 @@ void main() {
     ]) {
       coordinator.state.value = view;
       await tester.pump();
+      await letMotionEnd(tester);
       expect(toggleTop(tester), top, reason: title);
       expect(tester.getTopLeft(find.text(title)).dy, titleTop, reason: title);
     }
+  });
+
+  group('a change of state', () {
+    Future<void> fail(WidgetTester tester) async {
+      coordinator.state.value = const ConnectionView(
+        phase: ConnectionPhase.failed,
+        issue: 'startFailed',
+      );
+      // A frame to hear of it, one to rebuild.
+      await tester.pump();
+      await tester.pump();
+    }
+
+    Future<void> connect(WidgetTester tester) async {
+      coordinator.state.value = const ConnectionView(
+        phase: ConnectionPhase.connecting,
+      );
+      // A frame to hear of it, one to rebuild.
+      await tester.pump();
+      await tester.pump();
+    }
+
+    testWidgets('swaps the status softly: out above, in from below', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+
+      await connect(tester);
+      await tester.pump(const Duration(milliseconds: 75));
+      final old = find.text('Не подключено');
+      final next = find.text('Подключение…');
+
+      expect(shownOpacity(tester, old), inExclusiveRange(0, 1));
+      expect(shownOpacity(tester, next), inExclusiveRange(0, 1));
+      expect(tester.getTopLeft(old).dy, lessThan(tester.getTopLeft(next).dy));
+      expect(find.text('Нажмите, чтобы подключиться'), findsOneWidget);
+
+      await tester.pump(BrandMotion.quick);
+      expect(old, findsNothing);
+      expect(shownOpacity(tester, next), 1);
+      expect(find.text('Нажмите, чтобы подключиться'), findsNothing);
+    });
+
+    testWidgets('fades an error screen in over the toggle', (tester) async {
+      await pumpHome(tester);
+      await addSubscription(tester);
+
+      await fail(tester);
+      await tester.pump(const Duration(milliseconds: 100));
+      final title = find.text('Не удалось подключиться');
+
+      expect(shownOpacity(tester, title), inExclusiveRange(0, 1));
+      expect(find.byType(ConnectToggle), findsOneWidget);
+
+      await tester.pump(BrandMotion.slow);
+      expect(shownOpacity(tester, title), 1);
+      expect(find.byType(ConnectToggle), findsNothing);
+    });
+
+    testWidgets('with less motion changes at once', (tester) async {
+      await pumpHome(tester, reduced: true);
+      await addSubscription(tester);
+
+      await connect(tester);
+      expect(find.text('Не подключено'), findsNothing);
+
+      await fail(tester);
+      await tester.pump();
+      expect(find.byType(ConnectToggle), findsNothing);
+    });
   });
 
   testWidgets('without a subscription it says where to get one', (
@@ -895,6 +982,7 @@ void main() {
         issue: issue,
       );
       await tester.pump();
+      await letMotionEnd(tester);
     }
 
     /// Lets the connection queue run, which needs real time between frames,
@@ -907,7 +995,7 @@ void main() {
         await tester.pump();
       }
       await tester.runAsync(() => pumpEventQueue(times: 50));
-      await tester.pump(const Duration(milliseconds: 300));
+      await letMotionEnd(tester);
       expect(done(), isTrue);
     }
 
@@ -1001,6 +1089,7 @@ void main() {
         phase: ConnectionPhase.connected,
       );
       await tester.pump();
+      await letMotionEnd(tester);
 
       expect(find.text('Не удалось подключиться'), findsNothing);
       expect(toggleState(tester), ConnectToggleState.on);
@@ -1058,6 +1147,7 @@ void main() {
       await tester.tap(find.text('Обновить статус'));
       await tester.runAsync(() => pumpEventQueue(times: 20));
       await tester.pump();
+      await letMotionEnd(tester);
     }
 
     testWidgets(
@@ -1253,6 +1343,7 @@ void main() {
       issue: 'stopFailed',
     );
     await tester.pump();
+    await letMotionEnd(tester);
 
     expect(find.text('VPN может быть включён'), findsOneWidget);
     expect(find.text('Нажмите, чтобы отключить'), findsOneWidget);

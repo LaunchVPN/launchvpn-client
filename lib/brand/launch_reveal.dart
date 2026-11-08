@@ -7,7 +7,8 @@ import 'package:onexray/brand/theme.dart';
 /// The launch screen inside the App: the mark in the middle, where the native
 /// launch screens draw it, until [child] is ready. Then [child] fades in while
 /// the mark flies into the [LaunchMarkLanding] that [child] shows, or fades
-/// where it is when there is none. Later changes of [child] show at once.
+/// where it is when there is none. Every later page of another kind fades in
+/// the same way over the one it replaces, as the tabs do after «Вход».
 class LaunchReveal extends StatefulWidget {
   const LaunchReveal({super.key, required this.child});
 
@@ -24,6 +25,8 @@ class LaunchReveal extends StatefulWidget {
 
 class _LaunchRevealState extends State<LaunchReveal>
     with SingleTickerProviderStateMixin {
+  /// The page fading in: the first one with the mark's flight, a later one
+  /// over [_leaving].
   late final _controller = AnimationController(
     vsync: this,
     duration: LaunchReveal.duration,
@@ -33,6 +36,12 @@ class _LaunchRevealState extends State<LaunchReveal>
     curve: BrandMotion.smoothOut,
   );
   final _flight = _Flight();
+
+  /// The page a later one replaces, shown under it until it is in.
+  Widget? _leaving;
+
+  /// Counts pages, so each keeps its place in the tree as it gives way.
+  int _page = 0;
   final _stack = GlobalKey();
   Timer? _spinnerTimer;
   bool _spinner = false;
@@ -58,7 +67,7 @@ class _LaunchRevealState extends State<LaunchReveal>
     if (widget.child == null) {
       // A retry after a start-up error: the mark comes back until it is ready.
       if (_revealing || _revealed) _restart();
-    } else if (_controller.isAnimating) {
+    } else if (!_revealed && _controller.isAnimating) {
       // The page may have changed mid-flight, as «Вход» giving way to the tabs.
       final run = _run;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -66,9 +75,23 @@ class _LaunchRevealState extends State<LaunchReveal>
           setState(() => _landing = _measureLanding());
         }
       });
+    } else if (_revealed &&
+        old.child != null &&
+        !Widget.canUpdate(old.child!, widget.child!)) {
+      _arrive(old.child!);
     } else {
       _reveal();
     }
+  }
+
+  /// Fades the new page in over [leaving], which then goes.
+  void _arrive(Widget leaving) {
+    _page++;
+    if (BrandMotion.reduced(context)) return;
+    _leaving = leaving;
+    _controller.forward(from: 0).whenCompleteOrCancel(() {
+      if (mounted && _controller.isCompleted) setState(() => _leaving = null);
+    });
   }
 
   @override
@@ -90,6 +113,7 @@ class _LaunchRevealState extends State<LaunchReveal>
 
   void _restart() {
     _run++;
+    _leaving = null;
     _controller.value = 0;
     _revealing = false;
     _revealed = false;
@@ -136,9 +160,19 @@ class _LaunchRevealState extends State<LaunchReveal>
   @override
   Widget build(BuildContext context) {
     final child = widget.child;
+    final leaving = _leaving;
     final content = child == null
         ? null
-        : _FlightScope(flight: _flight, child: child);
+        : _FlightScope(
+            flight: _flight,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (leaving != null) _shown(_page - 1, leaving, leaving: true),
+                _shown(_page, child),
+              ],
+            ),
+          );
     // One tree throughout, so [child] keeps its state once the mark is gone.
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -152,8 +186,7 @@ class _LaunchRevealState extends State<LaunchReveal>
           fit: StackFit.expand,
           children: [
             const ColoredBox(color: BrandColors.bg),
-            if (content != null)
-              FadeTransition(opacity: _progress, child: content),
+            ?content,
             if (!_revealed) ...[
               AnimatedBuilder(
                 animation: _progress,
@@ -198,6 +231,25 @@ class _LaunchRevealState extends State<LaunchReveal>
   }
 
   static const _markSize = 64.0;
+
+  /// The [page]th page, wrapped alike whether it arrives or leaves, so it
+  /// keeps its state as it gives way.
+  Widget _shown(int page, Widget child, {bool leaving = false}) => KeyedSubtree(
+    key: ValueKey(page),
+    child: IgnorePointer(
+      ignoring: leaving,
+      child: ExcludeFocus(
+        excluding: leaving,
+        child: ExcludeSemantics(
+          excluding: leaving,
+          child: FadeTransition(
+            opacity: leaving ? kAlwaysCompleteAnimation : _progress,
+            child: child,
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Where the launch mark lands. [child] is the mark itself, drawn with the

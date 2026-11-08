@@ -11,6 +11,7 @@ import 'package:onexray/brand/login/controller.dart';
 import 'package:onexray/brand/login/footer_link.dart';
 import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/shader_backdrop.dart';
+import 'package:onexray/brand/swap.dart';
 import 'package:onexray/brand/text_field.dart';
 import 'package:onexray/brand/sheet.dart';
 import 'package:onexray/brand/theme.dart';
@@ -43,7 +44,8 @@ class LoginPage extends StatefulWidget {
   final ShareService? links;
 
   /// «Вход» over the tabs in [mode], closed by the sign-in it exists for:
-  /// the first true from [signedIn].
+  /// the first true from [signedIn]. On top it leaves as it came, with the
+  /// route's own transition.
   static Future<void> showOverTabs(
     BuildContext context, {
     required AccountService account,
@@ -56,7 +58,11 @@ class LoginPage extends StatefulWidget {
       builder: (_) => LoginPage(account: account, mode: mode, links: links),
     );
     final closing = signedIn.where((value) => value).listen((_) {
-      if (route.isActive) navigator.removeRoute(route);
+      if (route.isCurrent) {
+        navigator.pop();
+      } else if (route.isActive) {
+        navigator.removeRoute(route);
+      }
     });
     try {
       await navigator.push(route);
@@ -150,20 +156,39 @@ class _LoginPageState extends State<LoginPage> {
                           child: LaunchMarkTile(),
                         ),
                         const SizedBox(height: 36),
-                        Text(
-                          signup == null ? l.loginTitle : l.codeTitle,
-                          style: BrandText.heroTitle,
-                        ),
-                        const SizedBox(height: 12),
-                        if (signup == null)
-                          _form(l, state)
-                        else
-                          EmailCodeView(
-                            key: ValueKey(signup),
-                            signup: signup,
-                            account: widget.account,
-                            onChangeEmail: _login.changeEmail,
+                        // The code comes in from the end, the form from the
+                        // start, each with its title.
+                        BrandSwap(
+                          shift: Offset(
+                            signup == null
+                                ? -BrandMotion.step
+                                : BrandMotion.step,
+                            0,
                           ),
+                          duration: BrandMotion.fast,
+                          curve: BrandMotion.smoothOut,
+                          alignment: AlignmentDirectional.topStart,
+                          child: Column(
+                            key: ValueKey(signup == null),
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                signup == null ? l.loginTitle : l.codeTitle,
+                                style: BrandText.heroTitle,
+                              ),
+                              const SizedBox(height: 12),
+                              if (signup == null)
+                                _form(l, state)
+                              else
+                                EmailCodeView(
+                                  key: ValueKey(signup),
+                                  signup: signup,
+                                  account: widget.account,
+                                  onChangeEmail: _login.changeEmail,
+                                ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -209,10 +234,7 @@ class _LoginPageState extends State<LoginPage> {
             ],
             onSubmitted: (_) => _submit(),
           ),
-          if (_formMessage(l, state) case final message?) ...[
-            const SizedBox(height: 12),
-            ErrorText(message),
-          ],
+          ErrorText(_formMessage(l, state)),
           const SizedBox(height: 12),
           ListenableBuilder(
             listenable: Listenable.merge([_email, _password]),
@@ -242,10 +264,10 @@ class _LoginPageState extends State<LoginPage> {
                 child: Text(l.loginTelegram),
               ),
             ),
-            if (state.telegramError case final error?) ...[
-              const SizedBox(height: 12),
-              ErrorText(_errorMessage(l, error)),
-            ],
+            ErrorText(switch (state.telegramError) {
+              null => null,
+              final error => _errorMessage(l, error),
+            }),
           ],
           const SizedBox(height: 12),
           TextButton.icon(

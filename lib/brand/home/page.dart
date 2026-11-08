@@ -24,6 +24,7 @@ import 'package:onexray/brand/settings/vpn_apps_page.dart';
 import 'package:onexray/brand/permission/vpn_permission_page.dart';
 import 'package:onexray/brand/pull.dart';
 import 'package:onexray/brand/state_hero.dart';
+import 'package:onexray/brand/swap.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/brand/toast.dart';
 import 'package:onexray/core/brand.dart';
@@ -311,32 +312,46 @@ class _HomePageState extends State<HomePage> {
           ),
           child: Column(
             children: [
-              if (update != null) ...[
-                const SizedBox(height: 20),
-                UpdateBanner(
-                  update: update,
-                  onUpdate: () =>
-                      openExternalLink(update.releaseUri, 'release'),
+              BrandReveal(
+                child: update == null
+                    ? null
+                    : Padding(
+                        key: ValueKey(update.latestVersion),
+                        padding: const EdgeInsets.only(top: 20),
+                        child: UpdateBanner(
+                          update: update,
+                          onUpdate: () =>
+                              openExternalLink(update.releaseUri, 'release'),
+                        ),
+                      ),
+              ),
+              Expanded(
+                child: BrandSwap.screen(
+                  child: switch (_Screen.of(
+                    state,
+                    accountEnded: accountEnded,
+                    subscriptionEnded: expired,
+                    trialWaitsOnTelegram: account.trialWaitsOnTelegram,
+                  )) {
+                    _Screen.trialTelegram => _trialTelegramContent(
+                      state,
+                      linking: account.linking,
+                    ),
+                    _Screen.expired => _expiredContent(
+                      state,
+                      onRefresh: account.refreshing || state.refreshing
+                          ? null
+                          : refresh,
+                    ),
+                    _Screen.deviceLimit => _deviceLimitContent(state),
+                    _Screen.failure => _failureContent(state, state.failure!),
+                    _Screen.connection => _connectionContent(
+                      state,
+                      _toggleGap(constraints.maxHeight, banner: update != null),
+                    ),
+                  },
                 ),
-              ],
-              if (accountEnded && account.trialWaitsOnTelegram)
-                ..._trialTelegramContent(state, linking: account.linking)
-              else if (expired)
-                ..._expiredContent(
-                  state,
-                  onRefresh: account.refreshing || state.refreshing
-                      ? null
-                      : refresh,
-                )
-              else if (state.showsDeviceLimit)
-                ..._deviceLimitContent(state)
-              else if (state.failure case final failure?)
-                ..._failureContent(state, failure)
-              else
-                ..._connectionContent(
-                  state,
-                  _toggleGap(constraints.maxHeight, banner: update != null),
-                ),
+              ),
             ],
           ),
         ),
@@ -354,11 +369,14 @@ class _HomePageState extends State<HomePage> {
 
   /// The mockups' state screens: a centered explanation and the ways out, in
   /// place of the toggle and the cards.
-  List<Widget> _stateContent(Widget hero, Widget actions) => [
-    Expanded(child: Center(child: hero)),
-    const SizedBox(height: 12),
-    actions,
-  ];
+  Widget _stateContent(_Screen screen, Widget hero, Widget actions) => Column(
+    key: ValueKey(screen),
+    children: [
+      Expanded(child: Center(child: hero)),
+      const SizedBox(height: 12),
+      actions,
+    ],
+  );
 
   /// The error screen offers only the panel's support: null without its link.
   VoidCallback? _contactSupport(HomeState state) =>
@@ -367,23 +385,21 @@ class _HomePageState extends State<HomePage> {
         _ => () => openSupport(state.subscription),
       };
 
-  List<Widget> _failureContent(HomeState state, HomeFailure failure) =>
-      _stateContent(
-        _FailureHero(failure),
-        _FailureActions(
-          onRetry: _toggle,
-          onChangeLocation: _openLocations,
-          onContactSupport: _contactSupport(state),
-        ),
-      );
+  Widget _failureContent(HomeState state, HomeFailure failure) => _stateContent(
+    _Screen.failure,
+    _FailureHero(failure),
+    _FailureActions(
+      onRetry: _toggle,
+      onChangeLocation: _openLocations,
+      onContactSupport: _contactSupport(state),
+    ),
+  );
 
-  List<Widget> _expiredContent(
-    HomeState state, {
-    required VoidCallback? onRefresh,
-  }) {
+  Widget _expiredContent(HomeState state, {required VoidCallback? onRefresh}) {
     final l = AppLocalizations.of(context)!;
     final renews = widget.distribution == AppDistribution.apk;
     return _stateContent(
+      _Screen.expired,
       StateHero.warning(
         icon: LucideIcons.calendar,
         title: l.homeExpiredTitle,
@@ -401,10 +417,11 @@ class _HomePageState extends State<HomePage> {
 
   /// A new account the trial waits on Telegram for: its email is at a
   /// domain anyone can make endless addresses on.
-  List<Widget> _trialTelegramContent(HomeState state, {required bool linking}) {
+  Widget _trialTelegramContent(HomeState state, {required bool linking}) {
     final l = AppLocalizations.of(context)!;
     final buys = widget.distribution == AppDistribution.apk;
     return _stateContent(
+      _Screen.trialTelegram,
       StateHero.accent(
         icon: LucideIcons.send,
         title: l.homeTrialTelegramTitle,
@@ -441,7 +458,8 @@ class _HomePageState extends State<HomePage> {
     if (mounted) await tellTelegramLink(context, outcome);
   }
 
-  List<Widget> _deviceLimitContent(HomeState state) => _stateContent(
+  Widget _deviceLimitContent(HomeState state) => _stateContent(
+    _Screen.deviceLimit,
     DeviceLimitHero(account: widget.account),
     DeviceLimitActions(
       account: widget.account,
@@ -449,57 +467,94 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
-  List<Widget> _connectionContent(HomeState state, double toggleGap) => [
-    SizedBox(height: toggleGap),
-    _Hero(state: state, onToggle: _toggle),
-    const SizedBox(height: 24),
-    // Only the toggle follows a pull; the cards stay under the finger.
-    Expanded(
-      child: PinnedOnPull(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (state.location case final location?)
-              LocationCard(
-                key: const ValueKey('home-location'),
-                location: location,
-                // "No answer" would contradict a tunnel that works.
-                delay: PingDelayConstants.isSuccessful(location.delay)
-                    ? locationDelayLabel(
-                        AppLocalizations.of(context)!,
-                        location.delay,
-                      )
-                    : null,
-                onTap: _openLocations,
-                trailing: const Icon(
-                  LucideIcons.chevronRight,
-                  size: 20,
-                  color: BrandColors.muted,
+  Widget _connectionContent(HomeState state, double toggleGap) => Column(
+    key: const ValueKey(_Screen.connection),
+    children: [
+      // Moves with the update banner as it opens or closes above.
+      AnimatedContainer(
+        duration: BrandMotion.of(context, BrandReveal.duration),
+        curve: BrandMotion.smoothOut,
+        height: toggleGap,
+      ),
+      _Hero(state: state, onToggle: _toggle),
+      const SizedBox(height: 24),
+      // Only the toggle follows a pull; the cards stay under the finger.
+      Expanded(
+        child: PinnedOnPull(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (state.location case final location?)
+                LocationCard(
+                  key: const ValueKey('home-location'),
+                  location: location,
+                  // "No answer" would contradict a tunnel that works.
+                  delay: PingDelayConstants.isSuccessful(location.delay)
+                      ? locationDelayLabel(
+                          AppLocalizations.of(context)!,
+                          location.delay,
+                        )
+                      : null,
+                  onTap: _openLocations,
+                  trailing: const Icon(
+                    LucideIcons.chevronRight,
+                    size: 20,
+                    color: BrandColors.muted,
+                  ),
                 ),
-              ),
-            if (state.subscription != null) ...[
-              const SizedBox(height: 20),
-              _PresetSwitch(
-                presets: _controller.presets,
-                selected: state.preset,
-                onSelect: state.canChangeConnection
-                    ? (preset) =>
-                          choosePreset(context, _controller, preset, _run)
-                    : null,
+              if (state.subscription != null) ...[
+                const SizedBox(height: 20),
+                _PresetSwitch(
+                  presets: _controller.presets,
+                  selected: state.preset,
+                  onSelect: state.canChangeConnection
+                      ? (preset) =>
+                            choosePreset(context, _controller, preset, _run)
+                      : null,
+                ),
+              ],
+              BrandReveal(
+                child: switch (state.announcement) {
+                  null => null,
+                  final text => Padding(
+                    key: ValueKey(text),
+                    padding: const EdgeInsets.only(top: 20),
+                    child: _AnnouncementBanner(
+                      text: text,
+                      onClose: _controller.dismissAnnouncement,
+                    ),
+                  ),
+                },
               ),
             ],
-            if (state.announcement case final text?) ...[
-              const SizedBox(height: 20),
-              _AnnouncementBanner(
-                text: text,
-                onClose: _controller.dismissAnnouncement,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
-    ),
-  ];
+    ],
+  );
+}
+
+/// What Home shows under the header, each giving way to the next with
+/// [BrandSwap.screen].
+enum _Screen {
+  trialTelegram,
+  expired,
+  deviceLimit,
+  failure,
+  connection;
+
+  static _Screen of(
+    HomeState state, {
+    required bool accountEnded,
+    required bool subscriptionEnded,
+    required bool trialWaitsOnTelegram,
+  }) => switch (state) {
+    _ when accountEnded && trialWaitsOnTelegram => trialTelegram,
+    _ when subscriptionEnded => expired,
+    HomeState(showsDeviceLimit: true) => deviceLimit,
+    HomeState(failure: _?) => failure,
+    _ => connection,
+  };
 }
 
 class _Header extends StatelessWidget {
@@ -527,13 +582,23 @@ class _Header extends StatelessWidget {
       Expanded(
         child: Align(
           alignment: AlignmentDirectional.centerEnd,
-          // Holds the pill's place, so its arrival does not move the toggle.
-          child: Visibility(
-            visible: daysLeft != null,
-            maintainSize: true,
-            maintainAnimation: true,
-            maintainState: true,
-            child: _DaysPill(days: daysLeft ?? _placeholderDays),
+          // The pill fades in and out over a placeholder that holds its
+          // place, so its arrival does not move the toggle.
+          child: BrandSwap(
+            duration: BrandMotion.slow,
+            reverseDuration: BrandMotion.medium,
+            curve: BrandMotion.smoothOut,
+            alignment: AlignmentDirectional.centerEnd,
+            child: switch (daysLeft) {
+              final days? => _DaysPill(key: const ValueKey('days'), days: days),
+              null => const Visibility(
+                visible: false,
+                maintainSize: true,
+                maintainAnimation: true,
+                maintainState: true,
+                child: _DaysPill(days: _placeholderDays),
+              ),
+            },
           ),
         ),
       ),
@@ -542,7 +607,7 @@ class _Header extends StatelessWidget {
 }
 
 class _DaysPill extends StatelessWidget {
-  const _DaysPill({required this.days});
+  const _DaysPill({super.key, required this.days});
 
   final int days;
 
@@ -606,7 +671,14 @@ class _Hero extends StatelessWidget {
           onPressed: state.canToggle ? onToggle : null,
         ),
         const SizedBox(height: 24),
-        Text(title, textAlign: TextAlign.center, style: BrandText.screenTitle),
+        BrandSwap.text(
+          child: Text(
+            title,
+            key: ValueKey(title),
+            textAlign: TextAlign.center,
+            style: BrandText.screenTitle,
+          ),
+        ),
         const SizedBox(height: 6),
         _Hint(state: state),
       ],
@@ -622,23 +694,31 @@ class _Hint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    Widget text(String value, {Color? color}) => Text(
+    // Each line is told apart by its words, so a new one swaps in.
+    Widget text(String value) => Text(
       value,
+      key: ValueKey(value),
       textAlign: TextAlign.center,
-      style: BrandText.hint.copyWith(color: color),
+      style: BrandText.hint,
     );
-    return switch (state.status) {
-      // A failed attempt shows the error screen instead.
-      HomeStatus.off || HomeStatus.failed => text(
-        state.subscription == null ? l.homeNoSubscription : l.homeHintOff,
-      ),
-      HomeStatus.connecting => text(l.homeHintConnecting),
-      HomeStatus.checking => text(l.homeHintChecking),
-      HomeStatus.reconnecting => text(l.homeHintReconnecting),
-      HomeStatus.connected => _ConnectedHint(since: state.connectedSince),
-      HomeStatus.disconnecting => const SizedBox.shrink(),
-      HomeStatus.uncertain => text(l.homeHintUncertain),
-    };
+    return BrandSwap.text(
+      child: switch (state.status) {
+        // A failed attempt shows the error screen instead.
+        HomeStatus.off || HomeStatus.failed => text(
+          state.subscription == null ? l.homeNoSubscription : l.homeHintOff,
+        ),
+        HomeStatus.connecting => text(l.homeHintConnecting),
+        HomeStatus.checking => text(l.homeHintChecking),
+        HomeStatus.reconnecting => text(l.homeHintReconnecting),
+        // Its clock ticks every second, which is not a change to swap.
+        HomeStatus.connected => _ConnectedHint(
+          key: const ValueKey(HomeStatus.connected),
+          since: state.connectedSince,
+        ),
+        HomeStatus.disconnecting => const SizedBox.shrink(),
+        HomeStatus.uncertain => text(l.homeHintUncertain),
+      },
+    );
   }
 }
 
@@ -778,7 +858,7 @@ class _SupportLink extends StatelessWidget {
 
 /// Counts from the session's own start, so reopening the app keeps the time.
 class _ConnectedHint extends StatefulWidget {
-  const _ConnectedHint({required this.since});
+  const _ConnectedHint({super.key, required this.since});
 
   final DateTime? since;
 
@@ -885,12 +965,17 @@ class _AnnouncementBanner extends StatelessWidget {
   );
 }
 
+/// The segments over one highlight, which slides to the selected one.
 class _PresetSwitch extends StatelessWidget {
   const _PresetSwitch({
     required this.presets,
     required this.selected,
     required this.onSelect,
   });
+
+  /// Between segments and around them. Each segment keeps half of it on
+  /// either side, so the highlight lines up with a segment by its share.
+  static const _gap = 4.0;
 
   final List<ConnectionPreset> presets;
   final ConnectionPreset? selected;
@@ -899,26 +984,72 @@ class _PresetSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final duration = BrandMotion.of(context, BrandMotion.fast);
+    final index = switch (selected) {
+      final preset? => presets.indexOf(preset),
+      null => -1,
+    };
+    const half = EdgeInsets.symmetric(horizontal: _gap / 2);
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.symmetric(horizontal: _gap / 2, vertical: _gap),
       decoration: BoxDecoration(
         color: BrandColors.surface,
         borderRadius: BorderRadius.circular(BrandRadii.control),
         border: Border.all(color: BrandColors.line),
       ),
       child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 4,
+        child: Stack(
           children: [
-            for (final preset in presets)
-              Expanded(
-                child: _PresetSegment(
-                  label: presetLabel(l, preset),
-                  selected: preset == selected,
-                  onTap: onSelect == null ? null : () => onSelect!(preset),
+            Positioned.fill(
+              child: AnimatedOpacity(
+                opacity: index < 0 ? 0 : 1,
+                duration: duration,
+                curve: BrandMotion.smoothOut,
+                child: AnimatedAlign(
+                  duration: duration,
+                  curve: BrandMotion.smoothOut,
+                  alignment: AlignmentDirectional(
+                    presets.length < 2
+                        ? 0
+                        : -1 + 2 * max(index, 0) / (presets.length - 1),
+                    0,
+                  ),
+                  child: FractionallySizedBox(
+                    widthFactor: 1 / presets.length,
+                    heightFactor: 1,
+                    child: Padding(
+                      padding: half,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: BrandColors.accentSoft,
+                          borderRadius: BorderRadius.circular(
+                            BrandRadii.segment,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
+            ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final preset in presets)
+                  Expanded(
+                    child: Padding(
+                      padding: half,
+                      child: _PresetSegment(
+                        label: presetLabel(l, preset),
+                        selected: preset == selected,
+                        onTap: onSelect == null
+                            ? null
+                            : () => onSelect!(preset),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -951,14 +1082,12 @@ class _PresetSegment extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 34),
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? BrandColors.accentSoft : null,
-            borderRadius: BorderRadius.circular(BrandRadii.segment),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
+          child: AnimatedDefaultTextStyle(
+            duration: BrandMotion.of(context, BrandMotion.fast),
+            curve: BrandMotion.smoothOut,
             style: selected ? BrandText.selectedPreset : BrandText.preset,
+            textAlign: TextAlign.center,
+            child: Text(label),
           ),
         ),
       ),
@@ -1032,8 +1161,9 @@ class _RefreshArcState extends State<_RefreshArc>
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Opacity(
-      opacity: widget.mode == RefreshIndicatorMode.done ? 0 : widget.progress,
+    child: PullFade(
+      mode: widget.mode,
+      progress: widget.progress,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -16,6 +16,9 @@ abstract final class BrandColors {
   static const accent = Color(0xFF9C5EEF);
   static const accentSoft = Color(0xFF3B1B62);
 
+  /// [accentSoft] at the height of a pulse, a third of the way to [accent].
+  static const accentSoftLit = Color(0xFF582F8C);
+
   /// A control on an [accentSoft] card.
   static const accentSoftRaised = Color(0x14FFFFFF);
 
@@ -84,6 +87,9 @@ abstract final class BrandSpacing {
 /// passes it through [of]. Motion that is not a duration, such as a loop or a
 /// press, asks [reduced] instead.
 abstract final class BrandMotion {
+  /// One swing of a shake.
+  static const micro = Duration(milliseconds: 80);
+
   /// A close, a press.
   static const quick = Duration(milliseconds: 150);
 
@@ -102,6 +108,9 @@ abstract final class BrandMotion {
   /// Opening, closing and moving: fast start, long settle.
   static const smoothOut = Cubic(0.22, 1, 0.36, 1);
 
+  /// A pulse, and text swapping in place.
+  static const inOut = Curves.easeInOut;
+
   /// A pop that overshoots a little.
   static const bounce = Cubic(0.34, 1.36, 0.64, 1);
 
@@ -112,6 +121,9 @@ abstract final class BrandMotion {
   static const nudge = 4.0;
   static const step = 8.0;
   static const reveal = 12.0;
+
+  /// How far a shake swings before its smaller [nudge].
+  static const swing = 6.0;
 
   /// The size of a control under a finger.
   static const press = 0.97;

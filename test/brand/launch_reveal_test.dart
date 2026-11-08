@@ -4,6 +4,8 @@ import 'package:onexray/brand/launch_reveal.dart';
 import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/theme.dart';
 
+import '../support/opacity.dart';
+
 void main() {
   const landingKey = Key('landing');
 
@@ -123,6 +125,67 @@ void main() {
 
     expect(find.byType(LaunchMark), findsOneWidget);
     expect(landingOpacity(tester), 1);
+  });
+
+  group('a later page', () {
+    /// Another kind of page than [page], as the tabs are after «Вход».
+    Widget other(String text, {Key? key}) =>
+        ColoredBox(key: key, color: BrandColors.bg, child: Text(text));
+
+    testWidgets('fades in over the one it replaces, which stays as it was', (
+      tester,
+    ) async {
+      await pump(tester, page());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('0'));
+      await tester.pump();
+
+      await pump(tester, other('tabs'));
+      await tester.pump(LaunchReveal.duration ~/ 2);
+
+      expect(shownOpacity(tester, find.text('1')), 1);
+      expect(shownOpacity(tester, find.text('tabs')), inExclusiveRange(0, 1));
+      expect(find.text('1').hitTestable(), findsNothing);
+
+      await tester.pumpAndSettle();
+      expect(find.text('1'), findsNothing);
+      expect(shownOpacity(tester, find.text('tabs')), 1);
+    });
+
+    testWidgets('that comes back mid-fade shows once', (tester) async {
+      final tabs = GlobalKey();
+      await pump(tester, other('tabs', key: tabs));
+      await tester.pumpAndSettle();
+
+      await pump(tester, page());
+      await tester.pump(LaunchReveal.duration ~/ 3);
+      await pump(tester, other('tabs again', key: tabs));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('tabs again'), findsOneWidget);
+      expect(find.text('0'), findsNothing);
+    });
+
+    testWidgets('with animations off shows at once', (tester) async {
+      Future<void> pumpStill(Widget child) => tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(disableAnimations: true),
+            child: LaunchReveal(child: child),
+          ),
+        ),
+      );
+      await pumpStill(page());
+      await tester.pump();
+      await tester.pump();
+
+      await pumpStill(other('tabs'));
+      await tester.pump();
+
+      expect(find.text('0'), findsNothing);
+      expect(shownOpacity(tester, find.text('tabs')), 1);
+    });
   });
 
   testWidgets('with animations off the page shows at once', (tester) async {

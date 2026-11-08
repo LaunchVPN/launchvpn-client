@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/cupertino.dart' show RefreshIndicatorMode;
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:onexray/brand/theme.dart';
 
 /// What the screens that refresh on a pull share.
 abstract final class BrandPull {
@@ -19,6 +20,37 @@ abstract final class BrandPull {
   ) => mode == RefreshIndicatorMode.drag
       ? (pulledExtent / refreshTriggerPullDistance).clamp(0.0, 1.0)
       : 1;
+}
+
+/// A pull's indicator, as visible as the pull has gone toward refreshing. It
+/// fades out once the refresh is done instead of vanishing.
+class PullFade extends StatelessWidget {
+  const PullFade({
+    super.key,
+    required this.mode,
+    required this.progress,
+    required this.child,
+  });
+
+  final RefreshIndicatorMode mode;
+
+  /// From [BrandPull.progress].
+  final double progress;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = mode == RefreshIndicatorMode.done;
+    return AnimatedOpacity(
+      opacity: done ? 0 : progress,
+      // Under the finger it follows at once.
+      duration: done
+          ? BrandMotion.of(context, BrandMotion.quick)
+          : Duration.zero,
+      curve: BrandMotion.smoothOut,
+      child: child,
+    );
+  }
 }
 
 /// Lays [child] at the bottom of the space it is given and keeps it there while
