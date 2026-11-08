@@ -968,7 +968,7 @@ void main() {
               await settle();
               expect(sweeps, isEmpty);
               // The last delay is not passed off as current meanwhile.
-              expect(controller.state.measures(listed(germany)), isTrue);
+              expect(controller.state.showsMeasuring(listed(germany)), isTrue);
             },
           );
 
@@ -995,12 +995,41 @@ void main() {
         unawaited(controller.measureLocations());
         await settle();
 
-        await connectFully(whileConnecting: () async => running.complete());
+        await connectFully(
+          whileConnecting: () async {
+            expect(sweepCancels.single!(), isTrue);
+            running.complete();
+          },
+        );
 
         expect(sweeps, [
           [fastest, germany],
           [fastest, germany],
         ]);
+      });
+
+      test('a tap on a location in a stopped sweep is not lost', () async {
+        final running = Completer<void>();
+        sweep = () => running.future;
+        unawaited(controller.measureLocations());
+        await settle();
+
+        await connectFully(
+          whileConnecting: () async {
+            expect(sweepCancels.single!(), isTrue);
+            await controller.measureLocations(only: listed(germany));
+          },
+        );
+        // The stopped sweep returns only after the tunnel is up.
+        running.complete();
+        await settle();
+
+        expect(sweeps, [
+          [fastest, germany],
+          [fastest, germany],
+        ]);
+        expect(controller.state.measuring, isEmpty);
+        expect(controller.state.queued, isEmpty);
       });
 
       test('a location being measured is not measured twice', () async {

@@ -395,6 +395,30 @@ void main() {
       expect(find.bySemanticsLabel('Замеряем пинг'), findsNothing);
     });
 
+    testWidgets('a list opened while connecting is measured once up', (
+      tester,
+    ) async {
+      await pumpGroups(tester);
+      coordinator.state.value = const ConnectionView(
+        phase: ConnectionPhase.connecting,
+      );
+      await tester.pump();
+      // The dots never settle.
+      await tester.tap(find.byKey(const ValueKey('home-location')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(sweeps, isEmpty);
+      expect(find.bySemanticsLabel('Замеряем пинг'), findsNWidgets(4));
+
+      coordinator.state.value = ConnectionView(
+        phase: ConnectionPhase.connected,
+        runtime: _runtime(DateTime(2026, 11, 7)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(sweeps.single, hasLength(4));
+    });
+
     testWidgets('a tap while connecting measures that location once up', (
       tester,
     ) async {

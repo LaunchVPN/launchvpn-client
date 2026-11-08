@@ -158,10 +158,10 @@ class HomeState {
 
   /// Whether [location] shows that it is being measured. A sweep forgets the
   /// last delay a moment after it starts, so until then that one still shows.
-  bool measures(Location location) =>
+  bool showsMeasuring(Location location) =>
       queued.contains(location.id) ||
-      measuring.contains(location.id) &&
-          location.delay == PingDelayConstants.unknown;
+      (measuring.contains(location.id) &&
+          location.delay == PingDelayConstants.unknown);
 
   /// «Лимит устройств» in place of the toggle, once the tunnel is off. An
   /// ended subscription explains itself first.
@@ -447,7 +447,7 @@ class HomeController extends PageCubit<HomeState> {
   final _sweeps = <int, Future<void>>{};
 
   /// Locations a sweep saved a delay for that the catalog does not list yet.
-  final _landing = <int>{};
+  final _unlisted = <int>{};
 
   /// Locations asked for mid-transition.
   final _queued = <int>{};
@@ -514,7 +514,7 @@ class HomeController extends PageCubit<HomeState> {
     _catalog ??= ServerCatalog.watch(_db).listen(
       (catalog) {
         _dropListed(catalog);
-        emit(state.copyWith(catalog: catalog, measuring: _measuring));
+        _showMeasuring(catalog: catalog);
         _checkExpiry(catalog.sources.lastOrNull);
       },
       onError: (Object error) =>
@@ -778,14 +778,23 @@ class HomeController extends PageCubit<HomeState> {
     return Future.value();
   }
 
+  /// Measures what waited for a transition, once it ends. A location still in
+  /// the sweep the transition stopped waits for that sweep to return.
   void _measureQueued() {
-    if (isClosed || state.measureReadiness == MeasureReadiness.waiting) return;
-    final ids = _queued.toList();
-    _queued.clear();
-    if (state.measureReadiness == MeasureReadiness.ready) {
-      unawaited(_measure(ids));
-    } else {
-      _showMeasuring();
+    if (isClosed || _queued.isEmpty) return;
+    switch (state.measureReadiness) {
+      case MeasureReadiness.waiting:
+        return;
+      case MeasureReadiness.ready:
+        final ids = [
+          for (final id in _queued)
+            if (!_sweeps.containsKey(id)) id,
+        ];
+        _queued.removeAll(ids);
+        if (ids.isNotEmpty) unawaited(_measure(ids));
+      case MeasureReadiness.onlyWithVpnOff:
+        _queued.clear();
+        _showMeasuring();
     }
   }
 
@@ -799,7 +808,7 @@ class HomeController extends PageCubit<HomeState> {
       for (final id in fresh) {
         _sweeps[id] = done.future;
       }
-      _landing.removeAll(fresh);
+      _unlisted.removeAll(fresh);
       _showMeasuring();
       unawaited(_sweep(fresh).whenComplete(done.complete));
     }
@@ -807,11 +816,14 @@ class HomeController extends PageCubit<HomeState> {
   }
 
   Future<void> _sweep(Set<int> ids) async {
+    var stopped = false;
     try {
       await _pingLocations(
         state.catalog.servers.where((row) => ids.contains(row.id)).toList(),
-        isCancelled: () =>
-            isClosed || state.measureReadiness != MeasureReadiness.ready,
+        isCancelled: () => stopped =
+            stopped ||
+            isClosed ||
+            state.measureReadiness != MeasureReadiness.ready,
       );
     } catch (error) {
       ygLogger('measure locations failed (${error.runtimeType})');
@@ -822,39 +834,36 @@ class HomeController extends PageCubit<HomeState> {
           if (ids.contains(row.id) && row.delay != PingDelayConstants.unknown)
             row.id,
       };
-      _landing.addAll(saved);
+      _unlisted.addAll(saved);
       _dropListed(state.catalog);
-      // A transition stopped the sweep: the rest resumes once it ends.
-      if (state.measureReadiness == MeasureReadiness.waiting) {
-        _queued.addAll(ids.difference(saved));
-      }
+      // What a transition left unmeasured resumes once it ends.
+      if (stopped) _queued.addAll(ids.difference(saved));
     } catch (error) {
       ygLogger('read measured locations failed (${error.runtimeType})');
     }
     ids.forEach(_sweeps.remove);
     _showMeasuring();
+    _measureQueued();
   }
 
   /// A saved delay reaches the catalog a moment after its sweep ends, and the
   /// location counts as measuring until then. A location the catalog no longer
   /// has is done as well.
-  void _dropListed(ServerCatalog catalog) => _landing.removeWhere(
+  void _dropListed(ServerCatalog catalog) => _unlisted.removeWhere(
     (id) =>
         catalog.servers.firstWhereOrNull((row) => row.id == id)?.delay !=
         PingDelayConstants.unknown,
   );
 
-  Set<int> get _measuring => Set.unmodifiable({..._sweeps.keys, ..._landing});
-
-  void _showMeasuring() {
-    if (!isClosed) {
-      emit(
-        state.copyWith(
-          measuring: _measuring,
-          queued: Set.unmodifiable(_queued),
-        ),
-      );
-    }
+  void _showMeasuring({ServerCatalog? catalog}) {
+    if (isClosed) return;
+    emit(
+      state.copyWith(
+        catalog: catalog,
+        measuring: Set.unmodifiable({..._sweeps.keys, ..._unlisted}),
+        queued: Set.unmodifiable(_queued),
+      ),
+    );
   }
 
   /// Connects from off, cancels a connection in progress, otherwise disconnects.
