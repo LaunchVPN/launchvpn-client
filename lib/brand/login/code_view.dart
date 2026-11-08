@@ -101,7 +101,7 @@ class _EmailCodeViewState extends State<EmailCodeView> {
               ),
             ),
           ),
-          ErrorReveal(switch (state.error) {
+          ErrorText(switch (state.error) {
             null => null,
             final error => _errorMessage(l, error, state.attemptsLeft),
           }),

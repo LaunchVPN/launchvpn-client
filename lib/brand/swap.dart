@@ -34,7 +34,8 @@ class BrandSwap extends StatelessWidget {
 
   final Widget child;
 
-  /// Where the new child starts from its place.
+  /// Where the new child starts from its place. Its x runs toward the end of
+  /// a line, so it mirrors in a right-to-left language.
   final Offset shift;
   final Duration duration;
 
@@ -46,33 +47,39 @@ class BrandSwap extends StatelessWidget {
   final AlignmentGeometry alignment;
 
   @override
-  Widget build(BuildContext context) => AnimatedSwitcher(
-    duration: BrandMotion.of(context, duration),
-    reverseDuration: BrandMotion.of(context, reverseDuration ?? duration),
-    switchInCurve: curve,
-    switchOutCurve: curve,
-    layoutBuilder: (current, previous) =>
-        Stack(alignment: alignment, children: [...previous, ?current]),
-    transitionBuilder: (child, animation) => _Leaving(
-      animation: animation,
-      child: FadeTransition(
-        opacity: animation,
-        child: AnimatedBuilder(
-          animation: animation,
-          builder: (context, child) => Transform.translate(
-            // A child on its way out moves on past its place, not back.
-            offset:
-                shift *
-                (1 - animation.value) *
-                (animation.status.isForwardOrCompleted ? 1 : -1),
+  Widget build(BuildContext context) {
+    final shift = switch (Directionality.of(context)) {
+      TextDirection.ltr => this.shift,
+      TextDirection.rtl => this.shift.scale(-1, 1),
+    };
+    return AnimatedSwitcher(
+      duration: BrandMotion.of(context, duration),
+      reverseDuration: BrandMotion.of(context, reverseDuration ?? duration),
+      switchInCurve: curve,
+      switchOutCurve: curve,
+      layoutBuilder: (current, previous) =>
+          Stack(alignment: alignment, children: [...previous, ?current]),
+      transitionBuilder: (child, animation) => _Leaving(
+        animation: animation,
+        child: FadeTransition(
+          opacity: animation,
+          child: AnimatedBuilder(
+            animation: animation,
+            builder: (context, child) => Transform.translate(
+              // A child on its way out moves on past its place, not back.
+              offset:
+                  shift *
+                  (1 - animation.value) *
+                  (animation.status.isForwardOrCompleted ? 1 : -1),
+              child: child,
+            ),
             child: child,
           ),
-          child: child,
         ),
       ),
-    ),
-    child: child,
-  );
+      child: child,
+    );
+  }
 }
 
 /// Opens room for [child] as it fades in, and closes it as [child] fades out,

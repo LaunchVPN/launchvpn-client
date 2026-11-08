@@ -160,11 +160,9 @@ class _LoginPageState extends State<LoginPage> {
                         // start, each with its title.
                         BrandSwap(
                           shift: Offset(
-                            (signup == null ? -1 : 1) *
-                                switch (Directionality.of(context)) {
-                                  TextDirection.ltr => BrandMotion.step,
-                                  TextDirection.rtl => -BrandMotion.step,
-                                },
+                            signup == null
+                                ? -BrandMotion.step
+                                : BrandMotion.step,
                             0,
                           ),
                           duration: BrandMotion.fast,
@@ -236,7 +234,7 @@ class _LoginPageState extends State<LoginPage> {
             ],
             onSubmitted: (_) => _submit(),
           ),
-          ErrorReveal(_formMessage(l, state)),
+          ErrorText(_formMessage(l, state)),
           const SizedBox(height: 12),
           ListenableBuilder(
             listenable: Listenable.merge([_email, _password]),
@@ -266,7 +264,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: Text(l.loginTelegram),
               ),
             ),
-            ErrorReveal(switch (state.telegramError) {
+            ErrorText(switch (state.telegramError) {
               null => null,
               final error => _errorMessage(l, error),
             }),

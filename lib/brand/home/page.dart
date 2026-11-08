@@ -694,30 +694,29 @@ class _Hint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final message = switch (state.status) {
-      // A failed attempt shows the error screen instead.
-      HomeStatus.off || HomeStatus.failed =>
-        state.subscription == null ? l.homeNoSubscription : l.homeHintOff,
-      HomeStatus.connecting => l.homeHintConnecting,
-      HomeStatus.checking => l.homeHintChecking,
-      HomeStatus.reconnecting => l.homeHintReconnecting,
-      HomeStatus.uncertain => l.homeHintUncertain,
-      HomeStatus.connected || HomeStatus.disconnecting => null,
-    };
+    // Each line is told apart by its words, so a new one swaps in.
+    Widget text(String value) => Text(
+      value,
+      key: ValueKey(value),
+      textAlign: TextAlign.center,
+      style: BrandText.hint,
+    );
     return BrandSwap.text(
       child: switch (state.status) {
+        // A failed attempt shows the error screen instead.
+        HomeStatus.off || HomeStatus.failed => text(
+          state.subscription == null ? l.homeNoSubscription : l.homeHintOff,
+        ),
+        HomeStatus.connecting => text(l.homeHintConnecting),
+        HomeStatus.checking => text(l.homeHintChecking),
+        HomeStatus.reconnecting => text(l.homeHintReconnecting),
         // Its clock ticks every second, which is not a change to swap.
         HomeStatus.connected => _ConnectedHint(
           key: const ValueKey(HomeStatus.connected),
           since: state.connectedSince,
         ),
-        _ when message != null => Text(
-          message,
-          key: ValueKey(message),
-          textAlign: TextAlign.center,
-          style: BrandText.hint,
-        ),
-        _ => const SizedBox.shrink(),
+        HomeStatus.disconnecting => const SizedBox.shrink(),
+        HomeStatus.uncertain => text(l.homeHintUncertain),
       },
     );
   }
