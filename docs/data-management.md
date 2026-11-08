@@ -62,8 +62,10 @@ location; a pull sweeps them again and a tap on a delay sweeps that location. A 
 a sweep is not queued twice. Measurements leave past a running tunnel (see
 [Xray configuration](xray-configuration.md#measuring-past-the-tunnel)), except on iOS with Capture
 all traffic, where the screen shows its locations unmeasured and says the delay is measured with
-VPN off. Starting or stopping a connection stops a sweep after its current batch; once the tunnel
-is up or down, an open screen measures every location again.
+VPN off. Starting or stopping a connection stops a sweep after its current batch. What it left
+unmeasured, and whatever is asked for meanwhile, shows the dots at once and is measured once the
+tunnel is up or down. A location counts as measured only once its new delay reaches the list, so
+the dots turn straight into the delay.
 
 名称、延迟等显示排序是设备偏好，保存后通过共享事件同步，重启沿用；缺失或未知值回到默认。
 显示排序不改写手动顺序，切回默认时使用已保存的位置。手动分组和顺序进入资产备份，显示排序偏好不进入备份。

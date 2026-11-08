@@ -932,6 +932,77 @@ void main() {
         expect(controller.state.measuring, isEmpty);
       });
 
+      test('the delay replaces the dots without a gap', () async {
+        sweep = () async {
+          final row = await db.coreConfigDao.searchRow(germany);
+          await db.coreConfigDao.updateRow(row!.copyWith(delay: 120));
+        };
+        final shown = <(bool, int)>[];
+        final watching = controller.stream.listen(
+          (state) => shown.add((
+            state.measuring.contains(germany),
+            state.locations.withId(germany)!.delay,
+          )),
+        );
+        addTearDown(watching.cancel);
+
+        await controller.measureLocations(only: listed(germany));
+        await settle();
+
+        expect(shown.first, (true, PingDelayConstants.unknown));
+        expect(shown.last, (false, 120));
+        // A row neither measuring nor measured shows the measure icon.
+        expect(shown, isNot(contains((false, PingDelayConstants.unknown))));
+      });
+
+      test(
+        'a tap mid-transition is measured once the status settles',
+        () async {
+          final row = await db.coreConfigDao.searchRow(germany);
+          await db.coreConfigDao.updateRow(row!.copyWith(delay: 120));
+          await settle();
+
+          await connectFully(
+            whileConnecting: () async {
+              await controller.measureLocations(only: listed(germany));
+              await settle();
+              expect(sweeps, isEmpty);
+              // The last delay is not passed off as current meanwhile.
+              expect(controller.state.measures(listed(germany)), isTrue);
+            },
+          );
+
+          expect(sweeps, [
+            [germany],
+          ]);
+        },
+      );
+
+      test('a tunnel that captures all traffic drops the waiting', () async {
+        tun = TunJson.fromJson({'includeAllNetworks': true});
+
+        await connectFully(
+          whileConnecting: () => controller.measureLocations(),
+        );
+
+        expect(sweeps, isEmpty);
+        expect(controller.state.queued, isEmpty);
+      });
+
+      test('a sweep the tunnel stopped resumes once it is up', () async {
+        final running = Completer<void>();
+        sweep = () => running.future;
+        unawaited(controller.measureLocations());
+        await settle();
+
+        await connectFully(whileConnecting: () async => running.complete());
+
+        expect(sweeps, [
+          [fastest, germany],
+          [fastest, germany],
+        ]);
+      });
+
       test('a location being measured is not measured twice', () async {
         final running = Completer<void>();
         sweep = () => running.future;

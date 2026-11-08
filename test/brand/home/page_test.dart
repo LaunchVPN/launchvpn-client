@@ -395,7 +395,7 @@ void main() {
       expect(find.bySemanticsLabel('Замеряем пинг'), findsNothing);
     });
 
-    testWidgets('a list opened while connecting is measured once up', (
+    testWidgets('a tap while connecting measures that location once up', (
       tester,
     ) async {
       await pumpGroups(tester);
@@ -408,6 +408,8 @@ void main() {
       await tester.tap(find.text('516 мс'));
       await tester.pump();
       expect(sweeps, isEmpty);
+      expect(find.text('516 мс'), findsNothing);
+      expect(find.bySemanticsLabel('Замеряем пинг'), findsOneWidget);
 
       coordinator.state.value = ConnectionView(
         phase: ConnectionPhase.connected,
@@ -415,7 +417,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(sweeps.single, hasLength(4));
+      expect(sweeps.single, hasLength(1));
     });
 
     testWidgets('pulling the list measures every location again', (

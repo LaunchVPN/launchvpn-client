@@ -65,15 +65,8 @@ class _LocationsPageState extends State<LocationsPage> {
             children: [
               BrandTopBar(title: l.locationsTitle),
               Expanded(
-                child: BlocConsumer<HomeController, HomeState>(
+                child: BlocBuilder<HomeController, HomeState>(
                   bloc: widget.controller,
-                  // Opened mid-transition, or a sweep the tunnel stopped:
-                  // measured once it can be.
-                  listenWhen: (previous, next) =>
-                      previous.measureReadiness != MeasureReadiness.ready &&
-                      next.measureReadiness == MeasureReadiness.ready,
-                  listener: (context, state) =>
-                      unawaited(widget.controller.measureLocations()),
                   builder: (context, state) {
                     Widget section(String title, Iterable<Location> items) =>
                         _Section(
@@ -89,7 +82,7 @@ class _LocationsPageState extends State<LocationsPage> {
                                     ? item.withDelay(PingDelayConstants.unknown)
                                     : item,
                                 selected: item.name == state.location?.name,
-                                measuring: state.measuring.contains(item.id),
+                                measuring: state.measures(item),
                                 onTap: state.canChangeConnection
                                     ? () => Navigator.of(context).pop(item)
                                     : null,
@@ -191,10 +184,7 @@ class _LocationRow extends StatelessWidget {
           widthFactor: 1,
           child: _Delay(
             delay: location.delay,
-            // A sweep forgets the stored delay a moment after it starts,
-            // and the dots wait for that, then for the answer.
-            measuring:
-                measuring && location.delay == PingDelayConstants.unknown,
+            measuring: measuring,
             onAccent: selected,
             onTap: onMeasure,
           ),
