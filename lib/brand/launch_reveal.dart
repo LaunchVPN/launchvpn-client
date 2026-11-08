@@ -7,8 +7,8 @@ import 'package:onexray/brand/theme.dart';
 /// The launch screen inside the App: the mark in the middle, where the native
 /// launch screens draw it, until [child] is ready. Then [child] fades in while
 /// the mark flies into the [LaunchMarkLanding] that [child] shows, or fades
-/// where it is when there is none. Later, another kind of page fades in over
-/// the one it replaces, as the tabs do after «Вход».
+/// where it is when there is none. Every later page of another kind fades in
+/// the same way over the one it replaces, as the tabs do after «Вход».
 class LaunchReveal extends StatefulWidget {
   const LaunchReveal({super.key, required this.child});
 
@@ -24,7 +24,9 @@ class LaunchReveal extends StatefulWidget {
 }
 
 class _LaunchRevealState extends State<LaunchReveal>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
+  /// The page fading in: the first one with the mark's flight, a later one
+  /// over [_leaving].
   late final _controller = AnimationController(
     vsync: this,
     duration: LaunchReveal.duration,
@@ -35,16 +37,7 @@ class _LaunchRevealState extends State<LaunchReveal>
   );
   final _flight = _Flight();
 
-  /// A later page fading in over [_leaving], the one it replaces.
-  late final _arrival = AnimationController(
-    vsync: this,
-    duration: LaunchReveal.duration,
-    value: 1,
-  );
-  late final _arriving = CurvedAnimation(
-    parent: _arrival,
-    curve: BrandMotion.smoothOut,
-  );
+  /// The page a later one replaces, shown under it until it is in.
   Widget? _leaving;
 
   /// Counts pages, so each keeps its place in the tree as it gives way.
@@ -74,7 +67,7 @@ class _LaunchRevealState extends State<LaunchReveal>
     if (widget.child == null) {
       // A retry after a start-up error: the mark comes back until it is ready.
       if (_revealing || _revealed) _restart();
-    } else if (_controller.isAnimating) {
+    } else if (!_revealed && _controller.isAnimating) {
       // The page may have changed mid-flight, as «Вход» giving way to the tabs.
       final run = _run;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -96,8 +89,8 @@ class _LaunchRevealState extends State<LaunchReveal>
     _page++;
     if (BrandMotion.reduced(context)) return;
     _leaving = leaving;
-    _arrival.forward(from: 0).whenCompleteOrCancel(() {
-      if (mounted && _arrival.isCompleted) setState(() => _leaving = null);
+    _controller.forward(from: 0).whenCompleteOrCancel(() {
+      if (mounted && _controller.isCompleted) setState(() => _leaving = null);
     });
   }
 
@@ -106,8 +99,6 @@ class _LaunchRevealState extends State<LaunchReveal>
     _spinnerTimer?.cancel();
     _progress.dispose();
     _controller.dispose();
-    _arriving.dispose();
-    _arrival.dispose();
     _flight.dispose();
     super.dispose();
   }
@@ -123,7 +114,6 @@ class _LaunchRevealState extends State<LaunchReveal>
   void _restart() {
     _run++;
     _leaving = null;
-    _arrival.value = 1;
     _controller.value = 0;
     _revealing = false;
     _revealed = false;
@@ -196,8 +186,7 @@ class _LaunchRevealState extends State<LaunchReveal>
           fit: StackFit.expand,
           children: [
             const ColoredBox(color: BrandColors.bg),
-            if (content != null)
-              FadeTransition(opacity: _progress, child: content),
+            ?content,
             if (!_revealed) ...[
               AnimatedBuilder(
                 animation: _progress,
@@ -252,7 +241,7 @@ class _LaunchRevealState extends State<LaunchReveal>
       child: ExcludeSemantics(
         excluding: leaving,
         child: FadeTransition(
-          opacity: leaving ? kAlwaysCompleteAnimation : _arriving,
+          opacity: leaving ? kAlwaysCompleteAnimation : _progress,
           child: child,
         ),
       ),
