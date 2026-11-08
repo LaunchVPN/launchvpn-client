@@ -442,7 +442,7 @@ void main() {
       );
       await tester.pump();
       await tester.tap(find.text('516 мс'));
-      await tester.pump();
+      await letMotionEnd(tester);
       expect(sweeps, isEmpty);
       expect(find.text('516 мс'), findsNothing);
       expect(find.bySemanticsLabel('Замеряем пинг'), findsOneWidget);
@@ -557,6 +557,7 @@ void main() {
       await tester.tap(find.byTooltip('Закрыть объявление'));
       await tester.runAsync(() => pumpEventQueue(times: 20));
       await tester.pump();
+      await letMotionEnd(tester);
     }
 
     testWidgets('shows what the panel sent below the presets', (tester) async {
@@ -688,6 +689,7 @@ void main() {
         ),
       );
       await tester.pump();
+      await letMotionEnd(tester);
     }
 
     testWidgets(

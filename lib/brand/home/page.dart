@@ -312,14 +312,19 @@ class _HomePageState extends State<HomePage> {
           ),
           child: Column(
             children: [
-              if (update != null) ...[
-                const SizedBox(height: 20),
-                UpdateBanner(
-                  update: update,
-                  onUpdate: () =>
-                      openExternalLink(update.releaseUri, 'release'),
-                ),
-              ],
+              BrandReveal(
+                child: update == null
+                    ? null
+                    : Padding(
+                        key: ValueKey(update.latestVersion),
+                        padding: const EdgeInsets.only(top: 20),
+                        child: UpdateBanner(
+                          update: update,
+                          onUpdate: () =>
+                              openExternalLink(update.releaseUri, 'release'),
+                        ),
+                      ),
+              ),
               Expanded(
                 child: BrandSwap.screen(
                   child: switch (_Screen.of(
@@ -465,7 +470,12 @@ class _HomePageState extends State<HomePage> {
   Widget _connectionContent(HomeState state, double toggleGap) => Column(
     key: const ValueKey(_Screen.connection),
     children: [
-      SizedBox(height: toggleGap),
+      // Moves with the update banner as it opens or closes above.
+      AnimatedContainer(
+        duration: BrandMotion.of(context, BrandReveal.duration),
+        curve: BrandMotion.smoothOut,
+        height: toggleGap,
+      ),
       _Hero(state: state, onToggle: _toggle),
       const SizedBox(height: 24),
       // Only the toggle follows a pull; the cards stay under the finger.
@@ -503,13 +513,19 @@ class _HomePageState extends State<HomePage> {
                       : null,
                 ),
               ],
-              if (state.announcement case final text?) ...[
-                const SizedBox(height: 20),
-                _AnnouncementBanner(
-                  text: text,
-                  onClose: _controller.dismissAnnouncement,
-                ),
-              ],
+              BrandReveal(
+                child: switch (state.announcement) {
+                  null => null,
+                  final text => Padding(
+                    key: ValueKey(text),
+                    padding: const EdgeInsets.only(top: 20),
+                    child: _AnnouncementBanner(
+                      text: text,
+                      onClose: _controller.dismissAnnouncement,
+                    ),
+                  ),
+                },
+              ),
             ],
           ),
         ),
@@ -566,13 +582,23 @@ class _Header extends StatelessWidget {
       Expanded(
         child: Align(
           alignment: AlignmentDirectional.centerEnd,
-          // Holds the pill's place, so its arrival does not move the toggle.
-          child: Visibility(
-            visible: daysLeft != null,
-            maintainSize: true,
-            maintainAnimation: true,
-            maintainState: true,
-            child: _DaysPill(days: daysLeft ?? _placeholderDays),
+          // The pill fades in and out over a placeholder that holds its
+          // place, so its arrival does not move the toggle.
+          child: BrandSwap(
+            duration: BrandMotion.slow,
+            reverseDuration: BrandMotion.medium,
+            curve: BrandMotion.smoothOut,
+            alignment: AlignmentDirectional.centerEnd,
+            child: switch (daysLeft) {
+              final days? => _DaysPill(key: const ValueKey('days'), days: days),
+              null => const Visibility(
+                visible: false,
+                maintainSize: true,
+                maintainAnimation: true,
+                maintainState: true,
+                child: _DaysPill(days: _placeholderDays),
+              ),
+            },
           ),
         ),
       ),
@@ -581,7 +607,7 @@ class _Header extends StatelessWidget {
 }
 
 class _DaysPill extends StatelessWidget {
-  const _DaysPill({required this.days});
+  const _DaysPill({super.key, required this.days});
 
   final int days;
 
@@ -940,12 +966,17 @@ class _AnnouncementBanner extends StatelessWidget {
   );
 }
 
+/// The segments over one highlight, which slides to the selected one.
 class _PresetSwitch extends StatelessWidget {
   const _PresetSwitch({
     required this.presets,
     required this.selected,
     required this.onSelect,
   });
+
+  /// Between segments and around them. Each segment keeps half of it on
+  /// either side, so the highlight lines up with a segment by its share.
+  static const _gap = 4.0;
 
   final List<ConnectionPreset> presets;
   final ConnectionPreset? selected;
@@ -954,26 +985,71 @@ class _PresetSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final duration = BrandMotion.of(context, BrandMotion.fast);
+    final index = switch (selected) {
+      final preset? => presets.indexOf(preset),
+      null => -1,
+    };
+    const half = EdgeInsets.symmetric(horizontal: _gap / 2);
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.symmetric(horizontal: _gap / 2, vertical: _gap),
       decoration: BoxDecoration(
         color: BrandColors.surface,
         borderRadius: BorderRadius.circular(BrandRadii.control),
         border: Border.all(color: BrandColors.line),
       ),
       child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 4,
+        child: Stack(
           children: [
-            for (final preset in presets)
-              Expanded(
-                child: _PresetSegment(
-                  label: presetLabel(l, preset),
-                  selected: preset == selected,
-                  onTap: onSelect == null ? null : () => onSelect!(preset),
+            Positioned.fill(
+              child: AnimatedOpacity(
+                opacity: index < 0 ? 0 : 1,
+                duration: duration,
+                child: AnimatedAlign(
+                  duration: duration,
+                  curve: BrandMotion.smoothOut,
+                  alignment: AlignmentDirectional(
+                    presets.length < 2
+                        ? 0
+                        : -1 + 2 * max(index, 0) / (presets.length - 1),
+                    0,
+                  ),
+                  child: FractionallySizedBox(
+                    widthFactor: 1 / presets.length,
+                    heightFactor: 1,
+                    child: Padding(
+                      padding: half,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: BrandColors.accentSoft,
+                          borderRadius: BorderRadius.circular(
+                            BrandRadii.segment,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
+            ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final preset in presets)
+                  Expanded(
+                    child: Padding(
+                      padding: half,
+                      child: _PresetSegment(
+                        label: presetLabel(l, preset),
+                        selected: preset == selected,
+                        onTap: onSelect == null
+                            ? null
+                            : () => onSelect!(preset),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -1006,14 +1082,12 @@ class _PresetSegment extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 34),
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? BrandColors.accentSoft : null,
-            borderRadius: BorderRadius.circular(BrandRadii.segment),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
+          child: AnimatedDefaultTextStyle(
+            duration: BrandMotion.of(context, BrandMotion.fast),
+            curve: BrandMotion.smoothOut,
             style: selected ? BrandText.selectedPreset : BrandText.preset,
+            textAlign: TextAlign.center,
+            child: Text(label),
           ),
         ),
       ),
@@ -1087,8 +1161,9 @@ class _RefreshArcState extends State<_RefreshArc>
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Opacity(
-      opacity: widget.mode == RefreshIndicatorMode.done ? 0 : widget.progress,
+    child: PullFade(
+      mode: widget.mode,
+      progress: widget.progress,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

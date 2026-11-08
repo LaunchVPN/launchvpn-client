@@ -71,3 +71,36 @@ class BrandSwap extends StatelessWidget {
     child: child,
   );
 }
+
+/// Opens room for [child] as it fades in, and closes it as [child] fades out,
+/// so what sits below moves along instead of jumping. A new [child], told
+/// apart by its key, takes the place of the old one the same way.
+class BrandReveal extends StatelessWidget {
+  const BrandReveal({super.key, required this.child});
+
+  /// Null for nothing.
+  final Widget? child;
+
+  /// How long opening and closing take, which whatever moves along matches.
+  static const duration = BrandMotion.fast;
+
+  @override
+  Widget build(BuildContext context) => AnimatedSwitcher(
+    duration: BrandMotion.of(context, duration),
+    switchInCurve: BrandMotion.smoothOut,
+    switchOutCurve: BrandMotion.smoothOut,
+    layoutBuilder: (current, previous) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [...previous, ?current],
+    ),
+    transitionBuilder: (child, animation) => FadeTransition(
+      opacity: animation,
+      child: SizeTransition(
+        sizeFactor: animation,
+        alignment: Alignment.topCenter,
+        child: child,
+      ),
+    ),
+    child: child ?? const SizedBox(width: double.infinity),
+  );
+}
