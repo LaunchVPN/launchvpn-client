@@ -13,6 +13,7 @@ import 'package:onexray/brand/mark.dart';
 import 'package:onexray/brand/pressable.dart';
 import 'package:onexray/brand/pull.dart';
 import 'package:onexray/brand/section_label.dart';
+import 'package:onexray/brand/swap.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/brand/toast.dart';
 import 'package:onexray/brand/top_bar.dart';
@@ -245,15 +246,21 @@ class _Delay extends StatelessWidget {
     final answered = PingDelayConstants.isSuccessful(delay);
     final Widget content;
     if (measuring) {
-      content = const SizedBox(width: 52, child: _WaveDots());
+      content = const SizedBox(
+        key: ValueKey('measuring'),
+        width: 52,
+        child: _WaveDots(),
+      );
     } else if (unmeasured) {
       content = const Icon(
         LucideIcons.refreshCw,
+        key: ValueKey('unmeasured'),
         size: 16,
         color: BrandColors.muted,
       );
     } else {
       content = Row(
+        key: ValueKey(delay),
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
@@ -292,7 +299,9 @@ class _Delay extends StatelessWidget {
       excludeSemantics: true,
       child: Pressable(
         onTap: measuring ? null : onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: BrandMotion.of(context, BrandMotion.fast),
+          curve: BrandMotion.smoothOut,
           height: _height,
           constraints: const BoxConstraints(minWidth: _height),
           padding: EdgeInsets.symmetric(horizontal: unmeasured ? 0 : _padding),
@@ -304,9 +313,15 @@ class _Delay extends StatelessWidget {
             borderRadius: BorderRadius.circular(_height / 2),
           ),
           // The name beside it needs room at the largest system font.
+          // The dots give way to the delay in place while the pill takes
+          // its new width.
           child: MediaQuery.withClampedTextScaling(
             maxScaleFactor: _maxTextScale,
-            child: content,
+            child: AnimatedSize(
+              duration: BrandMotion.of(context, BrandMotion.fast),
+              curve: BrandMotion.smoothOut,
+              child: BrandSwap(child: content),
+            ),
           ),
         ),
       ),
@@ -456,8 +471,9 @@ class _PullMarkState extends State<_PullMark>
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Opacity(
-      opacity: widget.mode == RefreshIndicatorMode.done ? 0 : widget.progress,
+    child: PullFade(
+      mode: widget.mode,
+      progress: widget.progress,
       child: Container(
         width: _PullMark._size,
         height: _PullMark._size,
@@ -521,7 +537,9 @@ class LocationCard extends StatelessWidget {
       label: delay == null ? location.name : '${location.name}, $delay',
       child: Pressable(
         onTap: onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: BrandMotion.of(context, BrandMotion.fast),
+          curve: BrandMotion.smoothOut,
           width: double.infinity,
           constraints: const BoxConstraints(minHeight: 72),
           padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
