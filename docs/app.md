@@ -42,10 +42,11 @@ upstream pages kept for merging. They are not reachable in this build.
   `BrandTheme.palette` also feeds upstream's Material and Shad themes, so shared dialogs and
   toasts match. Manrope and Unbounded are bundled with their licenses in `assets/fonts/`.
 - Motion takes its durations, curves and distances from `BrandMotion` in the theme, after
-  transitions.dev's scale. When the system asks for less motion, `BrandMotion.of` drops a
-  transition to nothing, and loops and presses that ask `BrandMotion.reduced` hold still. Location cards, settings rows, preset segments and the connect toggle tap
-  through `Pressable`: they shrink to 97% under a finger for 150 ms, a quick tap included, and
-  keep still when disabled or under reduced motion.
+  transitions.dev's scale. When the system asks for less motion, `BrandMotion.of` drops a transition
+  to nothing, and loops and presses that ask `BrandMotion.reduced` hold still. Location cards,
+  settings rows, preset segments, the connect toggle, the update banner and the back button tap
+  through `Pressable`: they shrink to 97% under a finger for 150 ms, a quick tap included, and keep
+  still when disabled or under reduced motion.
 - Our screens tell outcomes with `showBrandToast`: a success, error or info icon on a tinted
   tile, at the bottom and above the tab bar while the tabs show (`ToastArea`). One line centres
   on the tile; a longer text starts at its top. A toast rises 8 px into place as it fades in over
