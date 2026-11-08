@@ -82,7 +82,7 @@ class _LocationsPageState extends State<LocationsPage> {
                                     ? item.withDelay(PingDelayConstants.unknown)
                                     : item,
                                 selected: item.name == state.location?.name,
-                                measuring: state.showsMeasuring(item),
+                                measuring: state.measuring.contains(item.id),
                                 onTap: state.canChangeConnection
                                     ? () => Navigator.of(context).pop(item)
                                     : null,

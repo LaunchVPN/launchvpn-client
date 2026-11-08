@@ -108,7 +108,6 @@ class HomeState {
     this.deviceLimit = false,
     this.check,
     this.measuring = const {},
-    this.queued = const {},
   }) : catalog = catalog ?? ServerCatalog();
 
   final ConnectionView view;
@@ -149,19 +148,8 @@ class HomeState {
   /// soon as the tunnel is up.
   final ConnectionCheckView? check;
 
-  /// The locations in a sweep, or whose saved delay the catalog does not list
-  /// yet, by row ID.
+  /// The locations «Локации» shows as being measured, by row ID.
   final Set<int> measuring;
-
-  /// The locations asked for mid-transition, measured once it ends.
-  final Set<int> queued;
-
-  /// Whether [location] shows that it is being measured. A sweep forgets the
-  /// last delay a moment after it starts, so until then that one still shows.
-  bool showsMeasuring(Location location) =>
-      queued.contains(location.id) ||
-      (measuring.contains(location.id) &&
-          location.delay == PingDelayConstants.unknown);
 
   /// «Лимит устройств» in place of the toggle, once the tunnel is off. An
   /// ended subscription explains itself first.
@@ -342,7 +330,6 @@ class HomeState {
     bool? deviceLimit,
     ConnectionCheckView? check,
     Set<int>? measuring,
-    Set<int>? queued,
   }) => HomeState(
     view: view ?? this.view,
     catalog: catalog ?? this.catalog,
@@ -357,7 +344,6 @@ class HomeState {
     deviceLimit: deviceLimit ?? this.deviceLimit,
     check: check ?? this.check,
     measuring: measuring ?? this.measuring,
-    queued: queued ?? this.queued,
   );
 
   HomeState _withRequest(HomeRequest? request) => HomeState(
@@ -374,7 +360,6 @@ class HomeState {
     deviceLimit: deviceLimit,
     check: check,
     measuring: measuring,
-    queued: queued,
   );
 }
 
@@ -446,11 +431,12 @@ class HomeController extends PageCubit<HomeState> {
   /// The sweep each location is in, until it ends.
   final _sweeps = <int, Future<void>>{};
 
+  /// Locations asked for that no sweep has taken yet. Mid-transition they wait
+  /// for it to end.
+  final _asked = <int>{};
+
   /// Locations a sweep saved a delay for that the catalog does not list yet.
   final _unlisted = <int>{};
-
-  /// Locations asked for mid-transition.
-  final _queued = <int>{};
 
   /// An expiry this close gets a timer, and so does a running tunnel, which
   /// checks again at least this often. Otherwise a later expiry is checked
@@ -478,10 +464,10 @@ class HomeController extends PageCubit<HomeState> {
         },
       ),
     );
-    if (_queued.isNotEmpty &&
+    if (_asked.isNotEmpty &&
         next.measureReadiness != MeasureReadiness.waiting) {
       // The new state is not current until this returns.
-      scheduleMicrotask(_measureQueued);
+      scheduleMicrotask(_measureAsked);
     }
   }
 
@@ -513,7 +499,6 @@ class HomeController extends PageCubit<HomeState> {
   Future<void> initialize() async {
     _catalog ??= ServerCatalog.watch(_db).listen(
       (catalog) {
-        _dropListed(catalog);
         _showMeasuring(catalog: catalog);
         _checkExpiry(catalog.sources.lastOrNull);
       },
@@ -756,63 +741,42 @@ class HomeController extends PageCubit<HomeState> {
     }
   }
 
-  /// Measures [only] that location, or every listed one. A location already
-  /// in a sweep stays in it, and the call returns once all of them are done.
-  /// The results reach the screen through the catalog as each is saved.
-  ///
-  /// Mid-transition the locations wait for it to end and the call returns at
-  /// once. A tunnel that captures all traffic leaves nothing to measure.
+  /// Measures [only] that location, or every listed one, and returns once the
+  /// sweeps they are in end. A location already in a sweep stays in it.
+  /// Mid-transition they wait for it to end, and a tunnel that captures all
+  /// traffic leaves nothing to measure. The results reach the screen through
+  /// the catalog as each is saved.
   Future<void> measureLocations({Location? only}) {
     final ids = only == null
         ? [for (final item in state.locations.all) item.id]
         : [only.id];
-    switch (state.measureReadiness) {
-      case MeasureReadiness.ready:
-        return _measure(ids);
-      case MeasureReadiness.waiting:
-        _queued.addAll(ids);
-        _showMeasuring();
-      case MeasureReadiness.onlyWithVpnOff:
-        break;
-    }
-    return Future.value();
-  }
-
-  /// Measures what waited for a transition, once it ends. A location still in
-  /// the sweep the transition stopped waits for that sweep to return.
-  void _measureQueued() {
-    if (isClosed || _queued.isEmpty) return;
-    switch (state.measureReadiness) {
-      case MeasureReadiness.waiting:
-        return;
-      case MeasureReadiness.ready:
-        final ids = [
-          for (final id in _queued)
-            if (!_sweeps.containsKey(id)) id,
-        ];
-        _queued.removeAll(ids);
-        if (ids.isNotEmpty) unawaited(_measure(ids));
-      case MeasureReadiness.onlyWithVpnOff:
-        _queued.clear();
-        _showMeasuring();
-    }
-  }
-
-  Future<void> _measure(List<int> ids) {
-    final fresh = {
-      for (final id in ids)
-        if (!_sweeps.containsKey(id)) id,
-    };
-    if (fresh.isNotEmpty) {
-      final done = Completer<void>();
-      for (final id in fresh) {
-        _sweeps[id] = done.future;
-      }
-      _unlisted.removeAll(fresh);
-      _showMeasuring();
-      unawaited(_sweep(fresh).whenComplete(done.complete));
-    }
+    _asked.addAll(ids);
+    _measureAsked();
     return Future.wait({for (final id in ids) ?_sweeps[id]});
+  }
+
+  /// Starts one sweep for what was asked. A location already in a sweep is
+  /// left to it: one a transition stops asks again for what it left.
+  void _measureAsked() {
+    if (isClosed) return;
+    switch (state.measureReadiness) {
+      case MeasureReadiness.waiting:
+        break;
+      case MeasureReadiness.ready:
+        final fresh = _asked.where((id) => !_sweeps.containsKey(id)).toSet();
+        _asked.clear();
+        if (fresh.isNotEmpty) {
+          final done = Completer<void>();
+          for (final id in fresh) {
+            _sweeps[id] = done.future;
+          }
+          _unlisted.removeAll(fresh);
+          unawaited(_sweep(fresh).whenComplete(done.complete));
+        }
+      case MeasureReadiness.onlyWithVpnOff:
+        _asked.clear();
+    }
+    _showMeasuring();
   }
 
   Future<void> _sweep(Set<int> ids) async {
@@ -835,33 +799,33 @@ class HomeController extends PageCubit<HomeState> {
             row.id,
       };
       _unlisted.addAll(saved);
-      _dropListed(state.catalog);
-      // What a transition left unmeasured resumes once it ends.
-      if (stopped) _queued.addAll(ids.difference(saved));
+      if (stopped) _asked.addAll(ids.difference(saved));
     } catch (error) {
       ygLogger('read measured locations failed (${error.runtimeType})');
     }
     ids.forEach(_sweeps.remove);
-    _showMeasuring();
-    _measureQueued();
+    _measureAsked();
   }
 
-  /// A saved delay reaches the catalog a moment after its sweep ends, and the
-  /// location counts as measuring until then. A location the catalog no longer
-  /// has is done as well.
-  void _dropListed(ServerCatalog catalog) => _unlisted.removeWhere(
-    (id) =>
-        catalog.servers.firstWhereOrNull((row) => row.id == id)?.delay !=
-        PingDelayConstants.unknown,
-  );
-
+  /// A location shows it is being measured while it waits for a sweep, and in
+  /// one until the catalog lists its new delay. A sweep forgets the last delay
+  /// a moment after it starts, so until then that one still shows.
   void _showMeasuring({ServerCatalog? catalog}) {
     if (isClosed) return;
+    final unmeasured = {
+      for (final row in (catalog ?? state.catalog).servers)
+        if (row.delay == PingDelayConstants.unknown) row.id,
+    };
+    // Listed, or gone from the catalog.
+    _unlisted.retainAll(unmeasured);
     emit(
       state.copyWith(
         catalog: catalog,
-        measuring: Set.unmodifiable({..._sweeps.keys, ..._unlisted}),
-        queued: Set.unmodifiable(_queued),
+        measuring: Set.unmodifiable({
+          ..._asked,
+          ..._unlisted,
+          ..._sweeps.keys.where(unmeasured.contains),
+        }),
       ),
     );
   }
