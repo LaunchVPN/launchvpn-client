@@ -89,10 +89,10 @@ upstream pages kept for merging. They are not reachable in this build.
 - Pulling Home down loads the subscription the same way, on every Home screen while there is a
   subscription; a signed-in account without one reloads the account instead. The header and its
   days stay in place, and so do the location card, the modes and the announcement under the
-  toggle; only the toggle follows the pull. Above it an arc closes with the pull and turns with
-  Updating subscription while the load runs. The result shows as a compact toast under the header rather than at the
-  bottom: updated, with the end date when the panel sets one, not renewed yet, or the cause of a
-  failure. Refresh status reports the same way.
+  toggle until the toggle reaches them; then it pushes them along. Above it an arc closes with
+  the pull and turns with Updating subscription while the load runs. The result shows as a
+  compact toast under the header rather than at the bottom: updated, with the end date when the
+  panel sets one, not renewed yet, or the cause of a failure. Refresh status reports the same way.
 - When the panel refuses this device because the subscription already has all its devices
   (Remnawave answers the subscription request with `x-hwid-max-devices-reached: true`),
   `SubscriptionService` remembers it until the panel serves the subscription again, and Home shows

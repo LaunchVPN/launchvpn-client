@@ -21,8 +21,10 @@ abstract final class BrandPull {
       : 1;
 }
 
-/// Keeps [child] where it rests while the scroll view it is in is pulled past
-/// its top, so only the content above it follows the pull.
+/// Lays [child] at the bottom of the space it is given and keeps it there while
+/// the scroll view it is in is pulled past its top, so only the content above
+/// follows the pull. Once the pull has used up that space, the content pushes
+/// the child along instead of sliding over it.
 ///
 /// The position is read as the child paints: the refresh indicator corrects
 /// it during layout, after any rebuild.
@@ -40,8 +42,8 @@ class PinnedOnPull extends SingleChildRenderObjectWidget {
   ) => renderObject.position = Scrollable.of(context).position;
 }
 
-class RenderPinnedOnPull extends RenderProxyBox {
-  RenderPinnedOnPull(this._position);
+class RenderPinnedOnPull extends RenderShiftedBox {
+  RenderPinnedOnPull(this._position) : super(null);
 
   ScrollPosition _position;
 
@@ -55,9 +57,13 @@ class RenderPinnedOnPull extends RenderProxyBox {
     markNeedsPaint();
   }
 
-  /// Up by as far as the content is pulled down.
-  Offset get _shift =>
-      Offset(0, _position.hasPixels ? min(_position.pixels, 0) : 0);
+  /// Where the child rests, up by as far as the content is pulled down, but
+  /// never above this box.
+  Offset get _childOffset {
+    final rest = (child!.parentData! as BoxParentData).offset;
+    final pulled = _position.hasPixels ? min(_position.pixels, 0.0) : 0.0;
+    return rest.translate(0, max(pulled, -rest.dy));
+  }
 
   @override
   void attach(PipelineOwner owner) {
@@ -72,19 +78,36 @@ class RenderPinnedOnPull extends RenderProxyBox {
   }
 
   @override
+  Size computeDryLayout(BoxConstraints constraints) =>
+      constraints.constrain(child!.getDryLayout(constraints.loosen()));
+
+  @override
+  void performLayout() {
+    final child = this.child!
+      ..layout(constraints.loosen(), parentUsesSize: true);
+    size = constraints.constrain(child.size);
+    (child.parentData! as BoxParentData).offset = Offset(
+      (size.width - child.size.width) / 2,
+      size.height - child.size.height,
+    );
+  }
+
+  @override
   void paint(PaintingContext context, Offset offset) =>
-      super.paint(context, offset + _shift);
+      context.paintChild(child!, offset + _childOffset);
 
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
       result.addWithPaintOffset(
-        offset: _shift,
+        offset: _childOffset,
         position: position,
         hitTest: (result, transformed) =>
-            super.hitTestChildren(result, position: transformed),
+            child!.hitTest(result, position: transformed),
       );
 
   @override
-  void applyPaintTransform(RenderBox child, Matrix4 transform) =>
-      transform.translateByDouble(_shift.dx, _shift.dy, 0, 1);
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    final offset = _childOffset;
+    transform.translateByDouble(offset.dx, offset.dy, 0, 1);
+  }
 }

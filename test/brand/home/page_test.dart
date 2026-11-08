@@ -1440,6 +1440,8 @@ void main() {
         isNot(toggleTop.dy),
       );
       expect(tester.getTopLeft(card), cardTop);
+      // Taps land where the card shows.
+      expect(card.hitTestable(), findsOneWidget);
 
       // Loading holds the indicator's place.
       await gesture.up();
@@ -1458,6 +1460,31 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.getTopLeft(card), cardTop);
       expect(tester.getTopLeft(presets), presetsTop);
+    });
+
+    testWidgets('a long pull pushes the cards instead of covering them', (
+      tester,
+    ) async {
+      useScreen(tester, 480);
+      await pumpHome(tester);
+      await addSubscription(tester);
+      await addGroup(tester, '🇩🇪 Германия', delay: 516);
+      final card = find.byKey(const ValueKey('home-location'));
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(ConnectToggle)),
+      );
+      for (var step = 0; step < 12; step++) {
+        await gesture.moveBy(const Offset(0, 50));
+        await tester.pump();
+      }
+
+      expect(
+        tester.getBottomLeft(find.byType(ConnectToggle)).dy,
+        lessThanOrEqualTo(tester.getTopLeft(card).dy),
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
     });
 
     testWidgets('without a subscription there is nothing to pull', (

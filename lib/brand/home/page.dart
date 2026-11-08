@@ -452,47 +452,50 @@ class _HomePageState extends State<HomePage> {
     SizedBox(height: toggleGap),
     _Hero(state: state, onToggle: _toggle),
     const SizedBox(height: 24),
-    const Spacer(),
     // Only the toggle follows a pull; the cards stay under the finger.
-    PinnedOnPull(
-      child: Column(
-        children: [
-          if (state.location case final location?)
-            LocationCard(
-              key: const ValueKey('home-location'),
-              location: location,
-              // "No answer" would contradict a tunnel that works.
-              delay: PingDelayConstants.isSuccessful(location.delay)
-                  ? locationDelayLabel(
-                      AppLocalizations.of(context)!,
-                      location.delay,
-                    )
-                  : null,
-              onTap: _openLocations,
-              trailing: const Icon(
-                LucideIcons.chevronRight,
-                size: 20,
-                color: BrandColors.muted,
+    Expanded(
+      child: PinnedOnPull(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (state.location case final location?)
+              LocationCard(
+                key: const ValueKey('home-location'),
+                location: location,
+                // "No answer" would contradict a tunnel that works.
+                delay: PingDelayConstants.isSuccessful(location.delay)
+                    ? locationDelayLabel(
+                        AppLocalizations.of(context)!,
+                        location.delay,
+                      )
+                    : null,
+                onTap: _openLocations,
+                trailing: const Icon(
+                  LucideIcons.chevronRight,
+                  size: 20,
+                  color: BrandColors.muted,
+                ),
               ),
-            ),
-          if (state.subscription != null) ...[
-            const SizedBox(height: 20),
-            _PresetSwitch(
-              presets: _controller.presets,
-              selected: state.preset,
-              onSelect: state.canChangeConnection
-                  ? (preset) => choosePreset(context, _controller, preset, _run)
-                  : null,
-            ),
+            if (state.subscription != null) ...[
+              const SizedBox(height: 20),
+              _PresetSwitch(
+                presets: _controller.presets,
+                selected: state.preset,
+                onSelect: state.canChangeConnection
+                    ? (preset) =>
+                          choosePreset(context, _controller, preset, _run)
+                    : null,
+              ),
+            ],
+            if (state.announcement case final text?) ...[
+              const SizedBox(height: 20),
+              _AnnouncementBanner(
+                text: text,
+                onClose: _controller.dismissAnnouncement,
+              ),
+            ],
           ],
-          if (state.announcement case final text?) ...[
-            const SizedBox(height: 20),
-            _AnnouncementBanner(
-              text: text,
-              onClose: _controller.dismissAnnouncement,
-            ),
-          ],
-        ],
+        ),
       ),
     ),
   ];
