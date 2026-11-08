@@ -87,6 +87,9 @@ abstract final class BrandSpacing {
 /// passes it through [of]. Motion that is not a duration, such as a loop or a
 /// press, asks [reduced] instead.
 abstract final class BrandMotion {
+  /// One swing of a shake.
+  static const micro = Duration(milliseconds: 80);
+
   /// A close, a press.
   static const quick = Duration(milliseconds: 150);
 
@@ -118,6 +121,9 @@ abstract final class BrandMotion {
   static const nudge = 4.0;
   static const step = 8.0;
   static const reveal = 12.0;
+
+  /// How far a shake swings before its smaller [nudge].
+  static const swing = 6.0;
 
   /// The size of a control under a finger.
   static const press = 0.97;

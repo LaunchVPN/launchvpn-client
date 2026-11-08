@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,10 +8,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/app.dart';
 import 'package:onexray/brand/router.dart';
 import 'package:onexray/brand/shader_backdrop.dart';
+import 'package:onexray/brand/theme.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/shared/share/service.dart';
 
 import '../../support/fake_account_api.dart';
+import '../../support/opacity.dart';
 
 const _configLink = 'https://sub.launch.tel/abc';
 
@@ -524,6 +527,81 @@ void main() {
         find.widgetWithText(FilledButton, 'Создать аккаунт'),
         findsOneWidget,
       );
+    });
+
+    group('with motion', () {
+      /// From here on the screens move, as on a phone without reduced
+      /// motion. The backdrop moves too, so nothing settles any more.
+      Future<void> allowMotion(WidgetTester tester) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures();
+        await tester.pump();
+      }
+
+      testWidgets('the code slides away as the form comes back', (
+        tester,
+      ) async {
+        api.signupWith(token: 'st1');
+        await pumpApp(tester, hasSubscription: false);
+        final rest = tester.getTopLeft(find.text('Интернет\nбез границ')).dx;
+        // A screen keeps the motion it showed with, so it moves from the start.
+        await allowMotion(tester);
+        await fillForm(tester);
+        await tester.tap(find.widgetWithText(FilledButton, 'Создать аккаунт'));
+        for (var frame = 0; frame < 40; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        expect(tester.getTopLeft(find.text('Проверьте\nпочту')).dx, rest);
+
+        await tester.tap(find.widgetWithText(TextButton, 'Изменить'));
+        // A frame to hear of it, one to rebuild.
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        final code = find.text('Проверьте\nпочту');
+        final form = find.text('Интернет\nбез границ');
+        expect(shownOpacity(tester, code), inExclusiveRange(0, 1));
+        expect(shownOpacity(tester, form), inExclusiveRange(0, 1));
+        expect(tester.getTopLeft(code).dx, greaterThan(rest));
+        expect(tester.getTopLeft(form).dx, lessThan(rest));
+
+        await tester.pump(BrandMotion.fast);
+        expect(code, findsNothing);
+        expect(tester.getTopLeft(form).dx, rest);
+      });
+
+      testWidgets('a wrong code shakes the field and fades the error in', (
+        tester,
+      ) async {
+        api.signupWith(token: 'st1');
+        api.refuse('/api/app/auth/verify-code', 400, 'invalid_code', {
+          'attemptsLeft': 4,
+        });
+        await pumpApp(tester, hasSubscription: false);
+        await createAccount(tester);
+        await enterCode(tester, '000000');
+        final field = find.widgetWithText(TextField, '000000');
+        final rest = tester.getTopLeft(field).dx;
+        await allowMotion(tester);
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Подтвердить'));
+        final error = find.text('Неверный код. Осталось попыток: 4');
+        for (var frame = 0; frame < 20 && error.evaluate().isEmpty; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        expect(shownOpacity(tester, error), lessThan(1));
+        final moves = <double>{};
+        for (var frame = 0; frame < 30; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          moves.add(tester.getTopLeft(field).dx - rest);
+        }
+
+        expect(moves.reduce(max), greaterThan(3));
+        expect(moves.reduce(min), lessThan(-3));
+        expect(tester.getTopLeft(field).dx, rest);
+        expect(shownOpacity(tester, error), 1);
+      });
     });
 
     testWidgets('a registered email is refused on the form', (tester) async {
