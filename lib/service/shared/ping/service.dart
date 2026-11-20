@@ -290,13 +290,16 @@ class PingService {
 
   /// Measures servers for a connection about to start. This stays out of the
   /// queue, so it waits for a batch in progress but not for the rest of a sweep.
+  /// Every new connection pays the handshakes, so the pick times them too.
   Future<List<PingBatchResult>> measureBeforeStart(
     List<String> outboundJsons, {
     required int timeoutSeconds,
   }) async {
     final pingState = PingState();
     await pingState.readFromPreferences();
-    pingState.timeout = timeoutSeconds.toDouble();
+    pingState
+      ..timeout = timeoutSeconds.toDouble()
+      ..warm = false;
     return (_batchOverride ?? PingBatchRunner.run)([
       for (final outbound in outboundJsons) PingBatchSource(outbound),
     ], pingState);

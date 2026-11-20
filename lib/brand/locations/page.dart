@@ -228,9 +228,9 @@ class _Delay extends StatelessWidget {
     return 2 * _padding + 2 * _dot + width;
   }
 
-  /// Answers this fast count as good, and up to a second as usable.
-  static const _good = 300;
-  static const _usable = 1000;
+  /// Warm delays this fast count as good, and up to half a second as usable.
+  static const _good = 200;
+  static const _usable = 500;
 
   final int delay;
   final bool measuring;

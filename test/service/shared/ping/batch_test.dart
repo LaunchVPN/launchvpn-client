@@ -61,6 +61,7 @@ void main() {
       ],
       'timeout': 8,
       'url': 'https://example.com/ping',
+      'warm': true,
     };
     expect(payloads, [expected]);
     expect(first.map((result) => result.delay), [0, 20]);

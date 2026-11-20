@@ -53,19 +53,21 @@ v1–v2 创建新结构时不新增退休地区列，v3–v6 删除已有列，�
 同名、同延迟或同一非成功类别均按 ID 升序确定顺序。筛选只取子集，不重新排序，订阅分组次序不变。
 
 Locations measures provider groups with `PingService.pingLocations`, on the same queue and through
-the same native batch as ordinary servers. A group stores the delay of its first server that answers,
-trying at most three, so a sweep of the real panel takes seconds. "No answer" therefore means those
-three were silent, not every server of the group. A sweep first clears the stored delays of its
-locations, so one that waits in the queue or stops never shows them as current, and saves each
-location as soon as a server answers or it has none left to try. Opening the screen sweeps every
-location; a pull sweeps them again and a tap on a delay sweeps that location. A location already in
-a sweep is not queued twice. Measurements leave past a running tunnel (see
-[Xray configuration](xray-configuration.md#measuring-past-the-tunnel)), except on iOS with Capture
-all traffic, where the screen shows its locations unmeasured and says the delay is measured with
-VPN off. Starting or stopping a connection stops a sweep after its current batch. What it left
+the same native batch as ordinary servers. Every delay the App stores or shows is warm: the native
+batch sends two HEAD requests on one connection and times the second, so the handshakes of a new
+connection stay out and the number reads like ping. A group stores the delay of its first server
+that answers, trying at most three, so a sweep of the real panel takes seconds. "No answer"
+therefore means those three were silent, not every server of the group. A sweep first clears the
+stored delays of its locations, so one that waits in the queue or stops never shows them as current,
+and saves each location as soon as a server answers or it has none left to try. Opening the screen
+sweeps every location; a pull sweeps them again and a tap on a delay sweeps that location. A
+location already in a sweep is not queued twice. Measurements leave past a running tunnel (see [Xray
+configuration](xray-configuration.md#measuring-past-the-tunnel)), except on iOS with Capture all
+traffic, where the screen shows its locations unmeasured and says the delay is measured with VPN
+off. Starting or stopping a connection stops a sweep after its current batch. What it left
 unmeasured, and whatever is asked for meanwhile, shows the dots at once and is measured once the
-tunnel is up or down. A location counts as measured only once its new delay reaches the list, so
-the dots turn straight into the delay.
+tunnel is up or down. A location counts as measured only once its new delay reaches the list, so the
+dots turn straight into the delay.
 
 名称、延迟等显示排序是设备偏好，保存后通过共享事件同步，重启沿用；缺失或未知值回到默认。
 显示排序不改写手动顺序，切回默认时使用已保存的位置。手动分组和顺序进入资产备份，显示排序偏好不进入备份。
@@ -76,7 +78,7 @@ the dots turn straight into the delay.
 ### 测速结果
 
 手动与自动测速共用测速偏好，每个任务开始时读取一次 URL/超时，后续批次使用同一快照。
-延迟是 HTTP HEAD 到响应头的耗时，`0` 是有效结果；每批最多五项，保留输入顺序与单项失败隔离。
+延迟是同一连接上第二次 HTTP HEAD 到响应头的耗时，`0` 是有效结果；每批最多五项，保留输入顺序与单项失败隔离。
 不执行出口地区 GET、解析国家码或保存位置缓存，提供方完整配置不进入此队列。
 
 结果按节点 ID、来源、类型与配置原文复核，来源切到提供方方式后不再测量或写回隐藏的普通派生行；

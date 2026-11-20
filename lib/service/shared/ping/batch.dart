@@ -64,6 +64,7 @@ class PingBatchRunner {
           .toList(growable: false),
       pingState.timeout.toInt(),
       pingState.realUrl,
+      warm: pingState.warm,
     );
     final PingBatchResponse? response;
     try {

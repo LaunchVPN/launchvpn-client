@@ -146,7 +146,11 @@ class PingBatchRequest {
   int? timeout;
   String? url;
 
-  PingBatchRequest(this.configs, this.timeout, this.url);
+  /// Times the second of two requests on one connection, leaving out the
+  /// handshakes.
+  bool? warm;
+
+  PingBatchRequest(this.configs, this.timeout, this.url, {this.warm});
 
   factory PingBatchRequest.fromJson(Map<String, dynamic> json) =>
       _$PingBatchRequestFromJson(json);

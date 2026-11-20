@@ -38,8 +38,9 @@ permissions:
   contents: read
 
 env:
-  # Bump only together with an upstream merge.
-  LIBXRAY_REF: 7fe8528063e54343af8ba9a37431afc56000de21 # Xray-core v26.10.31
+  # Bump only together with an upstream merge. Our fork adds the warm pingBatch
+  # delay on top of XTLS/libXray 7fe8528 until XTLS takes that change.
+  LIBXRAY_REF: 5bb98a56666391f484ac0fc0ce20247de8c32d37 # Xray-core v26.10.31
   BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:

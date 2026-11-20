@@ -29,13 +29,13 @@ Store and Google Play listings will follow.
 
 ## Build from source
 
-The App builds next to a [libXray](https://github.com/XTLS/libXray) checkout at
+The App builds next to a checkout of our [libXray fork](https://github.com/LaunchVPN/libXray) at
 the commit our CI pins as `LIBXRAY_REF` in the
 [LaunchVPN Build workflow](./.github/workflows/launchvpn-build.yml):
 
 ```shell
 git clone https://github.com/LaunchVPN/launchvpn-client.git
-git clone https://github.com/XTLS/libXray.git
+git clone https://github.com/LaunchVPN/libXray.git
 git -C libXray checkout <LIBXRAY_REF>
 cd launchvpn-client
 ```
