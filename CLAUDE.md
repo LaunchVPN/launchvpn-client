@@ -26,7 +26,8 @@ is published in English and Russian, and both pages change together.
 - Verify dependency maintenance and SDK/platform compatibility before adoption:
   archive status, dated releases, substantive commits and maintainer responses.
 - Pin `LIBXRAY_REF` in our CI to a commit, never `main`, and bump it only together
-  with an upstream merge.
+  with an upstream merge. CI builds our `LaunchVPN/libXray` fork: the pin is the XTLS
+  commit plus our changes XTLS has not taken yet.
 - Edit source models, ARB, Pigeon and FFI definitions, then regenerate outputs.
   Generated Dart, Kotlin, Swift, Drift, FFI and localization files are not sources.
 

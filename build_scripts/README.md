@@ -33,8 +33,10 @@ uv sync --project build_scripts
 dart pub global activate fastforge
 ```
 
-Keep `LIBXRAY_REF` pinned to a commit and bump it only with an upstream merge. Run Flutter/Dart
-commands serially.
+Keep `LIBXRAY_REF` pinned to a commit and bump it only with an upstream merge. CI builds it
+from the `LaunchVPN/libXray` fork, which carries the warm `pingBatch` delay on top of
+XTLS/libXray until XTLS takes that change; a local build needs that fork next to the App,
+because XTLS/libXray ignores the `warm` flag. Run Flutter/Dart commands serially.
 
 ## GitHub Actions
 

@@ -40,6 +40,11 @@ class PingState {
   var url = PingUrl.cloudflare;
   var customUrl = "";
 
+  /// The delay the App shows leaves out the handshakes of a new connection,
+  /// so it reads like ping. Picking a server to start with times them too.
+  /// Each measurement decides; it is not a saved preference.
+  var warm = true;
+
   String get realUrl => url == PingUrl.custom ? customUrl : url.url;
 
   Future<void> readFromPreferences() async {

@@ -1,5 +1,5 @@
 name: Setup Flutter with caches
-description: Install stable Flutter and restore the SDK, pub packages and Dart build state
+description: Install the pinned stable Flutter and restore the SDK, pub packages and Dart build state
 
 # A separate action, because setup-flutter is shared with the disabled upstream
 # workflows and also supports hosts this repository does not build on.
@@ -14,6 +14,9 @@ runs:
     - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
       with:
         channel: stable
+        # Pinned: a new stable can break plugins and reorder generated sources.
+        # Stable 3.50 drops Isolate.create, which nativeapi 0.5.7 calls.
+        flutter-version: 3.47.9
         cache: true
 
     # Both tools track their inputs, so an older restored state only rebuilds

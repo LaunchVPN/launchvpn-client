@@ -361,6 +361,24 @@ void main() {
     );
   });
 
+  test('shown delays are warm and a start picks by the cold one', () async {
+    final node = await db.coreConfigDao.insertRow(_node('Node'));
+    final warm = <bool>[];
+    final service = PingService.forTesting(
+      database: db,
+      runBatch: (sources, state) async {
+        warm.add(state.warm);
+        return _successes(sources.length);
+      },
+    );
+
+    await service.pingConfigIds([node], force: true);
+    await service.pingLocations([(await db.coreConfigDao.searchRow(node))!]);
+    await service.measureBeforeStart(['{}'], timeoutSeconds: 3);
+
+    expect(warm, [true, true, false]);
+  });
+
   test('imported-node and subscription queues always run', () async {
     final local = await db.coreConfigDao.insertRow(_node('Local'));
     final remote = await db.coreConfigDao.insertRow(_node('Remote', subId: 9));

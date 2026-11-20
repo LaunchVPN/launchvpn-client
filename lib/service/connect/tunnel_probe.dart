@@ -2,11 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/service/shared/ping/state.dart';
 
-/// Opens an address through the tunnel. Returns how long the answer took in
-/// milliseconds, or null when none came.
+/// Opens an address through the tunnel. Returns the delay in milliseconds as
+/// «Локации» measures it, or null when no answer came.
 typedef ProbeTunnel = Future<int?> Function();
 
 /// The network under the VPN, as the event about a silent server tells it.
@@ -14,10 +15,8 @@ enum NetworkKind { none, wifi, cellular, other }
 
 /// The App's own traffic takes the tunnel on Android and iOS, so a request
 /// from here goes the way the person's apps do, through routing and the
-/// group's balancer. Any HTTP answer means the server got it through, so
-/// the headers end the wait and the body is never read.
+/// group's balancer. Any HTTP answer means the server got it through.
 Future<int?> probeTunnel() async {
-  const timeout = Duration(seconds: 4);
   final ping = PingState();
   try {
     await ping.readFromPreferences();
@@ -25,14 +24,30 @@ Future<int?> probeTunnel() async {
     // The default address still tells whether the tunnel works.
     ygLogger('read ping settings failed (${error.runtimeType})');
   }
+  return timeWarmHead(Uri.parse(ping.realUrl));
+}
+
+/// Sends two HEAD requests on one connection and returns how long the second
+/// took, the way «Локации» measures: the first pays for DNS and every
+/// handshake. Null when either gets no answer within [timeout].
+@visibleForTesting
+Future<int?> timeWarmHead(
+  Uri url, {
+  Duration timeout = const Duration(seconds: 4),
+}) async {
   final client = HttpClient()..connectionTimeout = timeout;
-  final watch = Stopwatch()..start();
   try {
     return await () async {
-      final request = await client.getUrl(Uri.parse(ping.realUrl));
-      request.followRedirects = false;
-      await request.close();
-      return watch.elapsedMilliseconds;
+      late int elapsed;
+      for (var request = 0; request < 2; request++) {
+        final watch = Stopwatch()..start();
+        final head = await client.headUrl(url);
+        head.followRedirects = false;
+        // A drained response hands the connection to the next request.
+        await (await head.close()).drain<void>();
+        elapsed = watch.elapsedMilliseconds;
+      }
+      return elapsed;
     }().timeout(timeout);
   } catch (_) {
     return null;

@@ -77,7 +77,8 @@ upstream pages kept for merging. They are not reachable in this build.
   never sets `reasserting`. So after a network change the screen stays connected.
 - On Android and iOS a tunnel counts as connected only once `ConnectionCheck` gets an answer
   through it. Until then Home shows Connecting with «Проверяем связь с сервером», without «IP
-  скрыт» or a delay. The check opens the address «Локации» measures, with a 4-second limit: the
+  скрыт» or a delay. The check measures the delay the way «Локации» does (see
+  [data management](data-management.md)), with a 4-second limit: the
   App's own traffic takes the tunnel on both platforms, Apps mode included, so it goes the way the
   person's apps do. It runs only while the App is visible: when a session comes up, back in the
   App, 3 seconds after the network changes and every 30 seconds; without a network it waits for
@@ -154,7 +155,7 @@ upstream pages kept for merging. They are not reachable in this build.
   included, under Countries and services. The flag emoji becomes an image and is removed from the
   name. A tap stores the group as a fixed selection and returns Home; a running tunnel reconnects at
   once, as with a preset. Until the user chooses, the selection stays automatic, which is the first
-  group. Each row shows its delay in a pill with a dot: green up to 300 ms, yellow up to a second,
+  group. Each row shows its delay in a pill with a dot: green up to 200 ms, yellow up to 500 ms,
   red above that or with no answer. A location never measured shows only a button that measures
   it, and one being measured shows three dots in a wave. Pulling the list down measures every
   location again under the LaunchVPN mark; see [data management](data-management.md) for the sweep.

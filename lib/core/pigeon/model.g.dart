@@ -121,6 +121,7 @@ PingBatchRequest _$PingBatchRequestFromJson(Map<String, dynamic> json) =>
           .toList(),
       (json['timeout'] as num?)?.toInt(),
       json['url'] as String?,
+      warm: json['warm'] as bool?,
     );
 
 Map<String, dynamic> _$PingBatchRequestToJson(PingBatchRequest instance) =>
@@ -128,6 +129,7 @@ Map<String, dynamic> _$PingBatchRequestToJson(PingBatchRequest instance) =>
       'configs': ?instance.configs?.map((e) => e.toJson()).toList(),
       'timeout': ?instance.timeout,
       'url': ?instance.url,
+      'warm': ?instance.warm,
     };
 
 PingBatchItemRequest _$PingBatchItemRequestFromJson(
