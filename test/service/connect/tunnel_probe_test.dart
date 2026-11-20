@@ -16,7 +16,8 @@ void main() {
       ports.add(request.connectionInfo!.remotePort);
       if (ports.length == 1) await Future<void>.delayed(firstDelay);
       request.response.statusCode = HttpStatus.noContent;
-      await request.response.close();
+      // A client that gave up has closed the connection by now.
+      request.response.close().ignore();
     });
     return Uri.parse('http://127.0.0.1:${server.port}/');
   }
@@ -24,11 +25,12 @@ void main() {
   tearDown(() => server.close(force: true));
 
   test('times the second request on the first one\'s connection', () async {
-    final url = await serve(firstDelay: const Duration(milliseconds: 300));
+    const firstDelay = Duration(seconds: 1);
+    final url = await serve(firstDelay: firstDelay);
 
     final delay = await timeWarmHead(url);
 
-    expect(delay, lessThan(300));
+    expect(delay, lessThan(firstDelay.inMilliseconds));
     expect(ports, hasLength(2));
     expect(ports.toSet(), hasLength(1));
   });
