@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:onexray/brand/account/controller.dart';
@@ -6,6 +7,7 @@ import 'package:onexray/brand/home/controller.dart';
 import 'package:onexray/brand/home/page.dart';
 import 'package:onexray/brand/settings/page.dart';
 import 'package:onexray/brand/shell.dart';
+import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/pages/main/modal_route_observer.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/shared/share/service.dart';
@@ -30,6 +32,7 @@ GoRouter createBrandRouter({
   Future<void> Function(BuildContext, Uri)? openLink,
   AccountService? account,
   Stream<bool> Function()? watchSubscription,
+  ValueListenable<VerticalBar?>? verticalBar,
 }) {
   final modals = AppModalRouteObserver();
   // Home and Settings share it, so a mode chosen on either is one choice and one
@@ -54,6 +57,7 @@ GoRouter createBrandRouter({
           openLink: openLink,
           account: account,
           watchSubscription: watchSubscription,
+          verticalBar: verticalBar,
         ),
         branches: [
           StatefulShellBranch(

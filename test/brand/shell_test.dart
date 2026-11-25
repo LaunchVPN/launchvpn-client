@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/app.dart';
 import 'package:onexray/brand/router.dart';
+import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/constants/preferences.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/account/telegram_auth.dart';
@@ -57,12 +59,16 @@ void main() {
     share.startAppLinks();
   }
 
-  GoRouter router({AccountService? account}) => createBrandRouter(
+  GoRouter router({
+    AccountService? account,
+    ValueListenable<VerticalBar?>? verticalBar,
+  }) => createBrandRouter(
     home: const Text('home-body'),
     settings: const Text('settings-body'),
     account: account,
     shareService: share,
     watchSubscription: () => Stream.value(true),
+    verticalBar: verticalBar,
     initializeServices: (_) async {
       await share.init();
       await ready?.future;
@@ -99,6 +105,44 @@ void main() {
     expect(find.text('Аккаунт'), findsOneWidget);
     expect(find.text('Настройки'), findsOneWidget);
     expect(find.byType(NavigationDestination), findsNWidgets(3));
+  });
+
+  testWidgets('the tabs move down the vertical bar and back, and the pages '
+      'stay', (tester) async {
+    prepare();
+    final bar = ValueNotifier<VerticalBar?>(null);
+    addTearDown(bar.dispose);
+    // iPhone Duo's inner display on its side.
+    tester.view
+      ..physicalSize = const Size(951, 669)
+      ..devicePixelRatio = 1
+      ..padding = const FakeViewPadding(right: 84, bottom: 20);
+    addTearDown(tester.view.reset);
+    await pumpApp(tester, router(verticalBar: bar));
+    await tester.tap(find.text('Настройки'));
+    await tester.pumpAndSettle();
+    final pages = tester.state(find.byType(StatefulNavigationShell));
+
+    bar.value = VerticalBar(side: VerticalBarSide.right, top: 120, bottom: 669);
+    await tester.pump();
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(
+      tester.getRect(find.byType(NavigationRail)),
+      const Rect.fromLTWH(867, 120, 84, 549),
+    );
+    expect(find.text('settings-body'), findsOneWidget);
+    expect(tester.state(find.byType(StatefulNavigationShell)), same(pages));
+
+    await tester.tap(find.text('Главная'));
+    await tester.pumpAndSettle();
+    expect(find.text('home-body'), findsOneWidget);
+
+    // Closed or turned upright, without the column.
+    tester.view.padding = const FakeViewPadding(bottom: 20);
+    await tester.pump();
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byType(NavigationDestination), findsNWidgets(3));
+    expect(tester.state(find.byType(StatefulNavigationShell)), same(pages));
   });
 
   testWidgets('the first launch says once what crash reports hold', (

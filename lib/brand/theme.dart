@@ -367,6 +367,17 @@ abstract final class BrandTheme {
           ),
         ),
       ),
+      // The tab bar's look, down iPhone Duo's vertical bar, from the top.
+      navigationRailTheme: const NavigationRailThemeData(
+        backgroundColor: Colors.transparent,
+        useIndicator: false,
+        labelType: NavigationRailLabelType.all,
+        groupAlignment: -1,
+        selectedLabelTextStyle: BrandText.selectedTab,
+        unselectedLabelTextStyle: BrandText.tab,
+        selectedIconTheme: IconThemeData(size: 24, color: BrandColors.accent),
+        unselectedIconTheme: IconThemeData(size: 24, color: BrandColors.muted),
+      ),
     );
   }
 
