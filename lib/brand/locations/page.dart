@@ -565,8 +565,7 @@ class LocationCard extends StatelessWidget {
                             Text(location.name, style: BrandText.cardTitle),
                             // A new delay takes the old one's place.
                             if (delay != null)
-                              BrandSwap(
-                                shift: const Offset(0, BrandMotion.nudge),
+                              BrandSwap.text(
                                 alignment: AlignmentDirectional.centerStart,
                                 child: Text(
                                   delay!,

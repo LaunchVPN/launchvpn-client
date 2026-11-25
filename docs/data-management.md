@@ -60,8 +60,8 @@ delay as soon as it has one, without waiting for the others. A group stores the 
 server that answers, trying at most three in panel order, so a sweep of the real panel takes
 seconds. "No answer" therefore means those three were silent, not every server of the group. A
 stored delay stays until a new one replaces it, so Home keeps showing it during a sweep; the list
-shows the dots instead from the moment a location is asked for. Opening the screen sweeps every location; a pull sweeps them again and a tap on a
-delay sweeps that location. A location already in a sweep is not queued twice. Measurements leave
+shows the dots instead from the moment a location is asked for. Opening the screen sweeps every
+location; a pull sweeps them again and a tap on a delay sweeps that location. A location already in a sweep is not queued twice. Measurements leave
 past a running tunnel (see [Xray configuration](xray-configuration.md#measuring-past-the-tunnel)),
 except on iOS with Capture all traffic, where the screen shows its locations unmeasured and says the
 delay is measured with VPN off. Starting or stopping a connection stops a sweep, and a delay that

@@ -440,9 +440,9 @@ class HomeController extends PageCubit<HomeState> {
   /// dropped.
   Completer<void>? _askedDone;
 
-  /// The delay a sweep saved for each location, kept while it runs and until
-  /// the catalog lists that delay.
-  final _saved = <int, int>{};
+  /// The delay a sweep saved for each location, kept while the sweep runs and
+  /// until the catalog lists that delay or no longer lists the location.
+  final _savedDelays = <int, int>{};
 
   /// Counts the times measuring stopped being ready, so a sweep learns of a
   /// transition that ended before it looked.
@@ -785,7 +785,7 @@ class HomeController extends PageCubit<HomeState> {
           for (final id in fresh) {
             _sweeps[id] = done.future;
           }
-          fresh.forEach(_saved.remove);
+          fresh.forEach(_savedDelays.remove);
           unawaited(_sweep(fresh).whenComplete(done.complete));
         }
         _askedDone?.complete(
@@ -810,14 +810,16 @@ class HomeController extends PageCubit<HomeState> {
         isCancelled: () =>
             stopped = stopped || isClosed || _readinessLost != readinessLost,
         onSaved: (id, delay) {
-          _saved[id] = delay;
+          _savedDelays[id] = delay;
           _showMeasuring();
         },
       );
     } catch (error) {
       ygLogger('measure locations failed (${error.runtimeType})');
     }
-    if (stopped) _asked.addAll(ids.where((id) => !_saved.containsKey(id)));
+    if (stopped) {
+      _asked.addAll(ids.where((id) => !_savedDelays.containsKey(id)));
+    }
     ids.forEach(_sweeps.remove);
     _measureAsked();
   }
@@ -830,7 +832,7 @@ class HomeController extends PageCubit<HomeState> {
     final listed = {
       for (final row in (catalog ?? state.catalog).servers) row.id: row.delay,
     };
-    _saved.removeWhere(
+    _savedDelays.removeWhere(
       (id, delay) =>
           !_sweeps.containsKey(id) &&
           (!listed.containsKey(id) || listed[id] == delay),
@@ -840,8 +842,8 @@ class HomeController extends PageCubit<HomeState> {
         catalog: catalog,
         measuring: Set.unmodifiable({
           ..._asked,
-          for (final id in {..._sweeps.keys, ..._saved.keys})
-            if (listed.containsKey(id) && listed[id] != _saved[id]) id,
+          for (final id in {..._sweeps.keys, ..._savedDelays.keys})
+            if (listed.containsKey(id) && listed[id] != _savedDelays[id]) id,
         }),
       ),
     );
