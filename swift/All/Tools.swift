@@ -26,11 +26,13 @@ enum LibXrayInvoker {
         }
     }
 
-    private static func isMeasurement(_ requestJson: String) -> Bool {
-        guard requestJson.contains("\"pingBatch\""),
+    /// Whether a request is a `pingBatch` measurement.
+    static func isMeasurement(_ requestJson: String) -> Bool {
+        let method = LibXrayMethod.pingBatch.rawValue
+        guard requestJson.contains("\"\(method)\""),
               let object = try? JSONSerialization.jsonObject(with: Data(requestJson.utf8)) as? [String: Any]
         else { return false }
-        return object["method"] as? String == "pingBatch"
+        return object["method"] as? String == method
     }
 
     private static func perform(_ requestJson: String) throws -> String {

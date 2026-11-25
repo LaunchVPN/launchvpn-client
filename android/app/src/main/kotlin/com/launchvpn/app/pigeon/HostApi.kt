@@ -138,7 +138,7 @@ class AppHostApi(
 
     override fun invoke(requestJson: String, callback: (Result<String>) -> Unit) {
         scope.launch {
-            TunnelBypass.followTunnel(context, coreCalls::alone)
+            TunnelBypass.followTunnel(context, coreCalls::exclusive)
             callback(coreCalls.invoke(requestJson))
         }
     }

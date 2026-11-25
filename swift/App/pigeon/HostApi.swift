@@ -283,8 +283,7 @@ enum PingOutsideTunnel {
     /// measure the tunnel.
     static func prepare(_ requestJson: String) async throws -> String {
         // Only measurements need the work below, and every other call skips it.
-        guard requestJson.contains("\"pingBatch\""),
-              object(requestJson)?["method"] as? String == "pingBatch",
+        guard LibXrayInvoker.isMeasurement(requestJson),
               await tunnelLetsPast()
         else { return requestJson }
         guard let interface = await physicalInterface(),

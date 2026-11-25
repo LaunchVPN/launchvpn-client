@@ -42,13 +42,13 @@ object TunnelBypass : DialerController {
      * slower than the network under it. Before each core call, the core
      * resolves through that network's DNS while VPN is on, and through the
      * system's otherwise. A change swaps the core's resolver, so it runs
-     * [alone], away from measurements in flight.
+     * [exclusive], away from measurements in flight.
      */
-    fun followTunnel(context: Context, alone: (() -> Unit) -> Unit) {
+    fun followTunnel(context: Context, exclusive: (() -> Unit) -> Unit) {
         val server = if (VpnController.readVpnRunning(context)) underlyingDns(context) else null
         if (server == resolver) return
-        alone {
-            if (server == resolver) return@alone
+        exclusive {
+            if (server == resolver) return@exclusive
             try {
                 if (server == null) LibXray.resetDNS() else LibXray.setDNS(this, server)
                 resolver = server

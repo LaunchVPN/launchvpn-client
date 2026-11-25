@@ -46,6 +46,9 @@ class PingService {
 
   AppDatabase get _database => _databaseOverride ?? AppDatabase();
 
+  Future<List<PingBatchResult>> Function(List<PingBatchSource>, PingState)
+  get _runBatch => _batchOverride ?? PingBatchRunner.run;
+
   final _pingQueue = CommandSerialExecutor();
   var _pingingTaskCount = 0;
   var _automaticEnabled = false;
@@ -207,10 +210,7 @@ class PingService {
         }
       }
       if (sources.isEmpty) continue;
-      final results = await (_batchOverride ?? PingBatchRunner.run)(
-        sources,
-        pingState,
-      );
+      final results = await _runBatch(sources, pingState);
       await db.transaction(() async {
         for (var index = 0; index < results.length; index++) {
           final result = results[index];
@@ -268,9 +268,7 @@ class PingService {
     var result = PingBatchResult.failed();
     for (final server in _locationServers(row).take(_locationAttempts)) {
       if (stopped()) return;
-      result = (await (_batchOverride ?? PingBatchRunner.run)([
-        PingBatchSource(server),
-      ], pingState)).single;
+      result = (await _runBatch([PingBatchSource(server)], pingState)).single;
       if (stopped()) return;
       if (result.success) break;
     }
@@ -289,7 +287,7 @@ class PingService {
     pingState
       ..timeout = timeoutSeconds.toDouble()
       ..warm = false;
-    return (_batchOverride ?? PingBatchRunner.run)([
+    return _runBatch([
       for (final outbound in outboundJsons) PingBatchSource(outbound),
     ], pingState);
   }
