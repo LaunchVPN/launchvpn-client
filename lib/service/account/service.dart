@@ -3,6 +3,7 @@ import 'package:onexray/core/brand.dart';
 import 'package:onexray/core/pigeon/host_api.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/service/account/account_data.dart';
+import 'package:onexray/service/account/apple_auth.dart';
 import 'package:onexray/service/account/device_claim.dart';
 import 'package:onexray/service/account/email_auth.dart';
 import 'package:onexray/service/account/session.dart';
@@ -14,8 +15,8 @@ import 'package:onexray/service/settings/language/brand_language.dart';
 import 'package:onexray/service/shared/share/service.dart';
 
 /// The person's LaunchVPN account on this device, wired from its parts:
-/// the [session] every request carries, sign-in by [email] or [telegram],
-/// and the account's [data]. Callers use the part they need.
+/// the [session] every request carries, sign-in by [email], [telegram] or
+/// [apple], and the account's [data]. Callers use the part they need.
 final class AccountService {
   factory AccountService({
     required Dio dio,
@@ -25,6 +26,7 @@ final class AccountService {
     void Function(Uri link)? addSubscription,
     String Function()? language,
     TelegramBrowserAuth? browser,
+    AppleAuthorize? appleSheet,
   }) {
     final keep = store ?? AccountSessionStore();
     late final AccountData data;
@@ -61,6 +63,12 @@ final class AccountService {
         device: device,
         language: languageCode,
       ),
+      apple: AppleAuth(
+        session: session,
+        data: data,
+        device: device,
+        authorize: appleSheet,
+      ),
     );
   }
 
@@ -69,6 +77,7 @@ final class AccountService {
     required this.data,
     required this.email,
     required this.telegram,
+    required this.apple,
   });
 
   static final instance = AccountService(
@@ -85,6 +94,7 @@ final class AccountService {
   final AccountData data;
   final EmailAuth email;
   final TelegramAccount telegram;
+  final AppleAuth apple;
 
   /// Picks up the Telegram attempt and the session saved by an earlier
   /// launch, without a request, and finishes a sign-out it left undone.

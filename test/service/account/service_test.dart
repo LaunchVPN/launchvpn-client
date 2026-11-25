@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onexray/service/account/failure.dart';
@@ -487,6 +489,59 @@ void main() {
           ),
         ),
       );
+    });
+  });
+
+  group('Apple', () {
+    late FakeAppleSheet sheet;
+
+    setUp(() => sheet = FakeAppleSheet());
+
+    AccountService appleAccount() =>
+        accountServiceFor(api, addSubscription: added.add, apple: sheet);
+
+    test('sends the token with the nonce whose hash Apple signed, and adds '
+        'the account subscription', () async {
+      api.appleWith(access: 'a1', refresh: 'r1');
+      api.subscription(_configLink);
+      final service = appleAccount();
+
+      await service.apple.login();
+
+      expect(service.session.signedIn.value, isTrue);
+      expect(added, [_subscriptionLink]);
+      final body = api.bodies('/api/app/auth/apple').single! as Map;
+      expect(body, {
+        'identityToken': 'apple-token',
+        'authorizationCode': 'apple-code',
+        'nonce': body['nonce'],
+        'hwid': 'device-hwid',
+        'platform': 'android',
+      });
+      expect(sheet.hashedNonces, [
+        sha256.convert(utf8.encode(body['nonce']! as String)).toString(),
+      ]);
+    });
+
+    test('a closed sheet asks the backend nothing', () async {
+      sheet.refusal = const AccountException(AccountError.cancelled);
+
+      await expectLater(
+        appleAccount().apple.login(),
+        throwsA(_error(AccountError.cancelled)),
+      );
+      expect(api.requests, isEmpty);
+    });
+
+    test('a token the backend refuses does not sign in', () async {
+      api.refuse('/api/app/auth/apple', 401, 'invalid_apple_auth');
+      final service = appleAccount();
+
+      await expectLater(
+        service.apple.login(),
+        throwsA(_error(AccountError.appleFailed)),
+      );
+      expect(service.session.signedIn.value, isFalse);
     });
   });
 

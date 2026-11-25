@@ -18,6 +18,7 @@ import screen_retriever_macos
 import sentry_flutter
 import share_plus
 import shared_preferences_foundation
+import sign_in_with_apple
 import url_launcher_macos
 import window_manager
 
@@ -35,6 +36,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   SentryFlutterPlugin.register(with: registry.registrar(forPlugin: "SentryFlutterPlugin"))
   SharePlusMacosPlugin.register(with: registry.registrar(forPlugin: "SharePlusMacosPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
+  SignInWithApplePlugin.register(with: registry.registrar(forPlugin: "SignInWithApplePlugin"))
   UrlLauncherPlugin.register(with: registry.registrar(forPlugin: "UrlLauncherPlugin"))
   WindowManagerPlugin.register(with: registry.registrar(forPlugin: "WindowManagerPlugin"))
 }
