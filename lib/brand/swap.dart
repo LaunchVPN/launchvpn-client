@@ -17,12 +17,14 @@ class BrandSwap extends StatelessWidget {
 
   /// Text changing in place: the old line rises out, the new one comes from
   /// below.
-  const BrandSwap.text({super.key, required this.child})
-    : shift = const Offset(0, BrandMotion.nudge),
-      duration = BrandMotion.quick,
-      reverseDuration = null,
-      curve = BrandMotion.inOut,
-      alignment = Alignment.center;
+  const BrandSwap.text({
+    super.key,
+    required this.child,
+    this.alignment = Alignment.center,
+  }) : shift = const Offset(0, BrandMotion.nudge),
+       duration = BrandMotion.quick,
+       reverseDuration = null,
+       curve = BrandMotion.inOut;
 
   /// A screen giving way to another, which rises a little as it arrives.
   const BrandSwap.screen({super.key, required this.child})

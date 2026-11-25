@@ -233,37 +233,36 @@ class PingService {
   /// Measures what the locations screen lists, using only the app's own core.
   /// Every location is measured at once, each in its own native call, and
   /// saved as soon as one of its servers answers or it has none left to try.
-  /// It tries at most [_locationAttempts] of them, in panel order.
+  /// It tries at most [_locationAttempts] of them, in panel order. [onSaved]
+  /// hears each delay as it is saved, before the catalog lists it.
   ///
-  /// The last delays go first, so a sweep that stops, or waits behind another,
-  /// never passes them off as current.
+  /// The last delays stay saved until new ones replace them: the screen, not
+  /// the database, shows which locations are being measured.
   Future<void> pingLocations(
     List<CoreConfigData> rows, {
     bool Function()? isCancelled,
-  }) async {
+    void Function(int id, int delay)? onSaved,
+  }) {
     final db = _database;
-    await db.transaction(() async {
-      for (final row in rows) {
-        await _writeDelay(db, row, PingDelayConstants.unknown);
-      }
-    });
     return _enqueuePing(() async {
       final pingState = PingState();
       await pingState.readFromPreferences();
       bool stopped() => _pingQueue.isPaused || (isCancelled?.call() ?? false);
       await Future.wait([
-        for (final row in rows) _pingLocation(db, row, pingState, stopped),
+        for (final row in rows)
+          _pingLocation(db, row, pingState, stopped, onSaved),
       ]);
     });
   }
 
-  /// A stop leaves the location unmeasured, even with an answer in hand: that
-  /// answer may have crossed a tunnel coming up or going down.
+  /// A stop saves nothing more, even with an answer in hand: that answer may
+  /// have crossed a tunnel coming up or going down.
   Future<void> _pingLocation(
     AppDatabase db,
     CoreConfigData row,
     PingState pingState,
     bool Function() stopped,
+    void Function(int id, int delay)? onSaved,
   ) async {
     var result = PingBatchResult.failed();
     for (final server in _locationServers(row).take(_locationAttempts)) {
@@ -272,7 +271,8 @@ class PingService {
       if (stopped()) return;
       if (result.success) break;
     }
-    await _updateRow(db, row, _storedDelay(result));
+    final delay = _storedDelay(result);
+    if (await _updateRow(db, row, delay)) onSaved?.call(row.id, delay);
   }
 
   /// Measures servers for a connection about to start. This stays out of the
@@ -324,25 +324,19 @@ class PingService {
     }
   }
 
-  Future<void> _updateRow(AppDatabase db, CoreConfigData row, int delay) async {
-    if (delay == PingDelayConstants.unknown) return;
-    await _writeDelay(db, row, delay);
-  }
-
-  Future<void> _writeDelay(
-    AppDatabase db,
-    CoreConfigData row,
-    int delay,
-  ) async {
-    if (row.data == null) return;
+  /// Whether [row] took [delay]; an unknown one is never saved.
+  Future<bool> _updateRow(AppDatabase db, CoreConfigData row, int delay) async {
+    if (delay == PingDelayConstants.unknown || row.data == null) return false;
     // A slow result must not overwrite an edit, favorite, or restored asset.
-    await (db.update(db.coreConfig)..where(
-          (table) =>
-              table.id.equals(row.id) &
-              table.subId.equals(row.subId) &
-              table.type.equals(row.type) &
-              table.data.equals(row.data!),
-        ))
-        .write(CoreConfigCompanion(delay: Value(delay)));
+    final written =
+        await (db.update(db.coreConfig)..where(
+              (table) =>
+                  table.id.equals(row.id) &
+                  table.subId.equals(row.subId) &
+                  table.type.equals(row.type) &
+                  table.data.equals(row.data!),
+            ))
+            .write(CoreConfigCompanion(delay: Value(delay)));
+    return written > 0;
   }
 }

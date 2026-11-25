@@ -196,7 +196,7 @@ class Scene {
     final home = HomeController(
       database: db,
       coordinator: coordinator,
-      pingLocations: (_, {isCancelled}) async {},
+      pingLocations: (_, {isCancelled, onSaved}) async {},
       dismissAnnounce: db.subscriptionDao.dismissAnnounce,
       refreshSubscription: refresh,
       platform: device.platform.connection,

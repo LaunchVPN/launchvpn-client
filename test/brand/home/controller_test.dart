@@ -62,6 +62,7 @@ void main() {
   late List<List<int>> sweeps;
   late List<(String?, String?, ConnectionPreset?)> widgetContexts;
   late List<bool Function()?> sweepCancels;
+  late Future<void> Function(int id, int delay) saveDelay;
   late Future<void> Function() sweep;
   late Future<SubscriptionRefreshResult> Function(SubscriptionData) refresh;
   var status = VpnStatus.disconnected;
@@ -117,9 +118,14 @@ void main() {
       database: db,
       coordinator: coordinator,
       platform: _android,
-      pingLocations: (rows, {isCancelled}) {
+      pingLocations: (rows, {isCancelled, onSaved}) {
         sweeps.add([for (final row in rows) row.id]);
         sweepCancels.add(isCancelled);
+        saveDelay = (id, delay) async {
+          final row = await db.coreConfigDao.searchRow(id);
+          await db.coreConfigDao.updateRow(row!.copyWith(delay: delay));
+          onSaved?.call(id, delay);
+        };
         return sweep();
       },
       refreshSubscription: (row) => refresh(row),
@@ -932,11 +938,48 @@ void main() {
         expect(controller.state.measuring, isEmpty);
       });
 
-      test('the delay replaces the dots without a gap', () async {
+      test('the last delay gives way to the dots at once', () async {
+        final row = await db.coreConfigDao.searchRow(germany);
+        await db.coreConfigDao.updateRow(row!.copyWith(delay: 80));
+        await settle();
+        final running = Completer<void>();
+        sweep = () => running.future;
+        final shown = <(bool, int)>[];
+        final watching = controller.stream.listen(
+          (state) => shown.add((
+            state.measuring.contains(germany),
+            state.locations.withId(germany)!.delay,
+          )),
+        );
+        addTearDown(watching.cancel);
+
+        unawaited(controller.measureLocations(only: listed(germany)));
+        expect(controller.state.measuring, {germany});
+        await settle();
+
+        expect(shown, isNot(contains((false, 80))));
+        running.complete();
+      });
+
+      test('a location shows its delay before the sweep ends', () async {
+        final running = Completer<void>();
         sweep = () async {
-          final row = await db.coreConfigDao.searchRow(germany);
-          await db.coreConfigDao.updateRow(row!.copyWith(delay: 120));
+          await saveDelay(germany, 120);
+          await running.future;
         };
+
+        unawaited(controller.measureLocations());
+        await settle();
+
+        expect(controller.state.measuring, {fastest});
+        expect(listed(germany).delay, 120);
+        running.complete();
+        await settle();
+        expect(controller.state.measuring, isEmpty);
+      });
+
+      test('the delay replaces the dots without a gap', () async {
+        sweep = () => saveDelay(germany, 120);
         final shown = <(bool, int)>[];
         final watching = controller.stream.listen(
           (state) => shown.add((

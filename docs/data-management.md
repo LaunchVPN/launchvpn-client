@@ -58,17 +58,17 @@ one connection and times the second, so the handshakes of a new connection stay 
 reads like ping. Every location is measured at once, each in its own native call, and shows its
 delay as soon as it has one, without waiting for the others. A group stores the delay of its first
 server that answers, trying at most three in panel order, so a sweep of the real panel takes
-seconds. "No answer" therefore means those three were silent, not every server of the group. A sweep
-first clears the stored delays of its locations, so one that waits in the queue or stops never shows
-them as current. Opening the screen sweeps every location; a pull sweeps them again and a tap on a
-delay sweeps that location. A location already in a sweep is not queued twice. Measurements leave
+seconds. "No answer" therefore means those three were silent, not every server of the group. A
+stored delay stays until a new one replaces it, so Home keeps showing it during a sweep; the list
+shows the dots instead from the moment a location is asked for. Opening the screen sweeps every
+location; a pull sweeps them again and a tap on a delay sweeps that location. A location already in a sweep is not queued twice. Measurements leave
 past a running tunnel (see [Xray configuration](xray-configuration.md#measuring-past-the-tunnel)),
 except on iOS with Capture all traffic, where the screen shows its locations unmeasured and says the
 delay is measured with VPN off. Starting or stopping a connection stops a sweep, and a delay that
 comes back after that is not saved, since it may have crossed the tunnel coming up or going down.
 What the sweep left unmeasured, and whatever is asked for meanwhile, shows the dots at once and is
-measured once the tunnel is up or down. A location counts as measured only once its new delay
-reaches the list, so the dots turn straight into the delay.
+measured once the tunnel is up or down. The sweep reports each delay it saves, and a location counts
+as measured only once the list shows that delay, so the dots turn straight into it.
 
 名称、延迟等显示排序是设备偏好，保存后通过共享事件同步，重启沿用；缺失或未知值回到默认。
 显示排序不改写手动顺序，切回默认时使用已保存的位置。手动分组和顺序进入资产备份，显示排序偏好不进入备份。

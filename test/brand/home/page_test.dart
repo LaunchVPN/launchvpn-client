@@ -144,7 +144,7 @@ void main() {
     controller = HomeController(
       database: db,
       coordinator: coordinator,
-      pingLocations: (rows, {isCancelled}) {
+      pingLocations: (rows, {isCancelled, onSaved}) {
         sweeps.add([for (final row in rows) row.id]);
         return sweep();
       },
@@ -395,12 +395,13 @@ void main() {
       await addGroup(tester, '🇵🇱 Польша');
       await tester.tap(find.byKey(const ValueKey('home-location')));
       await tester.pump();
+      // From the first frame of the list.
+      expect(find.text('516 мс'), findsNothing);
       await tester.pump(const Duration(seconds: 1));
 
-      // The two without a delay wave. Германия keeps its own: the stub sweep
-      // never reaches the service, which would forget it first.
-      expect(find.bySemanticsLabel('Замеряем пинг'), findsNWidgets(2));
-      expect(find.text('516 мс'), findsOneWidget);
+      // Every location waves, the measured ones too.
+      expect(find.bySemanticsLabel('Замеряем пинг'), findsNWidgets(5));
+      expect(find.text('516 мс'), findsNothing);
 
       running.complete();
       await tester.pumpAndSettle();
