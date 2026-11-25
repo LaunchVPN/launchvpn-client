@@ -195,6 +195,11 @@ enum VpnStatus: Int, CaseIterable {
   case connected = 3
 }
 
+enum VerticalBarSide: Int, CaseIterable {
+  case left = 0
+  case right = 1
+}
+
 enum PlatformPermissionKind: Int, CaseIterable {
   case none = 0
   case androidVpn = 1
@@ -392,6 +397,56 @@ struct TunnelStop: Hashable, CustomStringConvertible {
 
   public var description: String {
     return "TunnelStop(reason: \(String(describing: reason)), startedAtMs: \(String(describing: startedAtMs)), endedAtMs: \(String(describing: endedAtMs)), memory: \(String(describing: memory)))"
+  }
+}
+
+/// The column iOS keeps along one side of the screen for the status bar and
+/// the camera, as on iPhone Duo. It is as wide as the safe area's inset on
+/// [side]; the App's tabs go between [top] and [bottom], in points from the
+/// top of the screen, clear of what the system shows there.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct VerticalBar: Hashable, CustomStringConvertible {
+  var side: VerticalBarSide
+  var top: Double
+  var bottom: Double
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> VerticalBar? {
+    let side = pigeonVar_list[0] as! VerticalBarSide
+    let top = pigeonVar_list[1] as! Double
+    let bottom = pigeonVar_list[2] as! Double
+
+    return VerticalBar(
+      side: side,
+      top: top,
+      bottom: bottom
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      side,
+      top,
+      bottom,
+    ]
+  }
+  static func == (lhs: VerticalBar, rhs: VerticalBar) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return MessagesPigeonInternal.deepEquals(lhs.side, rhs.side) && MessagesPigeonInternal.deepEquals(lhs.top, rhs.top) && MessagesPigeonInternal.deepEquals(lhs.bottom, rhs.bottom)
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("VerticalBar")
+    MessagesPigeonInternal.deepHash(value: side, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: top, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: bottom, hasher: &hasher)
+  }
+
+  public var description: String {
+    return "VerticalBar(side: \(String(describing: side)), top: \(String(describing: top)), bottom: \(String(describing: bottom)))"
   }
 }
 
@@ -754,48 +809,56 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
     case 130:
       let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
       if let enumResultAsInt = enumResultAsInt {
-        return PlatformPermissionKind(rawValue: enumResultAsInt)
+        return VerticalBarSide(rawValue: enumResultAsInt)
       }
       return nil
     case 131:
       let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
       if let enumResultAsInt = enumResultAsInt {
-        return PlatformPermissionState(rawValue: enumResultAsInt)
+        return PlatformPermissionKind(rawValue: enumResultAsInt)
       }
       return nil
     case 132:
       let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
       if let enumResultAsInt = enumResultAsInt {
-        return NativeVpnCommandState(rawValue: enumResultAsInt)
+        return PlatformPermissionState(rawValue: enumResultAsInt)
       }
       return nil
     case 133:
       let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
       if let enumResultAsInt = enumResultAsInt {
-        return NativeLaunchAtLoginState(rawValue: enumResultAsInt)
+        return NativeVpnCommandState(rawValue: enumResultAsInt)
       }
       return nil
     case 134:
-      return AppleWidgetContext.fromList(self.readValue() as! [Any?])
+      let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
+      if let enumResultAsInt = enumResultAsInt {
+        return NativeLaunchAtLoginState(rawValue: enumResultAsInt)
+      }
+      return nil
     case 135:
-      return TunnelMemory.fromList(self.readValue() as! [Any?])
+      return AppleWidgetContext.fromList(self.readValue() as! [Any?])
     case 136:
-      return TunnelStop.fromList(self.readValue() as! [Any?])
+      return TunnelMemory.fromList(self.readValue() as! [Any?])
     case 137:
-      return AndroidAutomationSettings.fromList(self.readValue() as! [Any?])
+      return TunnelStop.fromList(self.readValue() as! [Any?])
     case 138:
-      return BackupLocation.fromList(self.readValue() as! [Any?])
+      return VerticalBar.fromList(self.readValue() as! [Any?])
     case 139:
-      return DeviceIdentity.fromList(self.readValue() as! [Any?])
+      return AndroidAutomationSettings.fromList(self.readValue() as! [Any?])
     case 140:
-      return AppleVpnCapabilities.fromList(self.readValue() as! [Any?])
+      return BackupLocation.fromList(self.readValue() as! [Any?])
     case 141:
-      return NativeLaunchAtLoginResult.fromList(self.readValue() as! [Any?])
+      return DeviceIdentity.fromList(self.readValue() as! [Any?])
     case 142:
-      return PlatformPermissionResult.fromList(self.readValue() as! [Any?])
+      return AppleVpnCapabilities.fromList(self.readValue() as! [Any?])
     case 143:
-      return NativeVpnCommandResult.fromList(self.readValue() as! [Any?])
+      return NativeLaunchAtLoginResult.fromList(self.readValue() as! [Any?])
     case 144:
+      return PlatformPermissionResult.fromList(self.readValue() as! [Any?])
+    case 145:
+      return NativeVpnCommandResult.fromList(self.readValue() as! [Any?])
+    case 146:
       return AndroidAppInfo.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -808,50 +871,56 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     if let value = value as? VpnStatus {
       super.writeByte(129)
       super.writeValue(value.rawValue)
-    } else if let value = value as? PlatformPermissionKind {
+    } else if let value = value as? VerticalBarSide {
       super.writeByte(130)
       super.writeValue(value.rawValue)
-    } else if let value = value as? PlatformPermissionState {
+    } else if let value = value as? PlatformPermissionKind {
       super.writeByte(131)
       super.writeValue(value.rawValue)
-    } else if let value = value as? NativeVpnCommandState {
+    } else if let value = value as? PlatformPermissionState {
       super.writeByte(132)
       super.writeValue(value.rawValue)
-    } else if let value = value as? NativeLaunchAtLoginState {
+    } else if let value = value as? NativeVpnCommandState {
       super.writeByte(133)
       super.writeValue(value.rawValue)
-    } else if let value = value as? AppleWidgetContext {
+    } else if let value = value as? NativeLaunchAtLoginState {
       super.writeByte(134)
-      super.writeValue(value.toList())
-    } else if let value = value as? TunnelMemory {
+      super.writeValue(value.rawValue)
+    } else if let value = value as? AppleWidgetContext {
       super.writeByte(135)
       super.writeValue(value.toList())
-    } else if let value = value as? TunnelStop {
+    } else if let value = value as? TunnelMemory {
       super.writeByte(136)
       super.writeValue(value.toList())
-    } else if let value = value as? AndroidAutomationSettings {
+    } else if let value = value as? TunnelStop {
       super.writeByte(137)
       super.writeValue(value.toList())
-    } else if let value = value as? BackupLocation {
+    } else if let value = value as? VerticalBar {
       super.writeByte(138)
       super.writeValue(value.toList())
-    } else if let value = value as? DeviceIdentity {
+    } else if let value = value as? AndroidAutomationSettings {
       super.writeByte(139)
       super.writeValue(value.toList())
-    } else if let value = value as? AppleVpnCapabilities {
+    } else if let value = value as? BackupLocation {
       super.writeByte(140)
       super.writeValue(value.toList())
-    } else if let value = value as? NativeLaunchAtLoginResult {
+    } else if let value = value as? DeviceIdentity {
       super.writeByte(141)
       super.writeValue(value.toList())
-    } else if let value = value as? PlatformPermissionResult {
+    } else if let value = value as? AppleVpnCapabilities {
       super.writeByte(142)
       super.writeValue(value.toList())
-    } else if let value = value as? NativeVpnCommandResult {
+    } else if let value = value as? NativeLaunchAtLoginResult {
       super.writeByte(143)
       super.writeValue(value.toList())
-    } else if let value = value as? AndroidAppInfo {
+    } else if let value = value as? PlatformPermissionResult {
       super.writeByte(144)
+      super.writeValue(value.toList())
+    } else if let value = value as? NativeVpnCommandResult {
+      super.writeByte(145)
+      super.writeValue(value.toList())
+    } else if let value = value as? AndroidAppInfo {
+      super.writeByte(146)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -1309,6 +1378,74 @@ class TunnelStopsHostApiSetup {
       }
     } else {
       takeTunnelStopsChannel.setMessageHandler(nil)
+    }
+  }
+}
+/// Tells Dart where iOS puts its vertical bar.
+///
+/// Generated protocol from Pigeon that represents a handler of messages from Flutter.
+protocol VerticalBarHostApi {
+  /// Sends the current bar to [VerticalBarFlutterApi], then every change.
+  func watchVerticalBar() throws
+}
+
+/// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
+class VerticalBarHostApiSetup {
+  static var codec: FlutterStandardMessageCodec { MessagesPigeonCodec.shared }
+  /// Sets up an instance of `VerticalBarHostApi` to handle messages through the `binaryMessenger`.
+  static func setUp(binaryMessenger: FlutterBinaryMessenger, api: VerticalBarHostApi?, messageChannelSuffix: String = "") {
+    let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
+    /// Sends the current bar to [VerticalBarFlutterApi], then every change.
+    let watchVerticalBarChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.onexray.VerticalBarHostApi.watchVerticalBar\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      watchVerticalBarChannel.setMessageHandler { _, reply in
+        do {
+          try api.watchVerticalBar()
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      watchVerticalBarChannel.setMessageHandler(nil)
+    }
+  }
+}
+
+/// Generated protocol from Pigeon that represents Flutter messages that can be called from Swift.
+protocol VerticalBarFlutterApiProtocol {
+  /// Null wherever iOS lays its bars out across the top and bottom.
+  @MainActor func verticalBarChanged(bar barArg: VerticalBar?) async throws
+}
+class VerticalBarFlutterApi: VerticalBarFlutterApiProtocol {
+  private let binaryMessenger: FlutterBinaryMessenger
+  private let messageChannelSuffix: String
+  init(binaryMessenger: FlutterBinaryMessenger, messageChannelSuffix: String = "") {
+    self.binaryMessenger = binaryMessenger
+    self.messageChannelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
+  }
+  var codec: MessagesPigeonCodec {
+    return MessagesPigeonCodec.shared
+  }
+  /// Null wherever iOS lays its bars out across the top and bottom.
+  @MainActor func verticalBarChanged(bar barArg: VerticalBar?) async throws {
+    return try await withCheckedThrowingContinuation { continuation in
+      let channelName: String = "dev.flutter.pigeon.onexray.VerticalBarFlutterApi.verticalBarChanged\(messageChannelSuffix)"
+      let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
+      channel.sendMessage([barArg] as [Any?]) { response in
+        guard let listResponse = response as? [Any?] else {
+          continuation.resume(throwing: createConnectionError(withChannelName: channelName))
+          return
+        }
+        if listResponse.count > 1 {
+          let code: String = listResponse[0] as! String
+          let message: String? = nilOrValue(listResponse[1])
+          let details: String? = nilOrValue(listResponse[2])
+          continuation.resume(throwing: PigeonError(code: code, message: message, details: details))
+        } else {
+          continuation.resume()
+        }
+      }
     }
   }
 }

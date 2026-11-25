@@ -113,6 +113,8 @@ int _deepHash(Object? value) {
 
 enum VpnStatus { disconnecting, disconnected, connecting, connected }
 
+enum VerticalBarSide { left, right }
+
 enum PlatformPermissionKind {
   none,
   androidVpn,
@@ -330,6 +332,60 @@ class TunnelStop {
   @override
   String toString() {
     return 'TunnelStop(reason: $reason, startedAtMs: $startedAtMs, endedAtMs: $endedAtMs, memory: $memory)';
+  }
+}
+
+/// The column iOS keeps along one side of the screen for the status bar and
+/// the camera, as on iPhone Duo. It is as wide as the safe area's inset on
+/// [side]; the App's tabs go between [top] and [bottom], in points from the
+/// top of the screen, clear of what the system shows there.
+class VerticalBar {
+  VerticalBar({required this.side, required this.top, required this.bottom});
+
+  VerticalBarSide side;
+
+  double top;
+
+  double bottom;
+
+  List<Object?> _toList() {
+    return <Object?>[side, top, bottom];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static VerticalBar decode(Object result) {
+    result as List<Object?>;
+    return VerticalBar(
+      side: result[0]! as VerticalBarSide,
+      top: result[1]! as double,
+      bottom: result[2]! as double,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! VerticalBar || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(side, other.side) &&
+        _deepEquals(top, other.top) &&
+        _deepEquals(bottom, other.bottom);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'VerticalBar(side: $side, top: $top, bottom: $bottom)';
   }
 }
 
@@ -752,50 +808,56 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is VpnStatus) {
       buffer.putUint8(129);
       writeValue(buffer, value.index);
-    } else if (value is PlatformPermissionKind) {
+    } else if (value is VerticalBarSide) {
       buffer.putUint8(130);
       writeValue(buffer, value.index);
-    } else if (value is PlatformPermissionState) {
+    } else if (value is PlatformPermissionKind) {
       buffer.putUint8(131);
       writeValue(buffer, value.index);
-    } else if (value is NativeVpnCommandState) {
+    } else if (value is PlatformPermissionState) {
       buffer.putUint8(132);
       writeValue(buffer, value.index);
-    } else if (value is NativeLaunchAtLoginState) {
+    } else if (value is NativeVpnCommandState) {
       buffer.putUint8(133);
       writeValue(buffer, value.index);
-    } else if (value is AppleWidgetContext) {
+    } else if (value is NativeLaunchAtLoginState) {
       buffer.putUint8(134);
-      writeValue(buffer, value.encode());
-    } else if (value is TunnelMemory) {
+      writeValue(buffer, value.index);
+    } else if (value is AppleWidgetContext) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    } else if (value is TunnelStop) {
+    } else if (value is TunnelMemory) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    } else if (value is AndroidAutomationSettings) {
+    } else if (value is TunnelStop) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    } else if (value is BackupLocation) {
+    } else if (value is VerticalBar) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    } else if (value is DeviceIdentity) {
+    } else if (value is AndroidAutomationSettings) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
-    } else if (value is AppleVpnCapabilities) {
+    } else if (value is BackupLocation) {
       buffer.putUint8(140);
       writeValue(buffer, value.encode());
-    } else if (value is NativeLaunchAtLoginResult) {
+    } else if (value is DeviceIdentity) {
       buffer.putUint8(141);
       writeValue(buffer, value.encode());
-    } else if (value is PlatformPermissionResult) {
+    } else if (value is AppleVpnCapabilities) {
       buffer.putUint8(142);
       writeValue(buffer, value.encode());
-    } else if (value is NativeVpnCommandResult) {
+    } else if (value is NativeLaunchAtLoginResult) {
       buffer.putUint8(143);
       writeValue(buffer, value.encode());
-    } else if (value is AndroidAppInfo) {
+    } else if (value is PlatformPermissionResult) {
       buffer.putUint8(144);
+      writeValue(buffer, value.encode());
+    } else if (value is NativeVpnCommandResult) {
+      buffer.putUint8(145);
+      writeValue(buffer, value.encode());
+    } else if (value is AndroidAppInfo) {
+      buffer.putUint8(146);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -810,37 +872,42 @@ class _PigeonCodec extends StandardMessageCodec {
         return value == null ? null : VpnStatus.values[value];
       case 130:
         final value = readValue(buffer) as int?;
-        return value == null ? null : PlatformPermissionKind.values[value];
+        return value == null ? null : VerticalBarSide.values[value];
       case 131:
         final value = readValue(buffer) as int?;
-        return value == null ? null : PlatformPermissionState.values[value];
+        return value == null ? null : PlatformPermissionKind.values[value];
       case 132:
         final value = readValue(buffer) as int?;
-        return value == null ? null : NativeVpnCommandState.values[value];
+        return value == null ? null : PlatformPermissionState.values[value];
       case 133:
         final value = readValue(buffer) as int?;
-        return value == null ? null : NativeLaunchAtLoginState.values[value];
+        return value == null ? null : NativeVpnCommandState.values[value];
       case 134:
-        return AppleWidgetContext.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : NativeLaunchAtLoginState.values[value];
       case 135:
-        return TunnelMemory.decode(readValue(buffer)!);
+        return AppleWidgetContext.decode(readValue(buffer)!);
       case 136:
-        return TunnelStop.decode(readValue(buffer)!);
+        return TunnelMemory.decode(readValue(buffer)!);
       case 137:
-        return AndroidAutomationSettings.decode(readValue(buffer)!);
+        return TunnelStop.decode(readValue(buffer)!);
       case 138:
-        return BackupLocation.decode(readValue(buffer)!);
+        return VerticalBar.decode(readValue(buffer)!);
       case 139:
-        return DeviceIdentity.decode(readValue(buffer)!);
+        return AndroidAutomationSettings.decode(readValue(buffer)!);
       case 140:
-        return AppleVpnCapabilities.decode(readValue(buffer)!);
+        return BackupLocation.decode(readValue(buffer)!);
       case 141:
-        return NativeLaunchAtLoginResult.decode(readValue(buffer)!);
+        return DeviceIdentity.decode(readValue(buffer)!);
       case 142:
-        return PlatformPermissionResult.decode(readValue(buffer)!);
+        return AppleVpnCapabilities.decode(readValue(buffer)!);
       case 143:
-        return NativeVpnCommandResult.decode(readValue(buffer)!);
+        return NativeLaunchAtLoginResult.decode(readValue(buffer)!);
       case 144:
+        return PlatformPermissionResult.decode(readValue(buffer)!);
+      case 145:
+        return NativeVpnCommandResult.decode(readValue(buffer)!);
+      case 146:
         return AndroidAppInfo.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -1369,6 +1436,86 @@ class TunnelStopsHostApi {
       isNullValid: false,
     );
     return (pigeonVar_replyValue! as List<Object?>).cast<TunnelStop>();
+  }
+}
+
+/// Tells Dart where iOS puts its vertical bar.
+class VerticalBarHostApi {
+  /// Constructor for [VerticalBarHostApi]. The [binaryMessenger] named argument is
+  /// available for dependency injection. If it is left null, the default
+  /// BinaryMessenger will be used which routes to the host platform.
+  VerticalBarHostApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
+
+  final BinaryMessenger? pigeonVar_binaryMessenger;
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  final String pigeonVar_messageChannelSuffix;
+
+  /// Sends the current bar to [VerticalBarFlutterApi], then every change.
+  Future<void> watchVerticalBar() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.onexray.VerticalBarHostApi.watchVerticalBar$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
+  }
+}
+
+abstract class VerticalBarFlutterApi {
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  /// Null wherever iOS lays its bars out across the top and bottom.
+  void verticalBarChanged(VerticalBar? bar);
+
+  static void setUp(
+    VerticalBarFlutterApi? api, {
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) {
+    messageChannelSuffix = messageChannelSuffix.isNotEmpty
+        ? '.$messageChannelSuffix'
+        : '';
+    {
+      final pigeonVar_channel = BasicMessageChannel<Object?>(
+        'dev.flutter.pigeon.onexray.VerticalBarFlutterApi.verticalBarChanged$messageChannelSuffix',
+        pigeonChannelCodec,
+        binaryMessenger: binaryMessenger,
+      );
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          final List<Object?> args = message! as List<Object?>;
+          final VerticalBar? arg_bar = args[0] as VerticalBar?;
+          try {
+            api.verticalBarChanged(arg_bar);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          } catch (e) {
+            return wrapResponse(
+              error: PlatformException(code: 'error', message: e.toString()),
+            );
+          }
+        });
+      }
+    }
   }
 }
 

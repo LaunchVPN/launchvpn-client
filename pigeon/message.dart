@@ -169,6 +169,33 @@ abstract class TunnelStopsHostApi {
   List<TunnelStop> takeTunnelStops();
 }
 
+enum VerticalBarSide { left, right }
+
+/// The column iOS keeps along one side of the screen for the status bar and
+/// the camera, as on iPhone Duo. It is as wide as the safe area's inset on
+/// [side]; the App's tabs go between [top] and [bottom], in points from the
+/// top of the screen, clear of what the system shows there.
+class VerticalBar {
+  VerticalBar({required this.side, required this.top, required this.bottom});
+
+  final VerticalBarSide side;
+  final double top;
+  final double bottom;
+}
+
+/// Tells Dart where iOS puts its vertical bar.
+@HostApi()
+abstract class VerticalBarHostApi {
+  /// Sends the current bar to [VerticalBarFlutterApi], then every change.
+  void watchVerticalBar();
+}
+
+@FlutterApi()
+abstract class VerticalBarFlutterApi {
+  /// Null wherever iOS lays its bars out across the top and bottom.
+  void verticalBarChanged(VerticalBar? bar);
+}
+
 class AndroidAutomationSettings {
   AndroidAutomationSettings({required this.enabled, this.token});
   final bool enabled;

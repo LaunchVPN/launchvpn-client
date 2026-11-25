@@ -23,6 +23,10 @@ import UIKit
         AppleWidgetHostApiSetup.setUp(binaryMessenger: binaryMessenger, api: AppleWidgetApi(flutterApi: flutterApi))
         TesterHostApiSetup.setUp(binaryMessenger: binaryMessenger, api: TesterApi())
         TunnelStopsHostApiSetup.setUp(binaryMessenger: binaryMessenger, api: TunnelStopsApi())
+        VerticalBarHostApiSetup.setUp(
+            binaryMessenger: binaryMessenger,
+            api: VerticalBarApi(flutterApi: VerticalBarFlutterApi(binaryMessenger: binaryMessenger))
+        )
         
         GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     }

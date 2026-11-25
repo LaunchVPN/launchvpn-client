@@ -13,6 +13,12 @@ import io.flutter.plugin.common.StandardMethodCodec
 import io.flutter.plugin.common.StandardMessageCodec
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 private object MessagesPigeonUtils {
 
   fun createConnectionError(channelName: String): FlutterError {
@@ -203,6 +209,17 @@ enum class VpnStatus(val raw: Int) {
 
   companion object {
     fun ofRaw(raw: Int): VpnStatus? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
+enum class VerticalBarSide(val raw: Int) {
+  LEFT(0),
+  RIGHT(1);
+
+  companion object {
+    fun ofRaw(raw: Int): VerticalBarSide? {
       return values().firstOrNull { it.raw == raw }
     }
   }
@@ -436,6 +453,58 @@ data class TunnelStop (
   }
   override fun toString(): String {
     return "TunnelStop(reason=$reason, startedAtMs=$startedAtMs, endedAtMs=$endedAtMs, memory=$memory)"
+  }
+}
+
+/**
+ * The column iOS keeps along one side of the screen for the status bar and
+ * the camera, as on iPhone Duo. It is as wide as the safe area's inset on
+ * [side]; the App's tabs go between [top] and [bottom], in points from the
+ * top of the screen, clear of what the system shows there.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class VerticalBar (
+  val side: VerticalBarSide,
+  val top: Double,
+  val bottom: Double
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): VerticalBar {
+      val side = pigeonVar_list[0] as VerticalBarSide
+      val top = pigeonVar_list[1] as Double
+      val bottom = pigeonVar_list[2] as Double
+      return VerticalBar(side, top, bottom)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      side,
+      top,
+      bottom,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as VerticalBar
+    return MessagesPigeonUtils.deepEquals(this.side, other.side) && MessagesPigeonUtils.deepEquals(this.top, other.top) && MessagesPigeonUtils.deepEquals(this.bottom, other.bottom)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.side)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.top)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.bottom)
+    return result
+  }
+  override fun toString(): String {
+    return "VerticalBar(side=$side, top=$top, bottom=$bottom)"
   }
 }
 
@@ -800,75 +869,85 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       130.toByte() -> {
         (readValue(buffer) as Long?)?.let {
-          PlatformPermissionKind.ofRaw(it.toInt())
+          VerticalBarSide.ofRaw(it.toInt())
         }
       }
       131.toByte() -> {
         (readValue(buffer) as Long?)?.let {
-          PlatformPermissionState.ofRaw(it.toInt())
+          PlatformPermissionKind.ofRaw(it.toInt())
         }
       }
       132.toByte() -> {
         (readValue(buffer) as Long?)?.let {
-          NativeVpnCommandState.ofRaw(it.toInt())
+          PlatformPermissionState.ofRaw(it.toInt())
         }
       }
       133.toByte() -> {
         (readValue(buffer) as Long?)?.let {
-          NativeLaunchAtLoginState.ofRaw(it.toInt())
+          NativeVpnCommandState.ofRaw(it.toInt())
         }
       }
       134.toByte() -> {
-        (readValue(buffer) as? List<Any?>)?.let {
-          AppleWidgetContext.fromList(it)
+        (readValue(buffer) as Long?)?.let {
+          NativeLaunchAtLoginState.ofRaw(it.toInt())
         }
       }
       135.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TunnelMemory.fromList(it)
+          AppleWidgetContext.fromList(it)
         }
       }
       136.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TunnelStop.fromList(it)
+          TunnelMemory.fromList(it)
         }
       }
       137.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AndroidAutomationSettings.fromList(it)
+          TunnelStop.fromList(it)
         }
       }
       138.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          BackupLocation.fromList(it)
+          VerticalBar.fromList(it)
         }
       }
       139.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          DeviceIdentity.fromList(it)
+          AndroidAutomationSettings.fromList(it)
         }
       }
       140.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AppleVpnCapabilities.fromList(it)
+          BackupLocation.fromList(it)
         }
       }
       141.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          NativeLaunchAtLoginResult.fromList(it)
+          DeviceIdentity.fromList(it)
         }
       }
       142.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          PlatformPermissionResult.fromList(it)
+          AppleVpnCapabilities.fromList(it)
         }
       }
       143.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          NativeVpnCommandResult.fromList(it)
+          NativeLaunchAtLoginResult.fromList(it)
         }
       }
       144.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          PlatformPermissionResult.fromList(it)
+        }
+      }
+      145.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          NativeVpnCommandResult.fromList(it)
+        }
+      }
+      146.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
           AndroidAppInfo.fromList(it)
         }
@@ -882,64 +961,72 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(129)
         writeValue(stream, value.raw.toLong())
       }
-      is PlatformPermissionKind -> {
+      is VerticalBarSide -> {
         stream.write(130)
         writeValue(stream, value.raw.toLong())
       }
-      is PlatformPermissionState -> {
+      is PlatformPermissionKind -> {
         stream.write(131)
         writeValue(stream, value.raw.toLong())
       }
-      is NativeVpnCommandState -> {
+      is PlatformPermissionState -> {
         stream.write(132)
         writeValue(stream, value.raw.toLong())
       }
-      is NativeLaunchAtLoginState -> {
+      is NativeVpnCommandState -> {
         stream.write(133)
         writeValue(stream, value.raw.toLong())
       }
-      is AppleWidgetContext -> {
+      is NativeLaunchAtLoginState -> {
         stream.write(134)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw.toLong())
       }
-      is TunnelMemory -> {
+      is AppleWidgetContext -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is TunnelStop -> {
+      is TunnelMemory -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is AndroidAutomationSettings -> {
+      is TunnelStop -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is BackupLocation -> {
+      is VerticalBar -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is DeviceIdentity -> {
+      is AndroidAutomationSettings -> {
         stream.write(139)
         writeValue(stream, value.toList())
       }
-      is AppleVpnCapabilities -> {
+      is BackupLocation -> {
         stream.write(140)
         writeValue(stream, value.toList())
       }
-      is NativeLaunchAtLoginResult -> {
+      is DeviceIdentity -> {
         stream.write(141)
         writeValue(stream, value.toList())
       }
-      is PlatformPermissionResult -> {
+      is AppleVpnCapabilities -> {
         stream.write(142)
         writeValue(stream, value.toList())
       }
-      is NativeVpnCommandResult -> {
+      is NativeLaunchAtLoginResult -> {
         stream.write(143)
         writeValue(stream, value.toList())
       }
-      is AndroidAppInfo -> {
+      is PlatformPermissionResult -> {
         stream.write(144)
+        writeValue(stream, value.toList())
+      }
+      is NativeVpnCommandResult -> {
+        stream.write(145)
+        writeValue(stream, value.toList())
+      }
+      is AndroidAppInfo -> {
+        stream.write(146)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -1464,6 +1551,72 @@ interface TunnelStopsHostApi {
         } else {
           channel.setMessageHandler(null)
         }
+      }
+    }
+  }
+}
+/**
+ * Tells Dart where iOS puts its vertical bar.
+ *
+ * Generated interface from Pigeon that represents a handler of messages from Flutter.
+ */
+interface VerticalBarHostApi {
+  /** Sends the current bar to [VerticalBarFlutterApi], then every change. */
+  fun watchVerticalBar()
+
+  companion object {
+    /** The codec used by VerticalBarHostApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      MessagesPigeonCodec()
+    }
+    /** Sets up an instance of `VerticalBarHostApi` to handle messages through the `binaryMessenger`. */
+    @JvmOverloads
+    fun setUp(binaryMessenger: BinaryMessenger, api: VerticalBarHostApi?, messageChannelSuffix: String = "") {
+      val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.onexray.VerticalBarHostApi.watchVerticalBar$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              api.watchVerticalBar()
+              listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+    }
+  }
+}
+/** Generated class from Pigeon that represents Flutter messages that can be called from Kotlin. */
+class VerticalBarFlutterApi(private val binaryMessenger: BinaryMessenger, private val messageChannelSuffix: String = "") {
+  companion object {
+    /** The codec used by VerticalBarFlutterApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      MessagesPigeonCodec()
+    }
+  }
+  /** Null wherever iOS lays its bars out across the top and bottom. */
+  suspend fun verticalBarChanged(barArg: VerticalBar?)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    return suspendCancellableCoroutine { continuation ->
+      val channelName = "dev.flutter.pigeon.onexray.VerticalBarFlutterApi.verticalBarChanged$separatedMessageChannelSuffix"
+      val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+      channel.send(listOf(barArg)) {
+        if (it is List<*>) {
+          if (it.size > 1) {
+            continuation.resumeWithException(FlutterError(it[0] as String, it[1] as String, it[2] as String?))
+          } else {
+            continuation.resume(Unit)
+          }
+        } else {
+          continuation.resumeWithException(MessagesPigeonUtils.createConnectionError(channelName))
+        } 
       }
     }
   }
