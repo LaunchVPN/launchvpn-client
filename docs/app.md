@@ -250,26 +250,27 @@ upstream pages kept for merging. They are not reachable in this build.
   is white with Apple's logo, as Apple's guidelines ask. A tap shows Apple's sheet for the email
   scope with the SHA-256 of a fresh random nonce, then posts the identity token, the authorization
   code, the raw nonce, the App's language and the device to `/api/app/auth/apple` while the button
-  shows progress. Closing the sheet changes nothing; a blocked account, a closed App sign-in or too
-  many attempts shows the form's text for it under the button. `email_taken`, an Apple email whose
-  account another Apple ID signs in to or a Telegram user attached unconfirmed, says «Этот email
-  занят другим аккаунтом. Напишите в поддержку». Any other failure says «Не получилось войти через
-  Apple. Попробуйте ещё раз». Tapping Telegram makes a PKCE verifier for this attempt, kept in
-  memory and, for ten minutes, in the secure store, and opens
+  shows progress. Closing the sheet changes nothing; a blocked account, a closed App sign-in, too
+  many attempts or no connection shows the form's text for it under the button. `email_taken`, an
+  Apple email whose account another Apple ID signs in to or a Telegram user attached unconfirmed,
+  says «Этот email занят другим аккаунтом. Напишите в поддержку». Any other failure says «Не
+  получилось войти через Apple. Попробуйте ещё раз». Tapping Telegram makes a PKCE verifier for this
+  attempt, kept in memory and, for ten minutes, in the secure store, and opens
   `<api>/api/auth/telegram/start?mode=app_login` with the App's language and the verifier's S256
   challenge in the external browser. The form stays usable meanwhile, since the person may come back
   without finishing, and a second tap replaces the attempt. The browser returns to
   `launchvpn://auth`, which Android registers next to `sub` and iOS takes through the `launchvpn`
   scheme; the shell hands it to `TelegramBrowserAuth` instead of the subscription flow. `?code=` is
   exchanged with the verifier at `/api/app/auth/exchange` while the button shows progress.
-  `?error=cancelled` changes nothing; a blocked account, a closed App sign-in or too many attempts
-  shows the form's text for it under the button, and any other error, or a refused exchange, «Не
-  получилось войти через Telegram. Попробуйте ещё раз». A return no attempt waits for, such as a
-  repeat, is ignored. The return's `mode` names what the attempt was for, so a sign-in waits only
-  for a return without `mode` and linking only for `mode=link`. If the system closed the App while
-  the browser was open, startup restores an attempt younger than ten minutes: the «Вход» the gate
-  shows takes it back and signs in with the return; a person on the tabs with a subscription from a
-  link gets «Вход» over them for it. Returns wait until the gate shows «Вход» or the tabs.
+  `?error=cancelled` changes nothing; a blocked account, a closed App sign-in, too many attempts or
+  no connection shows the form's text for it under the button, and any other error, or a refused
+  exchange, «Не получилось войти через Telegram. Попробуйте ещё раз». A return no attempt waits for,
+  such as a repeat, or one that comes while «Проверьте почту» waits for its code, is ignored. The
+  return's `mode` names what the attempt was for, so a sign-in waits only for a return without
+  `mode` and linking only for `mode=link`. If the system closed the App while the browser was open,
+  startup restores an attempt younger than ten minutes: the «Вход» the gate shows takes it back and
+  signs in with the return; a person on the tabs with a subscription from a link gets «Вход» over
+  them for it. Returns wait until the gate shows «Вход» or the tabs.
 - Create account (`/api/app/auth/signup`) mails a code and replaces the form with «Проверьте почту»
   on the same page; signing in with an unconfirmed email does the same with the attempt the backend
   returns. The attempt's `signupToken` stays in memory for this flow only. The screen promises the
