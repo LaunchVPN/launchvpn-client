@@ -465,6 +465,23 @@ void main() {
       expect(api.bodies('/api/app/auth/exchange'), isEmpty);
     });
 
+    testWidgets('a return while «Проверьте почту» waits keeps the signup', (
+      tester,
+    ) async {
+      api.signupWith(token: 'st1');
+      api.exchangeWith(access: 't1', refresh: 'tr1');
+      await pumpApp(tester, hasSubscription: false);
+      await tester.tap(find.text('Войти через Telegram'));
+      await tester.pumpAndSettle();
+
+      await createAccount(tester);
+      links.add(Uri.parse('launchvpn://auth?code=c1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Проверьте\nпочту'), findsOneWidget);
+      expect(api.bodies('/api/app/auth/exchange'), isEmpty);
+    });
+
     group('after the system closed the App in the browser', () {
       /// The App left for Telegram's sign-in and was closed meanwhile; this
       /// launch restored what it saved.

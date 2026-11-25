@@ -140,9 +140,14 @@ final class LoginController extends PageCubit<LoginState> {
   Future<void> _redeemTelegram(Future<TelegramCode> pending) =>
       _reportingFailure(LoginProvider.telegram, () async {
         final code = await pending;
-        // Signed in meanwhile, or doing so by email or Apple: the code would
-        // switch accounts.
-        if (state.busy || _account.session.signedIn.value) return;
+        // Signed in meanwhile, or doing so by email or Apple, or waiting for
+        // the code from the email: the code would switch accounts or drop
+        // the signup.
+        if (state.busy ||
+            state.signup != null ||
+            _account.session.signedIn.value) {
+          return;
+        }
         emit(LoginState(mode: state.mode, signingIn: LoginProvider.telegram));
         await _account.telegram.exchangeLogin(code);
         emit(LoginState(mode: state.mode));
