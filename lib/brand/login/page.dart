@@ -374,17 +374,19 @@ class _ProviderButton extends StatelessWidget {
   }
 }
 
-/// Apple's logo at the button's icon size, in its text color.
+/// Apple's logo, 25 by 31, as tall as the button's icons and in its title's
+/// color, which dims with it.
 class _AppleLogo extends StatelessWidget {
   const _AppleLogo();
 
   @override
   Widget build(BuildContext context) {
+    // The button sets both; the fallbacks only satisfy the types.
     final icon = IconTheme.of(context);
-    final size = icon.size ?? 20;
+    final height = icon.size ?? 20;
     return CustomPaint(
-      size: Size(size * 25 / 31, size),
-      painter: AppleLogoPainter(color: icon.color ?? Colors.black),
+      size: Size(height * 25 / 31, height),
+      painter: AppleLogoPainter(color: icon.color ?? BrandTheme.appleInk),
     );
   }
 }
