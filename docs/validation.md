@@ -185,7 +185,8 @@ the local network stays direct and a TXT query to the DNS server shows no real a
 Locations are covered by `test/service/servers/locations_test.dart`, `test/brand/home/` and the
 refresh and sweep cases of the subscription and ping service tests. On a device with a real
 subscription, check that the list matches the panel, that a chosen group is what the session runs,
-and that a refresh during a session neither interrupts it nor duplicates a row.
+and that a refresh during a session neither interrupts it nor duplicates a row. With VPN off and on,
+each location shows its delay as soon as it answers.
 
 The first server of a provider group is covered by `test/service/connect/first_server_test.dart` and
 `preparation_test.dart`, which runs only on macOS, iOS and Android. On a device with a real

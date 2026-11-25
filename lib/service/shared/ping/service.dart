@@ -46,6 +46,9 @@ class PingService {
 
   AppDatabase get _database => _databaseOverride ?? AppDatabase();
 
+  Future<List<PingBatchResult>> Function(List<PingBatchSource>, PingState)
+  get _runBatch => _batchOverride ?? PingBatchRunner.run;
+
   final _pingQueue = CommandSerialExecutor();
   var _pingingTaskCount = 0;
   var _automaticEnabled = false;
@@ -207,10 +210,7 @@ class PingService {
         }
       }
       if (sources.isEmpty) continue;
-      final results = await (_batchOverride ?? PingBatchRunner.run)(
-        sources,
-        pingState,
-      );
+      final results = await _runBatch(sources, pingState);
       await db.transaction(() async {
         for (var index = 0; index < results.length; index++) {
           final result = results[index];
@@ -231,12 +231,12 @@ class PingService {
       : PingDelayConstants.error;
 
   /// Measures what the locations screen lists, using only the app's own core.
-  /// A provider group takes the delay of its first server that answers, trying
-  /// at most [_locationAttempts] of them, so one sweep stays seconds long.
+  /// Every location is measured at once, each in its own native call, and
+  /// saved as soon as one of its servers answers or it has none left to try.
+  /// It tries at most [_locationAttempts] of them, in panel order.
   ///
   /// The last delays go first, so a sweep that stops, or waits behind another,
-  /// never passes them off as current. A location is saved as soon as one of
-  /// its servers answers or it has none left to try.
+  /// never passes them off as current.
   Future<void> pingLocations(
     List<CoreConfigData> rows, {
     bool Function()? isCancelled,
@@ -250,46 +250,33 @@ class PingService {
     return _enqueuePing(() async {
       final pingState = PingState();
       await pingState.readFromPreferences();
-      final servers = {for (final row in rows) row: _locationServers(row)};
-      final unanswered = <CoreConfigData, PingBatchResult>{
-        for (final row in rows) row: PingBatchResult.failed(),
-      };
-      for (var attempt = 0; unanswered.isNotEmpty; attempt++) {
-        // Out of servers, or out of the attempts a sweep allows.
-        final spent = unanswered.keys
-            .where(
-              (row) =>
-                  attempt >= servers[row]!.length ||
-                  attempt >= _locationAttempts,
-            )
-            .toList();
-        await db.transaction(() async {
-          for (final row in spent) {
-            await _updateRow(db, row, _storedDelay(unanswered.remove(row)!));
-          }
-        });
-        final round = unanswered.keys.toList();
-        for (final slice in round.slices(PingBatchRunner.maxBatchSize)) {
-          if (_pingQueue.isPaused || (isCancelled?.call() ?? false)) return;
-          final results = await (_batchOverride ?? PingBatchRunner.run)([
-            for (final row in slice) PingBatchSource(servers[row]![attempt]),
-          ], pingState);
-          await db.transaction(() async {
-            for (var index = 0; index < results.length; index++) {
-              unanswered[slice[index]] = results[index];
-              if (results[index].success) {
-                await _updateRow(db, slice[index], results[index].delay);
-                unanswered.remove(slice[index]);
-              }
-            }
-          });
-        }
-      }
+      bool stopped() => _pingQueue.isPaused || (isCancelled?.call() ?? false);
+      await Future.wait([
+        for (final row in rows) _pingLocation(db, row, pingState, stopped),
+      ]);
     });
   }
 
+  /// A stop leaves the location unmeasured, even with an answer in hand: that
+  /// answer may have crossed a tunnel coming up or going down.
+  Future<void> _pingLocation(
+    AppDatabase db,
+    CoreConfigData row,
+    PingState pingState,
+    bool Function() stopped,
+  ) async {
+    var result = PingBatchResult.failed();
+    for (final server in _locationServers(row).take(_locationAttempts)) {
+      if (stopped()) return;
+      result = (await _runBatch([PingBatchSource(server)], pingState)).single;
+      if (stopped()) return;
+      if (result.success) break;
+    }
+    await _updateRow(db, row, _storedDelay(result));
+  }
+
   /// Measures servers for a connection about to start. This stays out of the
-  /// queue, so it waits for a batch in progress but not for the rest of a sweep.
+  /// queue, and native measurements run side by side, so it waits for no sweep.
   /// Every new connection pays the handshakes, so the pick times them too.
   Future<List<PingBatchResult>> measureBeforeStart(
     List<String> outboundJsons, {
@@ -300,7 +287,7 @@ class PingService {
     pingState
       ..timeout = timeoutSeconds.toDouble()
       ..warm = false;
-    return (_batchOverride ?? PingBatchRunner.run)([
+    return _runBatch([
       for (final outbound in outboundJsons) PingBatchSource(outbound),
     ], pingState);
   }

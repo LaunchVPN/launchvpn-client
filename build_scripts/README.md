@@ -34,9 +34,10 @@ dart pub global activate fastforge
 ```
 
 Keep `LIBXRAY_REF` pinned to a commit and bump it only with an upstream merge. CI builds it
-from the `LaunchVPN/libXray` fork, which carries the warm `pingBatch` delay on top of
-XTLS/libXray until XTLS takes that change; a local build needs that fork next to the App,
-because XTLS/libXray ignores the `warm` flag. Run Flutter/Dart commands serially.
+from the `LaunchVPN/libXray` fork, which carries two changes on top of XTLS/libXray: the warm
+`pingBatch` delay, until XTLS takes it, and `pingBatch` calls that overlap one another, which
+stays in the fork. A local build needs that fork next to the App, because XTLS/libXray ignores the
+`warm` flag and measures one call at a time. Run Flutter/Dart commands serially.
 
 ## GitHub Actions
 

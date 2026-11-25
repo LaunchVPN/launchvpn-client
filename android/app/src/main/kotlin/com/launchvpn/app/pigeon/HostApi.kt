@@ -19,9 +19,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import libXray.LibXray
 import com.launchvpn.app.vpn.TunnelBypass
 import com.launchvpn.app.vpn.VpnController
 import com.launchvpn.app.vpn.VpnStatusConnection
@@ -82,7 +79,7 @@ class AppHostApi(
     private var permissionCallback: ((PlatformPermissionResult) -> Unit)? = null
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val invokeMutex = Mutex()
+    private val coreCalls = CoreCalls()
 
     override fun getTunFilesDir(callback: (Result<String>) -> Unit) {
         val dirPath = context.filesDir.path
@@ -141,11 +138,8 @@ class AppHostApi(
 
     override fun invoke(requestJson: String, callback: (Result<String>) -> Unit) {
         scope.launch {
-            // Temporary cores share process-global Xray state. The VPN runs in :native.
-            invokeMutex.withLock {
-                TunnelBypass.followTunnel(context)
-                callback(runCatching { LibXray.invoke(requestJson) })
-            }
+            TunnelBypass.followTunnel(context, coreCalls::exclusive)
+            callback(coreCalls.invoke(requestJson))
         }
     }
 

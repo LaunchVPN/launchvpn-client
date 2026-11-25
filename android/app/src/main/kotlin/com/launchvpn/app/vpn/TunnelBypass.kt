@@ -21,6 +21,7 @@ object TunnelBypass : DialerController {
     private val registered = AtomicBoolean(false)
 
     /** The DNS server the core resolves through, or null for the system's. */
+    @Volatile
     private var resolver: String? = null
 
     /** The core keeps a registered controller for the life of the process. */
@@ -38,18 +39,22 @@ object TunnelBypass : DialerController {
 
     /**
      * The system resolves names through the tunnel while it runs, seconds
-     * slower than the network under it. Before each core call, which the host
-     * runs one at a time, the core resolves through that network's DNS while
-     * VPN is on, and through the system's otherwise.
+     * slower than the network under it. Before each core call, the core
+     * resolves through that network's DNS while VPN is on, and through the
+     * system's otherwise. A change swaps the core's resolver, so it runs
+     * [exclusive], away from measurements in flight.
      */
-    fun followTunnel(context: Context) {
+    fun followTunnel(context: Context, exclusive: (() -> Unit) -> Unit) {
         val server = if (VpnController.readVpnRunning(context)) underlyingDns(context) else null
         if (server == resolver) return
-        try {
-            if (server == null) LibXray.resetDNS() else LibXray.setDNS(this, server)
-            resolver = server
-        } catch (error: Exception) {
-            XLog.e("Resolve past the tunnel failed", error)
+        exclusive {
+            if (server == resolver) return@exclusive
+            try {
+                if (server == null) LibXray.resetDNS() else LibXray.setDNS(this, server)
+                resolver = server
+            } catch (error: Exception) {
+                XLog.e("Resolve past the tunnel failed", error)
+            }
         }
     }
 

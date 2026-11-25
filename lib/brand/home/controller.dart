@@ -442,6 +442,10 @@ class HomeController extends PageCubit<HomeState> {
   /// Locations a sweep saved a delay for that the catalog does not list yet.
   final _unlisted = <int>{};
 
+  /// Counts the times measuring stopped being ready, so a sweep learns of a
+  /// transition that ended before it looked.
+  var _readinessLost = 0;
+
   /// An expiry this close gets a timer, and so does a running tunnel, which
   /// checks again at least this often. Otherwise a later expiry is checked
   /// when the subscription refreshes or the App returns.
@@ -458,6 +462,10 @@ class HomeController extends PageCubit<HomeState> {
   void onChange(Change<HomeState> change) {
     super.onChange(change);
     final next = change.nextState;
+    if (change.currentState.measureReadiness == MeasureReadiness.ready &&
+        next.measureReadiness != MeasureReadiness.ready) {
+      _readinessLost++;
+    }
     unawaited(
       _widgetContext(
         location: next.location,
@@ -792,14 +800,13 @@ class HomeController extends PageCubit<HomeState> {
   }
 
   Future<void> _sweep(Set<int> ids) async {
+    final readinessLost = _readinessLost;
     var stopped = false;
     try {
       await _pingLocations(
         state.catalog.servers.where((row) => ids.contains(row.id)).toList(),
-        isCancelled: () => stopped =
-            stopped ||
-            isClosed ||
-            state.measureReadiness != MeasureReadiness.ready,
+        isCancelled: () =>
+            stopped = stopped || isClosed || _readinessLost != readinessLost,
       );
     } catch (error) {
       ygLogger('measure locations failed (${error.runtimeType})');

@@ -27,7 +27,7 @@ is published in English and Russian, and both pages change together.
   archive status, dated releases, substantive commits and maintainer responses.
 - Pin `LIBXRAY_REF` in our CI to a commit, never `main`, and bump it only together
   with an upstream merge. CI builds our `LaunchVPN/libXray` fork: the pin is the XTLS
-  commit plus our changes XTLS has not taken yet.
+  commit plus our own changes (see `build_scripts/README.md`).
 - Edit source models, ARB, Pigeon and FFI definitions, then regenerate outputs.
   Generated Dart, Kotlin, Swift, Drift, FFI and localization files are not sources.
 

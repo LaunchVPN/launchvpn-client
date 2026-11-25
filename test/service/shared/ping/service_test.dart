@@ -198,23 +198,80 @@ void main() {
       );
     });
 
-    test('never asks more than a native batch can hold', () async {
+    test('every location is asked at once, each in its own call', () async {
       final rows = [
         for (var index = 0; index < 7; index++)
           await group('Group $index', ['server$index']),
       ];
+      final held = Completer<void>();
       final sizes = <int>[];
       final service = PingService.forTesting(
         database: db,
         runBatch: (sources, _) async {
           sizes.add(sources.length);
+          await held.future;
           return _successes(sources.length);
         },
       );
 
-      await service.pingLocations(rows);
+      final sweep = service.pingLocations(rows);
+      await pumpEventQueue();
 
-      expect(sizes, [5, 2]);
+      expect(sizes, List.filled(7, 1));
+      held.complete();
+      await sweep;
+    });
+
+    test('a location shows its delay without waiting for the others', () async {
+      final germany = await group('Germany', ['de1']);
+      final poland = await group('Poland', ['pl1']);
+      final polandHeld = Completer<List<PingBatchResult>>();
+      final service = PingService.forTesting(
+        database: db,
+        runBatch: (sources, _) async => tag(sources.single) == 'pl1'
+            ? polandHeld.future
+            : const [PingBatchResult(true, 70, '')],
+      );
+
+      final sweep = service.pingLocations([germany, poland]);
+      await pumpEventQueue();
+
+      expect((await db.coreConfigDao.searchRow(germany.id))!.delay, 70);
+      expect(
+        (await db.coreConfigDao.searchRow(poland.id))!.delay,
+        PingDelayConstants.unknown,
+      );
+      polandHeld.complete(const [PingBatchResult(true, 90, '')]);
+      await sweep;
+      expect((await db.coreConfigDao.searchRow(poland.id))!.delay, 90);
+    });
+
+    test('an answer that comes back after a stop is not saved', () async {
+      final germany = await group('Germany', ['de1', 'de2']);
+      final held = Completer<List<PingBatchResult>>();
+      final asked = <String>[];
+      var stopped = false;
+      final service = PingService.forTesting(
+        database: db,
+        runBatch: (sources, _) {
+          asked.add(tag(sources.single));
+          return held.future;
+        },
+      );
+
+      final sweep = service.pingLocations([
+        germany,
+      ], isCancelled: () => stopped);
+      await pumpEventQueue();
+      stopped = true;
+      held.complete(const [PingBatchResult(true, 80, '')]);
+      await sweep;
+
+      expect(asked, ['de1']);
+      expect(
+        (await db.coreConfigDao.searchRow(germany.id))!.delay,
+        PingDelayConstants.unknown,
+      );
     });
 
     test('a sweep forgets the last delays before it starts', () async {
@@ -241,26 +298,24 @@ void main() {
     test('a location out of servers is told at once', () async {
       final finland = await group('Finland', ['fi1']);
       final germany = await group('Germany', ['de1', 'de2']);
-      int? finlandMeanwhile;
+      final germanyHeld = Completer<List<PingBatchResult>>();
       final service = PingService.forTesting(
         database: db,
-        runBatch: (sources, _) async {
-          if (sources.map(tag).contains('de2')) {
-            finlandMeanwhile = (await db.coreConfigDao.searchRow(finland.id))!
-                .delay;
-          }
-          return [
-            for (final source in sources)
-              tag(source) == 'de2'
-                  ? const PingBatchResult(true, 90, '')
-                  : PingBatchResult.failed(),
-          ];
+        runBatch: (sources, _) async => switch (tag(sources.single)) {
+          'de2' => germanyHeld.future,
+          _ => [PingBatchResult.failed()],
         },
       );
 
-      await service.pingLocations([finland, germany]);
+      final sweep = service.pingLocations([finland, germany]);
+      await pumpEventQueue();
 
-      expect(finlandMeanwhile, PingDelayConstants.error);
+      expect(
+        (await db.coreConfigDao.searchRow(finland.id))!.delay,
+        PingDelayConstants.error,
+      );
+      germanyHeld.complete(const [PingBatchResult(true, 90, '')]);
+      await sweep;
       expect((await db.coreConfigDao.searchRow(germany.id))!.delay, 90);
     });
   });

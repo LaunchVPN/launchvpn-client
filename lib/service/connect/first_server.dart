@@ -24,7 +24,7 @@ class FirstServerPicker {
 
   static const _timeoutSeconds = 2;
 
-  /// A native batch waits its turn behind one already running.
+  /// A native batch can wait behind another core call that runs alone.
   static const _budget = Duration(seconds: _timeoutSeconds + 1);
   static const _measuringStrategies = {'leastLoad', 'leastPing'};
   static const _catchAllRuleKeys = {
