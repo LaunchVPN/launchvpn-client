@@ -38,9 +38,10 @@ permissions:
   contents: read
 
 env:
-  # Bump only together with an upstream merge. Our fork adds the warm pingBatch
-  # delay on top of XTLS/libXray 7fe8528 until XTLS takes that change.
-  LIBXRAY_REF: 5bb98a56666391f484ac0fc0ce20247de8c32d37 # Xray-core v26.10.31
+  # Bump only together with an upstream merge. Our fork adds two changes on top
+  # of XTLS/libXray 7fe8528: the warm pingBatch delay, until XTLS takes it, and
+  # pingBatch calls that overlap one another, which stays in the fork.
+  LIBXRAY_REF: ac014386362179b23977c69c2a176cff7179dadb # Xray-core v26.10.31
   BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:

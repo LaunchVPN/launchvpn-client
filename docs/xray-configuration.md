@@ -344,16 +344,16 @@ as the dial takes, about 20 seconds in testing.
 Preparation therefore measures up to five random servers from the balancer of the group's catch-all
 last rule, in one native batch with a 2-second timeout. Unlike the delays the lists show, this batch
 times one request on a new connection, handshakes included, because every new connection through the
-server pays them. A native call holds a process-wide lock, so the batch is the only way to race
-servers, and it returns when all of them finish. The fastest to answer moves to the head of the
-session graph. A batch can wait behind one already running, so the check gives up after 3 seconds,
-or when the connection is cancelled, and the panel order then stays. The stored row does not change,
-and the balancer chooses as the panel configured it once it has measurements. Groups with one
-candidate, a narrower last rule or no measuring balancer are not checked. The check runs after any
-running tunnel has stopped, so it measures the device's own network; a batch that outlives the
-give-up time may still finish after the tunnel is up, and its result is ignored. Starts that reuse
-the last configuration (widget, Quick Settings tile, automation, Apple on-demand) skip preparation,
-so they keep the server chosen when it was written.
+server pays them. The batch races the servers and returns when all of them finish. The fastest to
+answer moves to the head of the session graph. Measurements run beside one another, but any other
+core call in the App's process runs alone, so a batch can wait behind one and the check gives up
+after 3 seconds, or when the connection is cancelled, and the panel order then stays. The stored row
+does not change, and the balancer chooses as the panel configured it once it has measurements.
+Groups with one candidate, a narrower last rule or no measuring balancer are not checked. The check
+runs after any running tunnel has stopped, so it measures the device's own network; a batch that
+outlives the give-up time may still finish after the tunnel is up, and its result is ignored. Starts
+that reuse the last configuration (widget, Quick Settings tile, automation, Apple on-demand) skip
+preparation, so they keep the server chosen when it was written.
 
 A restart after the running session went silent (see [App behavior](app.md)) measures every
 server of the group instead, five at a time, with the same timeout per batch, so a group with a
@@ -366,23 +366,26 @@ start. Single-server groups are measured too.
 The App's own traffic takes the tunnel on Android and iOS, so a delay measured from the App while
 VPN is on would describe the tunnel, not the server. Measurements therefore dial past it:
 
-- Android runs measurements in the App's process, while the tunnel's core runs in `:native`, where
-  `pingBatch` refuses to run beside the managed core. The App's process registers a dialer
-  controller with its core (`TunnelBypass`); while VPN runs, each socket goes to the VPN service over
-  its status binder, which calls `VpnService.protect` on it. A tunnel this process has not bound
-  yet, such as one started from the tile, is bound first; a socket the service cannot reach fails
-  rather than measure the tunnel. Without VPN the controller passes sockets as they are.
+- Android runs measurements in the App's process, while the tunnel's core runs in `:native`.
+  `pingBatch` refuses to run beside a managed core and never runs beside `runXray` or `testXray`,
+  but several `pingBatch` calls run at once, which no other core call does. The App's process
+  registers a dialer controller with its core (`TunnelBypass`); while VPN runs, each socket goes to
+  the VPN service over its status binder, which calls `VpnService.protect` on it. A tunnel this
+  process has not bound yet, such as one started from the tile, is bound first; a socket the service
+  cannot reach fails rather than measure the tunnel. Without VPN the controller passes sockets as
+  they are.
 - iOS binds every outbound of a measurement to the physical interface the system prefers, Wi-Fi
   before cellular, through Xray's `sockopt.interface` (`IP_BOUND_IF`), while a tunnel is connected.
   Without such an interface the measurement fails rather than measure the tunnel. A tunnel with
   `includeAllNetworks` (Capture all traffic) lets no socket past, so Locations does not measure
   while it runs and shows its locations unmeasured.
 
-The system resolves names through the tunnel while it runs, which added seconds to every
-measurement in testing. On Android the App's core therefore resolves through the DNS server of the
-network under the tunnel (libXray `SetDNS`, its sockets protected the same way) while VPN runs, set
-before each core call, and through the system's resolver otherwise. That network is the default one,
-which the tunnel's capabilities name by its transport, so cellular kept up beside Wi-Fi is not used.
+The system resolves names through the tunnel while it runs, which added seconds to every measurement
+in testing. On Android the App's core therefore resolves through the DNS server of the network under
+the tunnel (libXray `SetDNS`, its sockets protected the same way) while VPN runs, set before the
+first core call after VPN starts or stops, once measurements in flight finish, and through the
+system's resolver otherwise. That network is the default one, which the tunnel's capabilities name
+by its transport, so cellular kept up beside Wi-Fi is not used.
 
 libXray has no such resolver on Apple platforms, and a measurement takes only the outbounds of its
 configs, so iOS resolves each server name itself, through the DNS servers of the interface it binds
