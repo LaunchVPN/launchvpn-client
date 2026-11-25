@@ -117,29 +117,28 @@ final class LoginController extends PageCubit<LoginState> {
     }
   }
 
-  /// «Вход с Apple», on iOS: Apple's sheet covers the form until the person
-  /// signs in or closes it.
-  Future<void> signInWithApple() async {
+  /// A tap on [provider]'s button. Apple's sheet covers the form until the
+  /// person signs in or closes it. Telegram's sign-in opens in the browser,
+  /// and the form stays usable until the person comes back with its code;
+  /// turning Telegram down, or tapping again, leaves the form as it is.
+  Future<void> signInWith(LoginProvider provider) async {
     if (state.busy) return;
-    emit(LoginState(mode: state.mode, redeeming: LoginProvider.apple));
-    await _signInWith(LoginProvider.apple, () async {
-      await _account.apple.login();
-      emit(LoginState(mode: state.mode));
-    });
-  }
-
-  /// «Войти через Telegram»: Telegram's sign-in opens in the browser, and the
-  /// form stays usable until the person comes back with its code. Turning
-  /// Telegram down, or tapping again, leaves the form as it is.
-  Future<void> signInWithTelegram() async {
-    if (state.busy) return;
-    emit(LoginState(mode: state.mode));
-    await _redeemTelegram(_account.telegram.openLogin());
+    switch (provider) {
+      case LoginProvider.apple:
+        emit(LoginState(mode: state.mode, redeeming: provider));
+        await _failingUnder(provider, () async {
+          await _account.apple.login();
+          emit(LoginState(mode: state.mode));
+        });
+      case LoginProvider.telegram:
+        emit(LoginState(mode: state.mode));
+        await _redeemTelegram(_account.telegram.openLogin());
+    }
   }
 
   /// Signs in with the code [pending] brings back from Telegram.
   Future<void> _redeemTelegram(Future<TelegramCode> pending) =>
-      _signInWith(LoginProvider.telegram, () async {
+      _failingUnder(LoginProvider.telegram, () async {
         final code = await pending;
         // Signed in by email meanwhile, or doing so: the code would switch
         // accounts.
@@ -151,7 +150,7 @@ final class LoginController extends PageCubit<LoginState> {
 
   /// Runs [signIn] and shows why it failed under [provider]'s button. Turning
   /// the provider down only ends its progress.
-  Future<void> _signInWith(
+  Future<void> _failingUnder(
     LoginProvider provider,
     Future<void> Function() signIn,
   ) async {

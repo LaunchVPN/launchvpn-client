@@ -272,21 +272,16 @@ class _AccountPageState extends State<AccountPage> {
     final details = state.details;
     return [
       ?switch (details) {
-        AccountDetails(
-          :final email?,
-          :final telegramLinked,
-          :final appleLinked,
-        ) =>
-          SettingsRow(
-            icon: LucideIcons.user,
-            title: email,
-            subtitle: telegramLinked
-                ? l.accountTelegramLinked
-                : appleLinked
-                ? l.accountAppleSignIn
-                : l.accountEmailSignIn,
-            onTap: null,
-          ),
+        AccountDetails(:final email?) => SettingsRow(
+          icon: LucideIcons.user,
+          title: email,
+          subtitle: switch (details) {
+            AccountDetails(telegramLinked: true) => l.accountTelegramLinked,
+            AccountDetails(appleLinked: true) => l.accountAppleSignIn,
+            AccountDetails() => l.accountEmailSignIn,
+          },
+          onTap: null,
+        ),
         AccountDetails() => SettingsRow(
           icon: LucideIcons.send,
           title: l.accountTelegram,

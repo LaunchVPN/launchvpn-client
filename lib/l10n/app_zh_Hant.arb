@@ -1077,7 +1077,7 @@
   "loginTelegram": "Sign in with Telegram",
   "loginErrorTelegram": "Couldn't sign in with Telegram. Try again",
   "loginErrorApple": "Couldn't sign in with Apple. Try again",
-  "loginErrorAppleEmailTaken": "This email belongs to another account. Contact support",
+  "loginErrorProviderEmailTaken": "This email belongs to another account. Contact support",
   "loginErrorInvalidCredentials": "Wrong email or password",
   "loginErrorEmailNotVerified": "Your email isn't confirmed yet. Try signing in again",
   "loginErrorAccountBlocked": "This account is blocked. Contact support",

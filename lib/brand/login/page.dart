@@ -134,11 +134,6 @@ class _LoginPageState extends State<LoginPage> {
     _ => const [],
   };
 
-  void _signInWith(LoginProvider provider) => unawaited(switch (provider) {
-    LoginProvider.apple => _login.signInWithApple(),
-    LoginProvider.telegram => _login.signInWithTelegram(),
-  });
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -272,11 +267,14 @@ class _LoginPageState extends State<LoginPage> {
               _ProviderButton(
                 provider,
                 busy: state.redeeming == provider,
-                onPressed: state.busy ? null : () => _signInWith(provider),
+                onPressed: state.busy
+                    ? null
+                    : () => unawaited(_login.signInWith(provider)),
               ),
               ErrorText(switch (state.providerError) {
-                final failure? when failure.provider == provider =>
-                  _providerMessage(l, failure),
+                (provider: final failed, :final error)
+                    when failed == provider =>
+                  _providerMessage(l, error),
                 _ => null,
               }),
             ],
@@ -310,14 +308,12 @@ String? _formMessage(AppLocalizations l, LoginState state) => switch (state) {
   LoginState() => null,
 };
 
-/// Why a sign-in through another service failed. An Apple email someone
-/// else's Telegram account claimed unconfirmed stays theirs; support sorts
-/// it out.
-String _providerMessage(AppLocalizations l, ProviderFailure failure) =>
-    switch (failure) {
-      (provider: LoginProvider.apple, error: AccountError.emailTaken) =>
-        l.loginErrorAppleEmailTaken,
-      (:final error, provider: _) => _errorMessage(l, error),
+/// Why a sign-in through another service failed. The service's email may
+/// belong to an account it cannot sign in to; support sorts that out.
+String _providerMessage(AppLocalizations l, AccountError error) =>
+    switch (error) {
+      AccountError.emailTaken => l.loginErrorProviderEmailTaken,
+      _ => _errorMessage(l, error),
     };
 
 String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
