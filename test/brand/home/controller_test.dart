@@ -1034,6 +1034,23 @@ void main() {
         ]);
       });
 
+      test('a transition no one looked at still stops a sweep', () async {
+        final running = Completer<void>();
+        sweep = () => running.future;
+        unawaited(controller.measureLocations());
+        await settle();
+
+        await connectFully();
+
+        expect(sweepCancels.single!(), isTrue);
+        running.complete();
+        await settle();
+        expect(sweeps, [
+          [fastest, germany],
+          [fastest, germany],
+        ]);
+      });
+
       test('a tap on a location in a stopped sweep is not lost', () async {
         final running = Completer<void>();
         sweep = () => running.future;

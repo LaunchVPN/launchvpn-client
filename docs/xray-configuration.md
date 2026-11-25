@@ -368,12 +368,13 @@ VPN is on would describe the tunnel, not the server. Measurements therefore dial
 
 - Android runs measurements in the App's process, while the tunnel's core runs in `:native`.
   `pingBatch` refuses to run beside a managed core and never runs beside `runXray` or `testXray`,
-  but several `pingBatch` calls run at once, which no other core call does. The App's process
-  registers a dialer controller with its core (`TunnelBypass`); while VPN runs, each socket goes to
-  the VPN service over its status binder, which calls `VpnService.protect` on it. A tunnel this
-  process has not bound yet, such as one started from the tile, is bound first; a socket the service
-  cannot reach fails rather than measure the tunnel. Without VPN the controller passes sockets as
-  they are.
+  but several `pingBatch` calls run at once, which no other core call does. A batch whose outbounds
+  use `dialerProxy`, a `domainStrategy` or a `targetStrategy` runs alone, since those read state
+  Xray keeps once per process. The App's process registers a dialer controller with its core
+  (`TunnelBypass`); while VPN runs, each socket goes to the VPN service over its status binder,
+  which calls `VpnService.protect` on it. A tunnel this process has not bound yet, such as one
+  started from the tile, is bound first; a socket the service cannot reach fails rather than measure
+  the tunnel. Without VPN the controller passes sockets as they are.
 - iOS binds every outbound of a measurement to the physical interface the system prefers, Wi-Fi
   before cellular, through Xray's `sockopt.interface` (`IP_BOUND_IF`), while a tunnel is connected.
   Without such an interface the measurement fails rather than measure the tunnel. A tunnel with
