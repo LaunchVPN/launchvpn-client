@@ -135,6 +135,16 @@ void main() {
     expect(find.text('settings-body'), findsOneWidget);
     expect(tester.state(find.byType(StatefulNavigationShell)), same(pages));
 
+    // The keyboard covers them, as it covers the bar below.
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pump();
+    expect(
+      tester.getRect(find.bySemanticsLabel('Главная')),
+      const Rect.fromLTWH(879, 489, 48, 50),
+    );
+    tester.view.resetViewInsets();
+    await tester.pump();
+
     await tester.tap(find.bySemanticsLabel('Главная'));
     await tester.pumpAndSettle();
     expect(find.text('home-body'), findsOneWidget);

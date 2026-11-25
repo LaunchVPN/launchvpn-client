@@ -317,48 +317,49 @@ class _BrandShellState extends State<BrandShell> {
       final vertical = bar != null && columnWidth > 0;
       return ToastArea(
         bottom: vertical ? 0 : _tabBarHeight,
-        child: Scaffold(
-          body: Stack(
-            children: [
-              Positioned.fill(
-                // Without the bar below, the pages keep clear of the bottom.
-                child: SafeArea(
-                  top: false,
-                  left: false,
-                  right: false,
-                  bottom: vertical,
-                  child: shell,
-                ),
+        // Over the Scaffold, which shrinks above the keyboard: the keyboard
+        // covers the vertical tabs as it covers the bar below.
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Scaffold(
+              // Without the bar below, the pages keep clear of the bottom.
+              body: SafeArea(
+                top: false,
+                left: false,
+                right: false,
+                bottom: vertical,
+                child: shell,
               ),
-              if (vertical)
-                Align(
-                  alignment: bar.side == VerticalBarSide.right
-                      ? Alignment.topRight
-                      : Alignment.topLeft,
-                  child: SizedBox(
-                    width: columnWidth,
-                    height: bar.bottom,
-                    child: VerticalTabs(
-                      bar: bar,
-                      tabs: tabs,
-                      selected: shell.currentIndex,
-                      onSelect: go,
+              bottomNavigationBar: vertical
+                  ? null
+                  : NavigationBar(
+                      height: _tabBarHeight,
+                      selectedIndex: shell.currentIndex,
+                      onDestinationSelected: go,
+                      destinations: [
+                        for (final (icon, label) in tabs)
+                          NavigationDestination(icon: Icon(icon), label: label),
+                      ],
                     ),
+            ),
+            if (vertical)
+              Align(
+                alignment: bar.side == VerticalBarSide.right
+                    ? Alignment.topRight
+                    : Alignment.topLeft,
+                child: SizedBox(
+                  width: columnWidth,
+                  height: bar.bottom,
+                  child: VerticalTabs(
+                    bar: bar,
+                    tabs: tabs,
+                    selected: shell.currentIndex,
+                    onSelect: go,
                   ),
                 ),
-            ],
-          ),
-          bottomNavigationBar: vertical
-              ? null
-              : NavigationBar(
-                  height: _tabBarHeight,
-                  selectedIndex: shell.currentIndex,
-                  onDestinationSelected: go,
-                  destinations: [
-                    for (final (icon, label) in tabs)
-                      NavigationDestination(icon: Icon(icon), label: label),
-                  ],
-                ),
+              ),
+          ],
         ),
       );
     },
