@@ -97,9 +97,15 @@ final class FakeAccountApi implements HttpClientAdapter {
     return (status, {...pair, 'addedDays': ?addedDays});
   };
 
-  /// Signing in with Apple answers with the pair.
-  void appleWith({required String access, required String refresh}) =>
-      _routes['/api/app/auth/apple'] = (_) async => _pair(access, refresh);
+  /// Signing in with Apple answers with the pair, once [after] completes.
+  void appleWith({
+    required String access,
+    required String refresh,
+    Future<void>? after,
+  }) => _routes['/api/app/auth/apple'] = (_) async {
+    await after;
+    return _pair(access, refresh);
+  };
 
   /// Linking Telegram starts in the browser at [url].
   void linkStartWith(String url) =>

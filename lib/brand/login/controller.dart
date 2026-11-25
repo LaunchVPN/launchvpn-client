@@ -140,9 +140,9 @@ final class LoginController extends PageCubit<LoginState> {
   Future<void> _redeemTelegram(Future<TelegramCode> pending) =>
       _reportingFailure(LoginProvider.telegram, () async {
         final code = await pending;
-        // Signed in by email meanwhile, or doing so: the code would switch
-        // accounts.
-        if (state.submitting || _account.session.signedIn.value) return;
+        // Signed in meanwhile, or doing so by email or Apple: the code would
+        // switch accounts.
+        if (state.busy || _account.session.signedIn.value) return;
         emit(LoginState(mode: state.mode, signingIn: LoginProvider.telegram));
         await _account.telegram.exchangeLogin(code);
         emit(LoginState(mode: state.mode));
@@ -174,12 +174,17 @@ final class LoginController extends PageCubit<LoginState> {
     }
   }
 
-  void _failed(LoginProvider provider, AccountError error) => emit(
-    LoginState(
-      mode: state.mode,
-      providerError: (provider: provider, error: error),
-    ),
-  );
+  /// Shows [error] under [provider]'s button, unless another sign-in is
+  /// under way: a Telegram attempt left in the browser may fail late.
+  void _failed(LoginProvider provider, AccountError error) {
+    if (state.busy && state.signingIn != provider) return;
+    emit(
+      LoginState(
+        mode: state.mode,
+        providerError: (provider: provider, error: error),
+      ),
+    );
+  }
 
   /// «Не та почта? Изменить»: back to the form, whose fields keep their text.
   void changeEmail() => emit(LoginState(mode: state.mode));

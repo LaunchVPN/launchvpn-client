@@ -321,6 +321,28 @@ void main() {
       variant: iOS,
     );
 
+    testWidgets('a Telegram return during it switches no account', (
+      tester,
+    ) async {
+      final appleAnswers = Completer<void>();
+      api.appleWith(access: 'a1', refresh: 'r1', after: appleAnswers.future);
+      api.exchangeWith(access: 't1', refresh: 'tr1');
+      api.subscription(_configLink);
+      await pumpApp(tester, hasSubscription: false);
+      await tester.tap(find.text('Войти через Telegram'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Вход с Apple'));
+      await tester.pump();
+      links.add(Uri.parse('launchvpn://auth?code=c1'));
+      await tester.pump();
+      appleAnswers.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.text('home-body'), findsOneWidget);
+      expect(api.bodies('/api/app/auth/exchange'), isEmpty);
+    }, variant: iOS);
+
     testWidgets('a refused token says so under the button', (tester) async {
       api.refuse('/api/app/auth/apple', 401, 'invalid_apple_auth');
       await pumpApp(tester, hasSubscription: false);
