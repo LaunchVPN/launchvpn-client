@@ -173,13 +173,13 @@ enum VerticalBarSide { left, right }
 
 /// The column iOS keeps along one side of the screen for the status bar and
 /// the camera, as on iPhone Duo. It is as wide as the safe area's inset on
-/// [side]; the App's tabs go between [top] and [bottom], in points from the
-/// top of the screen, clear of what the system shows there.
+/// [side]. The App's tabs sit low in it and end above [bottom], in points from
+/// the top of the screen: the camera's region when it is below them, else the
+/// screen's edge.
 class VerticalBar {
-  VerticalBar({required this.side, required this.top, required this.bottom});
+  VerticalBar({required this.side, required this.bottom});
 
   final VerticalBarSide side;
-  final double top;
   final double bottom;
 }
 

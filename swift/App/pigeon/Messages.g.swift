@@ -402,32 +402,29 @@ struct TunnelStop: Hashable, CustomStringConvertible {
 
 /// The column iOS keeps along one side of the screen for the status bar and
 /// the camera, as on iPhone Duo. It is as wide as the safe area's inset on
-/// [side]; the App's tabs go between [top] and [bottom], in points from the
-/// top of the screen, clear of what the system shows there.
+/// [side]. The App's tabs sit low in it and end above [bottom], in points from
+/// the top of the screen: the camera's region when it is below them, else the
+/// screen's edge.
 ///
 /// Generated class from Pigeon that represents data sent in messages.
 struct VerticalBar: Hashable, CustomStringConvertible {
   var side: VerticalBarSide
-  var top: Double
   var bottom: Double
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> VerticalBar? {
     let side = pigeonVar_list[0] as! VerticalBarSide
-    let top = pigeonVar_list[1] as! Double
-    let bottom = pigeonVar_list[2] as! Double
+    let bottom = pigeonVar_list[1] as! Double
 
     return VerticalBar(
       side: side,
-      top: top,
       bottom: bottom
     )
   }
   func toList() -> [Any?] {
     return [
       side,
-      top,
       bottom,
     ]
   }
@@ -435,18 +432,17 @@ struct VerticalBar: Hashable, CustomStringConvertible {
     if Swift.type(of: lhs) != Swift.type(of: rhs) {
       return false
     }
-    return MessagesPigeonInternal.deepEquals(lhs.side, rhs.side) && MessagesPigeonInternal.deepEquals(lhs.top, rhs.top) && MessagesPigeonInternal.deepEquals(lhs.bottom, rhs.bottom)
+    return MessagesPigeonInternal.deepEquals(lhs.side, rhs.side) && MessagesPigeonInternal.deepEquals(lhs.bottom, rhs.bottom)
   }
 
   func hash(into hasher: inout Hasher) {
     hasher.combine("VerticalBar")
     MessagesPigeonInternal.deepHash(value: side, hasher: &hasher)
-    MessagesPigeonInternal.deepHash(value: top, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: bottom, hasher: &hasher)
   }
 
   public var description: String {
-    return "VerticalBar(side: \(String(describing: side)), top: \(String(describing: top)), bottom: \(String(describing: bottom)))"
+    return "VerticalBar(side: \(String(describing: side)), bottom: \(String(describing: bottom)))"
   }
 }
 

@@ -89,16 +89,13 @@ private final class VerticalBarWatcher: UIView {
         let width = left ? safeAreaInsets.left : safeAreaInsets.right
         guard width > 0 else { return nil }
         let column = CGRect(x: left ? 0 : bounds.width - width, y: 0, width: width, height: bounds.height)
-        var taken = reservedRegions(kind: .occlusion).map(\.frame)
-        if let status = window?.windowScene?.statusBarManager?.statusBarFrame {
-            taken.append(convert(status, from: nil))
-        }
-        // What the system shows in the upper half pushes the tabs down, and
-        // what it shows in the lower half keeps them above it.
-        let inColumn = taken.filter { $0.intersects(column) }
-        let top = inColumn.filter { $0.midY < column.midY }.map(\.maxY).max() ?? 0
-        let bottom = inColumn.filter { $0.midY >= column.midY }.map(\.minY).min() ?? bounds.height
-        guard bottom > top else { return nil }
-        return VerticalBar(side: left ? .left : .right, top: top, bottom: bottom)
+        // The status bar and the camera are regions too; in landscape the
+        // camera sits low in the column, and the tabs end above it.
+        let bottom = reservedRegions(kind: .occlusion)
+            .map(\.frame)
+            .filter { $0.intersects(column) && $0.midY >= column.midY }
+            .map(\.minY)
+            .min() ?? bounds.height
+        return VerticalBar(side: left ? .left : .right, bottom: bottom)
     }
 }

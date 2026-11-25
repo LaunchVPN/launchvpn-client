@@ -18,6 +18,13 @@ class VerticalTabs extends StatelessWidget {
   final ValueChanged<int> onSelect;
 
   static const width = 48.0;
+
+  /// Between the capsule and the pages beside it.
+  static const pagesGap = 12.0;
+
+  /// Above the screen's bottom edge. A region below the capsule, such as the
+  /// camera's, already keeps its own margin.
+  static const lift = 24.0;
   static const _pitch = 50.0;
   static const _inset = 6.0;
 

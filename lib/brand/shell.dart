@@ -82,13 +82,6 @@ class _BrandShellState extends State<BrandShell> {
 
   static const _tabBarHeight = 80.0;
 
-  /// Between the vertical tabs and the pages.
-  static const _railInset = 12.0;
-
-  /// Above the screen's bottom edge; a reserved region below them already
-  /// keeps its own margin.
-  static const _railLift = 24.0;
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -321,9 +314,9 @@ class _BrandShellState extends State<BrandShell> {
         VerticalBarSide.right => padding.right,
         null => 0.0,
       };
-      final rail = bar != null && column > 0;
+      final vertical = bar != null && column > 0;
       return ToastArea(
-        bottom: rail ? 0 : _tabBarHeight,
+        bottom: vertical ? 0 : _tabBarHeight,
         child: Scaffold(
           body: Stack(
             children: [
@@ -333,26 +326,30 @@ class _BrandShellState extends State<BrandShell> {
                   top: false,
                   left: false,
                   right: false,
-                  bottom: rail,
+                  bottom: vertical,
                   child: shell,
                 ),
               ),
-              if (rail)
+              if (vertical)
                 Positioned(
                   left: bar.side == VerticalBarSide.left ? 0 : null,
                   right: bar.side == VerticalBarSide.right ? 0 : null,
-                  top: bar.top,
-                  height: bar.bottom - bar.top,
+                  top: 0,
+                  height: bar.bottom,
                   width: column,
                   // Low in the column, under the middle of the status items,
                   // where iOS keeps its own tab bar.
                   child: Padding(
                     padding: EdgeInsets.only(
-                      left: bar.side == VerticalBarSide.right ? _railInset : 0,
-                      right: bar.side == VerticalBarSide.left ? _railInset : 0,
+                      left: bar.side == VerticalBarSide.right
+                          ? VerticalTabs.pagesGap
+                          : 0,
+                      right: bar.side == VerticalBarSide.left
+                          ? VerticalTabs.pagesGap
+                          : 0,
                       bottom: bar.bottom < MediaQuery.sizeOf(context).height
                           ? 0
-                          : _railLift,
+                          : VerticalTabs.lift,
                     ),
                     child: Align(
                       alignment: bar.side == VerticalBarSide.right
@@ -368,7 +365,7 @@ class _BrandShellState extends State<BrandShell> {
                 ),
             ],
           ),
-          bottomNavigationBar: rail
+          bottomNavigationBar: vertical
               ? null
               : NavigationBar(
                   height: _tabBarHeight,

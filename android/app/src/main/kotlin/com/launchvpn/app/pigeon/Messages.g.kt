@@ -459,29 +459,27 @@ data class TunnelStop (
 /**
  * The column iOS keeps along one side of the screen for the status bar and
  * the camera, as on iPhone Duo. It is as wide as the safe area's inset on
- * [side]; the App's tabs go between [top] and [bottom], in points from the
- * top of the screen, clear of what the system shows there.
+ * [side]. The App's tabs sit low in it and end above [bottom], in points from
+ * the top of the screen: the camera's region when it is below them, else the
+ * screen's edge.
  *
  * Generated class from Pigeon that represents data sent in messages.
  */
 data class VerticalBar (
   val side: VerticalBarSide,
-  val top: Double,
   val bottom: Double
 )
  {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): VerticalBar {
       val side = pigeonVar_list[0] as VerticalBarSide
-      val top = pigeonVar_list[1] as Double
-      val bottom = pigeonVar_list[2] as Double
-      return VerticalBar(side, top, bottom)
+      val bottom = pigeonVar_list[1] as Double
+      return VerticalBar(side, bottom)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       side,
-      top,
       bottom,
     )
   }
@@ -493,18 +491,17 @@ data class VerticalBar (
       return true
     }
     val other = other as VerticalBar
-    return MessagesPigeonUtils.deepEquals(this.side, other.side) && MessagesPigeonUtils.deepEquals(this.top, other.top) && MessagesPigeonUtils.deepEquals(this.bottom, other.bottom)
+    return MessagesPigeonUtils.deepEquals(this.side, other.side) && MessagesPigeonUtils.deepEquals(this.bottom, other.bottom)
   }
 
   override fun hashCode(): Int {
     var result = javaClass.hashCode()
     result = 31 * result + MessagesPigeonUtils.deepHash(this.side)
-    result = 31 * result + MessagesPigeonUtils.deepHash(this.top)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.bottom)
     return result
   }
   override fun toString(): String {
-    return "VerticalBar(side=$side, top=$top, bottom=$bottom)"
+    return "VerticalBar(side=$side, bottom=$bottom)"
   }
 }
 

@@ -124,7 +124,7 @@ void main() {
     await tester.pumpAndSettle();
     final pages = tester.state(find.byType(StatefulNavigationShell));
 
-    bar.value = VerticalBar(side: VerticalBarSide.right, top: 120, bottom: 669);
+    bar.value = VerticalBar(side: VerticalBarSide.right, bottom: 669);
     await tester.pump();
     expect(find.byType(NavigationBar), findsNothing);
     // Where iOS keeps its own: low in the column, under the status items.

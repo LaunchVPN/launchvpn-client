@@ -337,19 +337,18 @@ class TunnelStop {
 
 /// The column iOS keeps along one side of the screen for the status bar and
 /// the camera, as on iPhone Duo. It is as wide as the safe area's inset on
-/// [side]; the App's tabs go between [top] and [bottom], in points from the
-/// top of the screen, clear of what the system shows there.
+/// [side]. The App's tabs sit low in it and end above [bottom], in points from
+/// the top of the screen: the camera's region when it is below them, else the
+/// screen's edge.
 class VerticalBar {
-  VerticalBar({required this.side, required this.top, required this.bottom});
+  VerticalBar({required this.side, required this.bottom});
 
   VerticalBarSide side;
-
-  double top;
 
   double bottom;
 
   List<Object?> _toList() {
-    return <Object?>[side, top, bottom];
+    return <Object?>[side, bottom];
   }
 
   Object encode() {
@@ -360,8 +359,7 @@ class VerticalBar {
     result as List<Object?>;
     return VerticalBar(
       side: result[0]! as VerticalBarSide,
-      top: result[1]! as double,
-      bottom: result[2]! as double,
+      bottom: result[1]! as double,
     );
   }
 
@@ -374,9 +372,7 @@ class VerticalBar {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(side, other.side) &&
-        _deepEquals(top, other.top) &&
-        _deepEquals(bottom, other.bottom);
+    return _deepEquals(side, other.side) && _deepEquals(bottom, other.bottom);
   }
 
   @override
@@ -385,7 +381,7 @@ class VerticalBar {
 
   @override
   String toString() {
-    return 'VerticalBar(side: $side, top: $top, bottom: $bottom)';
+    return 'VerticalBar(side: $side, bottom: $bottom)';
   }
 }
 
