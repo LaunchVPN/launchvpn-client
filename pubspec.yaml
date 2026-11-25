@@ -91,6 +91,7 @@ dependencies:
   win32: ^6.4.0
   country_flags: ^4.1.2
   connectivity_plus: ^7.3.2
+  sign_in_with_apple: ^8.2.0
 
 dev_dependencies:
   flutter_test:

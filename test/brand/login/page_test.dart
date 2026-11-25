@@ -12,6 +12,7 @@ import 'package:onexray/brand/router.dart';
 import 'package:onexray/brand/shader_backdrop.dart';
 import 'package:onexray/brand/theme.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
+import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/settings/language/locale.dart';
 import 'package:onexray/service/shared/share/service.dart';
@@ -27,6 +28,7 @@ void main() {
   late StreamController<bool> subscriptions;
   late List<Uri> opened;
   late FakeBrowser browser;
+  late FakeAppleSheet apple;
   late StreamController<Uri> links;
   late ShareService share;
 
@@ -34,9 +36,11 @@ void main() {
     FlutterSecureStorage.setMockInitialValues({});
     api = FakeAccountApi();
     browser = FakeBrowser();
+    apple = FakeAppleSheet();
     account = accountServiceFor(
       api,
       browser: browser,
+      apple: apple,
       addSubscription: (link) => share.addAppLink(link),
     );
     opened = [];
@@ -286,6 +290,136 @@ void main() {
     });
   });
 
+  group('Apple', () {
+    final iOS = TargetPlatformVariant.only(TargetPlatform.iOS);
+
+    testWidgets('Android offers Telegram only', (tester) async {
+      await pumpApp(tester, hasSubscription: false);
+
+      expect(find.text('Войти через Telegram'), findsOneWidget);
+      expect(find.text('Вход с Apple'), findsNothing);
+    });
+
+    testWidgets(
+      'on iOS, signing in passes the gate and adds the account subscription',
+      (tester) async {
+        api.appleWith(access: 'a1', refresh: 'r1');
+        api.subscription(_configLink);
+        await pumpApp(tester, hasSubscription: false);
+        expect(find.text('Войти через Telegram'), findsOneWidget);
+
+        await tester.tap(find.text('Вход с Apple'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('home-body'), findsOneWidget);
+        expect(opened, [
+          Uri.parse(
+            'launchvpn://sub/add?url=${Uri.encodeQueryComponent(_configLink)}',
+          ),
+        ]);
+      },
+      variant: iOS,
+    );
+
+    testWidgets('a Telegram return during it switches no account', (
+      tester,
+    ) async {
+      final appleAnswers = Completer<void>();
+      api.appleWith(access: 'a1', refresh: 'r1', after: appleAnswers.future);
+      api.exchangeWith(access: 't1', refresh: 'tr1');
+      api.subscription(_configLink);
+      await pumpApp(tester, hasSubscription: false);
+      await tester.tap(find.text('Войти через Telegram'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Вход с Apple'));
+      await tester.pump();
+      links.add(Uri.parse('launchvpn://auth?code=c1'));
+      await tester.pump();
+      appleAnswers.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.text('home-body'), findsOneWidget);
+      expect(api.bodies('/api/app/auth/exchange'), isEmpty);
+    }, variant: iOS);
+
+    testWidgets('a refused token says so under the button', (tester) async {
+      api.refuse('/api/app/auth/apple', 401, 'invalid_apple_auth');
+      await pumpApp(tester, hasSubscription: false);
+
+      await tester.tap(find.text('Вход с Apple'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Не получилось войти через Apple. Попробуйте ещё раз'),
+        findsOneWidget,
+      );
+      expect(find.text('home-body'), findsNothing);
+    }, variant: iOS);
+
+    testWidgets('an email another account holds asks to contact support', (
+      tester,
+    ) async {
+      api.refuse('/api/app/auth/apple', 409, 'email_taken');
+      await pumpApp(tester, hasSubscription: false);
+
+      await tester.tap(find.text('Вход с Apple'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Этот email занят другим аккаунтом. Напишите в поддержку'),
+        findsOneWidget,
+      );
+    }, variant: iOS);
+
+    testWidgets('too many attempts say so under the button', (tester) async {
+      api.refuse('/api/app/auth/apple', 429, 'rate_limited');
+      await pumpApp(tester, hasSubscription: false);
+
+      await tester.tap(find.text('Вход с Apple'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Слишком много попыток. Подождите немного'),
+        findsOneWidget,
+      );
+    }, variant: iOS);
+
+    testWidgets('no connection says so under the button', (tester) async {
+      api.unreachable('/api/app/auth/apple');
+      await pumpApp(tester, hasSubscription: false);
+
+      await tester.tap(find.text('Вход с Apple'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Нет связи с сервером. Попробуйте ещё раз'),
+        findsOneWidget,
+      );
+    }, variant: iOS);
+
+    testWidgets('closing the sheet leaves the form as it was', (tester) async {
+      apple.refusal = const AccountException(AccountError.cancelled);
+      await pumpApp(tester, hasSubscription: false);
+
+      await tester.tap(find.text('Вход с Apple'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Не получилось'), findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.ancestor(
+                of: find.text('Вход с Apple'),
+                matching: find.byWidgetPredicate((w) => w is FilledButton),
+              ),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    }, variant: iOS);
+  });
+
   group('Telegram', () {
     Future<void> returnFromTelegram(WidgetTester tester, String query) async {
       await tester.tap(find.text('Войти через Telegram'));
@@ -328,6 +462,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('home-body'), findsOneWidget);
+      expect(api.bodies('/api/app/auth/exchange'), isEmpty);
+    });
+
+    testWidgets('a return while «Проверьте почту» waits keeps the signup', (
+      tester,
+    ) async {
+      api.signupWith(token: 'st1');
+      api.exchangeWith(access: 't1', refresh: 'tr1');
+      await pumpApp(tester, hasSubscription: false);
+      await tester.tap(find.text('Войти через Telegram'));
+      await tester.pumpAndSettle();
+
+      await createAccount(tester);
+      links.add(Uri.parse('launchvpn://auth?code=c1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Проверьте\nпочту'), findsOneWidget);
       expect(api.bodies('/api/app/auth/exchange'), isEmpty);
     });
 
@@ -425,17 +576,6 @@ void main() {
       expect(find.textContaining('Telegram. Попробуйте'), findsNothing);
       expect(find.text('Войти через Telegram'), findsOneWidget);
     });
-
-    testWidgets('iOS offers no Telegram sign-in', (tester) async {
-      await pumpApp(tester, hasSubscription: false);
-
-      expect(find.text('Войти через Telegram'), findsNothing);
-      expect(find.text('или'), findsNothing);
-      expect(
-        find.widgetWithText(FilledButton, 'Создать аккаунт'),
-        findsOneWidget,
-      );
-    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
   });
 
   testWidgets('«Вход» over the tabs closes once, however often the account '

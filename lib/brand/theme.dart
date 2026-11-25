@@ -398,6 +398,20 @@ abstract final class BrandTheme {
     ),
   );
 
+  /// «Вход с Apple»: white with a black logo and title on a dark page, as
+  /// Apple's guidelines ask, not in brand colors.
+  static final appleButton = _wide(
+    FilledButton.styleFrom(
+      backgroundColor: Colors.white,
+      foregroundColor: appleInk,
+      // Busy, it stays Apple's white and black, only the ink fades.
+      disabledBackgroundColor: Colors.white,
+      disabledForegroundColor: appleInk.withValues(alpha: 0.4),
+    ),
+  );
+
+  static const appleInk = Colors.black;
+
   /// The action of a sheet that deletes something.
   static final dangerButton = _wide(
     FilledButton.styleFrom(

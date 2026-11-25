@@ -51,9 +51,9 @@ API address, which is the site's own domain.
 _Avoid_: flavor, theme, white-label
 
 **Account**:
-A person's login, by email and password or by Telegram. Signing in on a device opens
-a session there and brings the account's subscription. Without an account a
-subscription can still come from a deeplink.
+A person's login, by email and password, by Telegram, or by Apple on iOS. Signing
+in on a device opens a session there and brings the account's subscription.
+Without an account a subscription can still come from a deeplink.
 _Avoid_: profile, user, cabinet
 
 **Cabinet**:

@@ -26,11 +26,15 @@ enum AccountError {
   /// The account or this device already had its trial.
   trialUsed,
 
-  /// The person turned Telegram's sign-in down, or started another one.
+  /// The person turned Telegram's or Apple's sign-in down, or started
+  /// another one.
   cancelled,
 
   /// Telegram's sign-in did not finish in the browser.
   telegramFailed,
+
+  /// Apple's sheet failed, or the backend refused what it signed.
+  appleFailed,
 
   /// Linking: that Telegram belongs to another account with an email.
   telegramTaken,
@@ -60,6 +64,7 @@ enum AccountError {
     'trial_used' => trialUsed,
     'cancelled' => cancelled,
     'telegram_failed' => telegramFailed,
+    'invalid_apple_auth' || 'apple_failed' => appleFailed,
     'telegram_taken' => telegramTaken,
     'already_linked' => alreadyLinked,
     'invalid_token' => signedOut,

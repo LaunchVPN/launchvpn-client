@@ -97,11 +97,17 @@ enum TrialAvailability {
 
 /// What `GET /api/me` says about the signed-in account.
 final class AccountDetails {
-  const AccountDetails({required this.email, required this.telegramLinked});
+  const AccountDetails({
+    required this.email,
+    required this.telegramLinked,
+    required this.appleLinked,
+  });
 
-  /// Null for an account that has only Telegram.
+  /// Null for an account that has only Telegram. Signing in with Apple may
+  /// leave Apple's relay address here.
   final String? email;
   final bool telegramLinked;
+  final bool appleLinked;
 
   static AccountDetails fromJson(Map<String, Object?> data) => AccountDetails(
     email: switch (data['email']) {
@@ -109,6 +115,7 @@ final class AccountDetails {
       _ => null,
     },
     telegramLinked: data['telegramLinked'] == true,
+    appleLinked: data['appleLinked'] == true,
   );
 }
 

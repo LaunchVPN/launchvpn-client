@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
+import 'package:onexray/service/account/apple_auth.dart';
+import 'package:onexray/service/account/failure.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/account/telegram_auth.dart';
 
@@ -95,6 +97,16 @@ final class FakeAccountApi implements HttpClientAdapter {
     return (status, {...pair, 'addedDays': ?addedDays});
   };
 
+  /// Signing in with Apple answers with the pair, once [after] completes.
+  void appleWith({
+    required String access,
+    required String refresh,
+    Future<void>? after,
+  }) => _routes['/api/app/auth/apple'] = (_) async {
+    await after;
+    return _pair(access, refresh);
+  };
+
   /// Linking Telegram starts in the browser at [url].
   void linkStartWith(String url) =>
       _routes['/api/app/link/telegram/start'] = (_) async =>
@@ -142,15 +154,19 @@ final class FakeAccountApi implements HttpClientAdapter {
 
   /// The account as `/api/me` describes it; no [email] for one that has only
   /// Telegram.
-  void me({required String? email, required bool telegramLinked}) =>
-      _routes['/api/me'] = (_) async => (
-        200,
-        {
-          'email': email,
-          'emailVerified': email != null,
-          'telegramLinked': telegramLinked,
-        },
-      );
+  void me({
+    required String? email,
+    required bool telegramLinked,
+    bool appleLinked = false,
+  }) => _routes['/api/me'] = (_) async => (
+    200,
+    {
+      'email': email,
+      'emailVerified': email != null,
+      'telegramLinked': telegramLinked,
+      'appleLinked': appleLinked,
+    },
+  );
 
   /// The panel's devices for the account, as `/api/devices` passes them on.
   /// Removing one takes it off the list.
@@ -249,14 +265,29 @@ final class FakeBrowser {
   }
 }
 
+/// Apple's sheet: signs a token for the nonce hash it is shown, or throws
+/// [refusal] as the closed or failed sheet does.
+final class FakeAppleSheet {
+  final hashedNonces = <String>[];
+  AccountException? refusal;
+
+  Future<AppleCredential> authorize(String hashedNonce) async {
+    hashedNonces.add(hashedNonce);
+    if (refusal case final refusal?) throw refusal;
+    return (identityToken: 'apple-token', authorizationCode: 'apple-code');
+  }
+}
+
 /// An [AccountService] that talks to [api] from a Pixel 9, with this device's
 /// subscriptions behind [removeSubscription] and [addSubscription] and
-/// Telegram's sign-in opening in [browser] at the time [now] tells.
+/// Telegram's sign-in opening in [browser] at the time [now] tells, and
+/// Apple's in [apple].
 AccountService accountServiceFor(
   FakeAccountApi api, {
   Future<void> Function(String url)? removeSubscription,
   void Function(Uri link)? addSubscription,
   FakeBrowser? browser,
+  FakeAppleSheet? apple,
   Random? random,
   DateTime Function()? now,
 }) => AccountService(
@@ -269,6 +300,7 @@ AccountService accountServiceFor(
     random: random,
     now: now,
   ),
+  appleSheet: (apple ?? FakeAppleSheet()).authorize,
   readDevice: () async => DeviceIdentity(
     hwid: 'device-hwid',
     os: 'Android',

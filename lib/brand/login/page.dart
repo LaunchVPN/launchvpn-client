@@ -23,12 +23,15 @@ import 'package:onexray/service/account/model.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/servers/subscription/deep_link.dart';
 import 'package:onexray/service/shared/share/service.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart'
+    show AppleLogoPainter;
 
 /// «Вход», in place of the tabs while the device has neither a session nor a
 /// subscription. It creates an account, as it opens by default, or signs in;
 /// a new account, or an unconfirmed email, continues to «Проверьте почту» on
-/// the same page. On Android it also signs in with Telegram. A pasted link
-/// goes to [links], the queue incoming links go through.
+/// the same page. On iOS it also signs in with Apple and Telegram, on Android
+/// with Telegram. A pasted link goes to [links], the queue incoming links go
+/// through.
 class LoginPage extends StatefulWidget {
   const LoginPage({
     super.key,
@@ -121,6 +124,15 @@ class _LoginPageState extends State<LoginPage> {
     }
     (widget.links ?? ShareService()).addAppLink(link);
   }
+
+  /// The sign-ins «Вход» offers below the form on this platform. Apple's
+  /// comes only on iOS, where App Store guideline 4.8 asks for it next to
+  /// Telegram's.
+  static List<LoginProvider> get _providers => switch (defaultTargetPlatform) {
+    TargetPlatform.iOS => const [LoginProvider.apple, LoginProvider.telegram],
+    TargetPlatform.android => const [LoginProvider.telegram],
+    _ => const [],
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -247,27 +259,25 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-          // Not on iOS: App Store guideline 4.8 would then require Sign in
-          // with Apple.
-          if (defaultTargetPlatform == TargetPlatform.android) ...[
+          if (_providers case final providers when providers.isNotEmpty) ...[
             const SizedBox(height: 16),
             _OrDivider(l.loginOr),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              style: BrandTheme.secondaryButton,
-              onPressed: state.busy
-                  ? null
-                  : () => unawaited(_login.signInWithTelegram()),
-              icon: const Icon(LucideIcons.send),
-              label: ButtonProgress(
-                busy: state.redeemingTelegram,
-                child: Text(l.loginTelegram),
+            for (final provider in providers) ...[
+              const SizedBox(height: 16),
+              _ProviderButton(
+                provider,
+                busy: state.signingIn == provider,
+                onPressed: state.busy
+                    ? null
+                    : () => unawaited(_login.signInWith(provider)),
               ),
-            ),
-            ErrorText(switch (state.telegramError) {
-              null => null,
-              final error => _errorMessage(l, error),
-            }),
+              ErrorText(switch (state.providerError) {
+                (provider: final failed, :final error)
+                    when failed == provider =>
+                  _providerMessage(l, error),
+                _ => null,
+              }),
+            ],
           ],
           const SizedBox(height: 12),
           TextButton.icon(
@@ -298,6 +308,14 @@ String? _formMessage(AppLocalizations l, LoginState state) => switch (state) {
   LoginState() => null,
 };
 
+/// Why a sign-in through another service failed. The service's email may
+/// belong to an account it cannot sign in to; support sorts that out.
+String _providerMessage(AppLocalizations l, AccountError error) =>
+    switch (error) {
+      AccountError.emailTaken => l.loginErrorProviderEmailTaken,
+      _ => _errorMessage(l, error),
+    };
+
 String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
   AccountError.invalidCredentials => l.loginErrorInvalidCredentials,
   AccountError.emailNotVerified => l.loginErrorEmailNotVerified,
@@ -306,6 +324,7 @@ String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
   AccountError.invalidRequest => l.loginErrorInvalidRequest,
   AccountError.network => l.loginErrorNetwork,
   AccountError.telegramFailed => l.loginErrorTelegram,
+  AccountError.appleFailed => l.loginErrorApple,
   AccountError.accountBlocked => l.loginErrorAccountBlocked,
   AccountError.appNotAvailable => l.loginErrorAppNotAvailable,
   AccountError.signedOut => l.loginErrorSessionEnded,
@@ -318,7 +337,61 @@ String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
   AccountError.unexpected => l.loginErrorUnexpected,
 };
 
-/// «или» between the form and the Telegram sign-in.
+/// A sign-in through [provider], showing progress while it signs in.
+/// Apple's keeps Apple's look, as its guidelines ask.
+class _ProviderButton extends StatelessWidget {
+  const _ProviderButton(
+    this.provider, {
+    required this.busy,
+    required this.onPressed,
+  });
+
+  final LoginProvider provider;
+  final bool busy;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final (style, icon, label) = switch (provider) {
+      LoginProvider.apple => (
+        BrandTheme.appleButton,
+        const _AppleLogo(),
+        l.loginApple,
+      ),
+      LoginProvider.telegram => (
+        BrandTheme.secondaryButton,
+        const Icon(LucideIcons.send),
+        l.loginTelegram,
+      ),
+    };
+    return FilledButton.icon(
+      style: style,
+      onPressed: onPressed,
+      icon: icon,
+      label: ButtonProgress(busy: busy, child: Text(label)),
+    );
+  }
+}
+
+/// Apple's logo, 25 by 31, as tall as the button's icons and in its title's
+/// color, which dims with it.
+class _AppleLogo extends StatelessWidget {
+  const _AppleLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    // The button sets both; the fallbacks only satisfy the types.
+    final icon = IconTheme.of(context);
+    final height = icon.size ?? 20;
+    return CustomPaint(
+      size: Size(height * 25 / 31, height),
+      painter: AppleLogoPainter(color: icon.color ?? BrandTheme.appleInk),
+    );
+  }
+}
+
+/// «или» between the form and the sign-ins through other services.
 class _OrDivider extends StatelessWidget {
   const _OrDivider(this.label);
 
