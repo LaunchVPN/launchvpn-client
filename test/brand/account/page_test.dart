@@ -148,6 +148,23 @@ void main() {
     expect(find.text('Продлить подписку'), findsNothing);
   });
 
+  testWidgets('an account signed in with Apple says so under its email', (
+    tester,
+  ) async {
+    await pumpAccount(tester, openAccount: false);
+    api.me(
+      email: 'x7k2@privaterelay.appleid.com',
+      telegramLinked: false,
+      appleLinked: true,
+    );
+    await tester.tap(find.text('Аккаунт'));
+    await settle(tester);
+
+    expect(find.text('x7k2@privaterelay.appleid.com'), findsOneWidget);
+    expect(find.text('Вход через Apple'), findsOneWidget);
+    expect(find.text('Вход по email'), findsNothing);
+  });
+
   for (final signedIn in [true, false]) {
     testWidgets('without a support link from the panel, «Поддержка» opens the '
         'bot\'s support (signed in: $signedIn)', (tester) async {

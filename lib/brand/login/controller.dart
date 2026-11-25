@@ -11,24 +11,38 @@ import 'package:onexray/service/account/telegram_auth.dart';
 /// sign in to one.
 enum LoginMode { create, signIn }
 
+/// A sign-in through another service's page or sheet. [failure] is shown
+/// under its button for any refusal the form has no text of its own for.
+enum LoginProvider {
+  apple(AccountError.appleFailed),
+  telegram(AccountError.telegramFailed);
+
+  const LoginProvider(this.failure);
+
+  final AccountError failure;
+}
+
+/// Why the last sign-in with [provider] failed.
+typedef ProviderFailure = ({LoginProvider provider, AccountError error});
+
 final class LoginState {
   const LoginState({
     this.mode = LoginMode.create,
     this.submitting = false,
-    this.redeemingTelegram = false,
+    this.redeeming,
     this.error,
     this.signedOut,
-    this.telegramError,
+    this.providerError,
     this.signup,
   });
 
   final LoginMode mode;
   final bool submitting;
 
-  /// Back from Telegram, the App is signing in with the code it brought.
-  final bool redeemingTelegram;
+  /// Signing in with Apple's sheet, or with the code Telegram brought back.
+  final LoginProvider? redeeming;
 
-  bool get busy => submitting || redeemingTelegram;
+  bool get busy => submitting || redeeming != null;
 
   /// Why the last attempt failed, shown under the fields until the next one.
   final AccountError? error;
@@ -37,16 +51,16 @@ final class LoginState {
   /// sign-in form it opens to until the next attempt.
   final ForcedSignOut? signedOut;
 
-  /// Why the last Telegram sign-in failed, shown under its button:
-  /// [AccountError.telegramFailed] unless the backend named the reason.
-  final AccountError? telegramError;
+  /// Shown under the provider's button: its [LoginProvider.failure] unless
+  /// the backend named the reason.
+  final ProviderFailure? providerError;
 
   /// A signup waiting for the code from the email: «Проверьте почту» shows
   /// instead of the form.
   final PendingSignup? signup;
 }
 
-/// The «Вход» form. Signing in, by email or Telegram, adds the account's
+/// The «Вход» form. Signing in, by email, Apple or Telegram, adds the account's
 /// subscription the way a system link does. Creating an account, or signing
 /// in with an unconfirmed email, leads to the code from the email.
 final class LoginController extends PageCubit<LoginState> {
@@ -103,6 +117,17 @@ final class LoginController extends PageCubit<LoginState> {
     }
   }
 
+  /// «Вход с Apple», on iOS: Apple's sheet covers the form until the person
+  /// signs in or closes it.
+  Future<void> signInWithApple() async {
+    if (state.busy) return;
+    emit(LoginState(mode: state.mode, redeeming: LoginProvider.apple));
+    await _signInWith(LoginProvider.apple, () async {
+      await _account.apple.login();
+      emit(LoginState(mode: state.mode));
+    });
+  }
+
   /// «Войти через Telegram»: Telegram's sign-in opens in the browser, and the
   /// form stays usable until the person comes back with its code. Turning
   /// Telegram down, or tapping again, leaves the form as it is.
@@ -113,37 +138,47 @@ final class LoginController extends PageCubit<LoginState> {
   }
 
   /// Signs in with the code [pending] brings back from Telegram.
-  Future<void> _redeemTelegram(Future<TelegramCode> pending) async {
+  Future<void> _redeemTelegram(Future<TelegramCode> pending) =>
+      _signInWith(LoginProvider.telegram, () async {
+        final code = await pending;
+        // Signed in by email meanwhile, or doing so: the code would switch
+        // accounts.
+        if (state.submitting || _account.session.signedIn.value) return;
+        emit(LoginState(mode: state.mode, redeeming: LoginProvider.telegram));
+        await _account.telegram.exchangeLogin(code);
+        emit(LoginState(mode: state.mode));
+      });
+
+  /// Runs [signIn] and shows why it failed under [provider]'s button. Turning
+  /// the provider down only ends its progress.
+  Future<void> _signInWith(
+    LoginProvider provider,
+    Future<void> Function() signIn,
+  ) async {
     try {
-      final code = await pending;
-      // Signed in by email meanwhile, or doing so: the code would switch
-      // accounts.
-      if (state.submitting || _account.session.signedIn.value) return;
-      emit(LoginState(mode: state.mode, redeemingTelegram: true));
-      await _account.telegram.exchangeLogin(code);
-      emit(LoginState(mode: state.mode));
+      await signIn();
     } on AccountException catch (error) {
-      if (error.error == AccountError.cancelled) return;
-      emit(
-        LoginState(
-          mode: state.mode,
-          telegramError: switch (error.error) {
-            AccountError.accountBlocked ||
-            AccountError.appNotAvailable => error.error,
-            _ => AccountError.telegramFailed,
-          },
-        ),
-      );
+      if (error.error == AccountError.cancelled) {
+        if (state.redeeming == provider) emit(LoginState(mode: state.mode));
+        return;
+      }
+      _failed(provider, switch (error.error) {
+        AccountError.accountBlocked ||
+        AccountError.appNotAvailable => error.error,
+        _ => provider.failure,
+      });
     } catch (error) {
-      ygLogger('Telegram sign-in failed (${error.runtimeType})');
-      emit(
-        LoginState(
-          mode: state.mode,
-          telegramError: AccountError.telegramFailed,
-        ),
-      );
+      ygLogger('${provider.name} sign-in failed (${error.runtimeType})');
+      _failed(provider, provider.failure);
     }
   }
+
+  void _failed(LoginProvider provider, AccountError error) => emit(
+    LoginState(
+      mode: state.mode,
+      providerError: (provider: provider, error: error),
+    ),
+  );
 
   /// «Не та почта? Изменить»: back to the form, whose fields keep their text.
   void changeEmail() => emit(LoginState(mode: state.mode));

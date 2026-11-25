@@ -398,6 +398,15 @@ abstract final class BrandTheme {
     ),
   );
 
+  /// «Вход с Apple»: white on a dark page, as Apple's guidelines ask, not
+  /// in brand colors.
+  static final appleButton = _wide(
+    FilledButton.styleFrom(
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black,
+    ),
+  );
+
   /// The action of a sheet that deletes something.
   static final dangerButton = _wide(
     FilledButton.styleFrom(

@@ -229,7 +229,7 @@ upstream pages kept for merging. They are not reachable in this build.
   [memory](xray-configuration.md#ios-memory-headroom); App Store installs never show it.
 - «Вход» talks to the account API at `Brand.apiUrl` through `AccountService`, which wires its
   parts: `AccountSession` (tokens, the Bearer header and the refresh), `EmailAuth`,
-  `TelegramAccount` (sign-in and linking) and `AccountData` (the account's subscription, details,
+  `TelegramAccount` (sign-in and linking), `AppleAuth` (sign-in on iOS) and `AccountData` (the account's subscription, details,
   devices, trial, sign-out and deletion). `--dart-define=LAUNCHVPN_API_URL` points a local run at
   another backend. It opens in create mode, with «Бесплатный период для новых пользователей» in its subtitle and
   Create account, and its footer switches to sign-in mode
@@ -245,14 +245,20 @@ upstream pages kept for merging. They are not reachable in this build.
   motion it holds the first frame. It stops while another screen covers it or the App is hidden,
   and resumes from the same frame. If the shader fails to load, the page keeps its plain
   background.
-- On Android, «Вход» also offers «Войти через Telegram» below the form, after «или»; iOS does not
-  (App Store guideline 4.8 would require Sign in with Apple). A tap makes a PKCE verifier for this
+- Below the form, after «или», «Вход» offers «Войти через Telegram» on Android and iOS, and on
+  iOS «Вход с Apple» above it (App Store guideline 4.8 asks for it next to Telegram's). Apple's button
+  is white with Apple's logo, as Apple's guidelines ask. A tap shows Apple's sheet for the email
+  scope with the SHA-256 of a fresh random nonce, then posts the identity token, the authorization
+  code, the raw nonce and the device to `/api/app/auth/apple` while the button shows progress.
+  Closing the sheet changes nothing; a blocked account or a closed App sign-in shows the form's
+  text for it under the button, and any other failure «Не получилось войти через Apple.
+  Попробуйте ещё раз». Tapping Telegram makes a PKCE verifier for this
   attempt, kept in memory and, for ten minutes, in the secure store, and opens
   `<api>/api/auth/telegram/start?mode=app_login` with the App's language and the verifier's S256
   challenge in the external browser. The form stays usable
   meanwhile, since the person may come back without finishing, and a second tap replaces the
-  attempt. The browser returns to `launchvpn://auth`, which Android registers next to `sub`; the
-  shell hands it to `TelegramBrowserAuth` instead of the subscription flow. `?code=` is exchanged
+  attempt. The browser returns to `launchvpn://auth`, which Android registers next to `sub` and
+  iOS takes through the `launchvpn` scheme; the shell hands it to `TelegramBrowserAuth` instead of the subscription flow. `?code=` is exchanged
   with the verifier at `/api/app/auth/exchange` while the button shows progress. `?error=cancelled`
   changes nothing; a blocked account or a closed App sign-in shows the form's text for it under the
   button, and any other error, or a refused exchange, «Не получилось войти через Telegram.
@@ -273,11 +279,11 @@ upstream pages kept for merging. They are not reachable in this build.
   form's text for it. Resend counts down from the backend's `resendIn`, or its
   `retryAfter` when it refuses an early resend; an attempt the backend no longer knows asks to start
   over. «Не та почта? Изменить», or Back, returns to the form with the email kept.
-- A sign-in, by password, code or Telegram, stores the session, then the account's subscription becomes a
+- A sign-in, by password, code, Apple or Telegram, stores the session, then the account's subscription becomes a
   `launchvpn://sub/add` link in the same queue system links take, so it is added, confirmed and
   reported the same way, and its URL is kept as the account's. An account without an active
   subscription claims the trial (`/api/app/trial`) and adds the subscription it brings, unless the
-  code from the email already started it or the signup said `trialAvailable: false`. A password or Telegram sign-in cannot tell an account
+  code from the email already started it or the signup said `trialAvailable: false`. A password, Apple or Telegram sign-in cannot tell an account
   that never had a subscription from an ended one, so it claims and the backend refuses one whose
   trial was used. Whenever Account reads no active subscription, it asks `GET /api/app/trial` what
   the account can start: `available` claims it there, which also finishes a trial a panel failure
@@ -308,7 +314,9 @@ upstream pages kept for merging. They are not reachable in this build.
   `/api/devices` names, this device first and not removable. Another device opens a
   sheet; Remove device calls `/api/devices/disconnect`, the list updates at once and a toast
   says the place is free for 3 seconds. The account card has the email with Telegram linked or
-  Signs in with email, or «Telegram» with «Вход через Telegram» for an account without an email,
+  Signs in with email, or «Вход через Apple» for an account the backend marks `appleLinked`, whose
+  email may be Apple's relay address, or «Telegram» with «Вход через Telegram» for an account
+  without an email,
   then Support, Sign out and, last, Delete account. Support opens the panel's link, or
   `Brand.supportUrl` (the bot's support in Telegram) when the panel sent none, in every state of
   the tab. From a link only, the tab shows days and traffic, Sign in and Create account, which open
