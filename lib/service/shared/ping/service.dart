@@ -236,19 +236,14 @@ class PingService {
   /// It tries at most [_locationAttempts] of them, in panel order. [onSaved]
   /// hears each delay as it is saved, before the catalog lists it.
   ///
-  /// The last delays go first, so a sweep that stops, or waits behind another,
-  /// never passes them off as current.
+  /// The last delays stay saved until new ones replace them: the screen, not
+  /// the database, shows which locations are being measured.
   Future<void> pingLocations(
     List<CoreConfigData> rows, {
     bool Function()? isCancelled,
     void Function(int id, int delay)? onSaved,
-  }) async {
+  }) {
     final db = _database;
-    await db.transaction(() async {
-      for (final row in rows) {
-        await _writeDelay(db, row, PingDelayConstants.unknown);
-      }
-    });
     return _enqueuePing(() async {
       final pingState = PingState();
       await pingState.readFromPreferences();
@@ -260,8 +255,8 @@ class PingService {
     });
   }
 
-  /// A stop leaves the location unmeasured, even with an answer in hand: that
-  /// answer may have crossed a tunnel coming up or going down.
+  /// A stop saves nothing more, even with an answer in hand: that answer may
+  /// have crossed a tunnel coming up or going down.
   Future<void> _pingLocation(
     AppDatabase db,
     CoreConfigData row,
@@ -331,16 +326,7 @@ class PingService {
 
   /// Whether [row] took [delay]; an unknown one is never saved.
   Future<bool> _updateRow(AppDatabase db, CoreConfigData row, int delay) async {
-    if (delay == PingDelayConstants.unknown) return false;
-    return _writeDelay(db, row, delay);
-  }
-
-  Future<bool> _writeDelay(
-    AppDatabase db,
-    CoreConfigData row,
-    int delay,
-  ) async {
-    if (row.data == null) return false;
+    if (delay == PingDelayConstants.unknown || row.data == null) return false;
     // A slow result must not overwrite an edit, favorite, or restored asset.
     final written =
         await (db.update(db.coreConfig)..where(

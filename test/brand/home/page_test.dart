@@ -395,6 +395,8 @@ void main() {
       await addGroup(tester, '🇵🇱 Польша');
       await tester.tap(find.byKey(const ValueKey('home-location')));
       await tester.pump();
+      // From the first frame of the list.
+      expect(find.text('516 мс'), findsNothing);
       await tester.pump(const Duration(seconds: 1));
 
       // Every location waves, the measured ones too.

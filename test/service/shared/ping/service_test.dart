@@ -284,25 +284,24 @@ void main() {
       );
     });
 
-    test('a sweep forgets the last delays before it starts', () async {
+    test('the last delay stays until a new one replaces it', () async {
       final germany = await group('Germany', ['de1']);
       await db.coreConfigDao.updateRow(germany.copyWith(delay: 80));
-      var runs = 0;
+      final held = Completer<List<PingBatchResult>>();
       final service = PingService.forTesting(
         database: db,
-        runBatch: (sources, _) async {
-          runs++;
-          return _successes(sources.length);
-        },
+        runBatch: (_, _) => held.future,
       );
 
-      await service.pingLocations([germany], isCancelled: () => true);
+      final sweep = service.pingLocations([
+        (await db.coreConfigDao.searchRow(germany.id))!,
+      ]);
+      await pumpEventQueue();
 
-      expect(runs, 0);
-      expect(
-        (await db.coreConfigDao.searchRow(germany.id))!.delay,
-        PingDelayConstants.unknown,
-      );
+      expect((await db.coreConfigDao.searchRow(germany.id))!.delay, 80);
+      held.complete(const [PingBatchResult(true, 120, '')]);
+      await sweep;
+      expect((await db.coreConfigDao.searchRow(germany.id))!.delay, 120);
     });
 
     test('a location out of servers is told at once', () async {
