@@ -250,12 +250,11 @@ upstream pages kept for merging. They are not reachable in this build.
   is white with Apple's logo, as Apple's guidelines ask. A tap shows Apple's sheet for the email
   scope with the SHA-256 of a fresh random nonce, then posts the identity token, the authorization
   code, the raw nonce, the App's language and the device to `/api/app/auth/apple` while the button
-  shows progress.
-  Closing the sheet changes nothing; a blocked account or a closed App sign-in shows the form's
-  text for it under the button. `email_taken`, an Apple email another account's Telegram user
-  attached unconfirmed, says «Этот email занят другим аккаунтом. Напишите в поддержку». Any other
-  failure «Не получилось войти через Apple.
-  Попробуйте ещё раз». Tapping Telegram makes a PKCE verifier for this
+  shows progress. Closing the sheet changes nothing; a blocked account or a closed App sign-in
+  shows the form's text for it under the button. `email_taken`, an Apple email another account's
+  Telegram user attached unconfirmed, says «Этот email занят другим аккаунтом. Напишите в
+  поддержку». Any other failure says «Не получилось войти через Apple. Попробуйте ещё раз».
+  Tapping Telegram makes a PKCE verifier for this
   attempt, kept in memory and, for ten minutes, in the secure store, and opens
   `<api>/api/auth/telegram/start?mode=app_login` with the App's language and the verifier's S256
   challenge in the external browser. The form stays usable
