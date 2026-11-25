@@ -233,9 +233,14 @@ void main() {
             : const [PingBatchResult(true, 70, '')],
       );
 
-      final sweep = service.pingLocations([germany, poland]);
+      final saved = <int, int>{};
+      final sweep = service.pingLocations([
+        germany,
+        poland,
+      ], onSaved: (id, delay) => saved[id] = delay);
       await pumpEventQueue();
 
+      expect(saved, {germany.id: 70});
       expect((await db.coreConfigDao.searchRow(germany.id))!.delay, 70);
       expect(
         (await db.coreConfigDao.searchRow(poland.id))!.delay,
@@ -243,6 +248,7 @@ void main() {
       );
       polandHeld.complete(const [PingBatchResult(true, 90, '')]);
       await sweep;
+      expect(saved, {germany.id: 70, poland.id: 90});
       expect((await db.coreConfigDao.searchRow(poland.id))!.delay, 90);
     });
 
@@ -259,15 +265,19 @@ void main() {
         },
       );
 
-      final sweep = service.pingLocations([
-        germany,
-      ], isCancelled: () => stopped);
+      final saved = <int>[];
+      final sweep = service.pingLocations(
+        [germany],
+        isCancelled: () => stopped,
+        onSaved: (id, _) => saved.add(id),
+      );
       await pumpEventQueue();
       stopped = true;
       held.complete(const [PingBatchResult(true, 80, '')]);
       await sweep;
 
       expect(asked, ['de1']);
+      expect(saved, isEmpty);
       expect(
         (await db.coreConfigDao.searchRow(germany.id))!.delay,
         PingDelayConstants.unknown,

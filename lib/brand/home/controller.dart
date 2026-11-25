@@ -74,6 +74,7 @@ typedef ConnectionActionRunner = Future<void> Function(
 typedef LocationPing = Future<void> Function(
   List<CoreConfigData> rows, {
   bool Function()? isCancelled,
+  void Function(int id, int delay)? onSaved,
 });
 
 typedef AnnouncementDismissal = Future<void> Function(int subId, String text);
@@ -439,8 +440,9 @@ class HomeController extends PageCubit<HomeState> {
   /// dropped.
   Completer<void>? _askedDone;
 
-  /// Locations a sweep saved a delay for that the catalog does not list yet.
-  final _unlisted = <int>{};
+  /// The delay a sweep saved for each location, kept while it runs and until
+  /// the catalog lists that delay.
+  final _saved = <int, int>{};
 
   /// Counts the times measuring stopped being ready, so a sweep learns of a
   /// transition that ended before it looked.
@@ -783,7 +785,7 @@ class HomeController extends PageCubit<HomeState> {
           for (final id in fresh) {
             _sweeps[id] = done.future;
           }
-          _unlisted.removeAll(fresh);
+          fresh.forEach(_saved.remove);
           unawaited(_sweep(fresh).whenComplete(done.complete));
         }
         _askedDone?.complete(
@@ -807,43 +809,39 @@ class HomeController extends PageCubit<HomeState> {
         state.catalog.servers.where((row) => ids.contains(row.id)).toList(),
         isCancelled: () =>
             stopped = stopped || isClosed || _readinessLost != readinessLost,
+        onSaved: (id, delay) {
+          _saved[id] = delay;
+          _showMeasuring();
+        },
       );
     } catch (error) {
       ygLogger('measure locations failed (${error.runtimeType})');
     }
-    try {
-      final saved = {
-        for (final row in await _db.coreConfigDao.allActiveServerRows())
-          if (ids.contains(row.id) && row.delay != PingDelayConstants.unknown)
-            row.id,
-      };
-      _unlisted.addAll(saved);
-      if (stopped) _asked.addAll(ids.difference(saved));
-    } catch (error) {
-      ygLogger('read measured locations failed (${error.runtimeType})');
-    }
+    if (stopped) _asked.addAll(ids.where((id) => !_saved.containsKey(id)));
     ids.forEach(_sweeps.remove);
     _measureAsked();
   }
 
-  /// A location shows it is being measured while it waits for a sweep, and in
-  /// one until the catalog lists its new delay. A sweep forgets the last delay
-  /// a moment after it starts, so until then that one still shows.
+  /// A location shows it is being measured from the moment it is asked for
+  /// until the catalog lists the delay its sweep saved, so the last delay
+  /// never shows in between and each new one shows as soon as it is listed.
   void _showMeasuring({ServerCatalog? catalog}) {
     if (isClosed) return;
-    final unmeasured = {
-      for (final row in (catalog ?? state.catalog).servers)
-        if (row.delay == PingDelayConstants.unknown) row.id,
+    final listed = {
+      for (final row in (catalog ?? state.catalog).servers) row.id: row.delay,
     };
-    // Listed, or gone from the catalog.
-    _unlisted.retainAll(unmeasured);
+    _saved.removeWhere(
+      (id, delay) =>
+          !_sweeps.containsKey(id) &&
+          (!listed.containsKey(id) || listed[id] == delay),
+    );
     emit(
       state.copyWith(
         catalog: catalog,
         measuring: Set.unmodifiable({
           ..._asked,
-          ..._unlisted,
-          ..._sweeps.keys.where(unmeasured.contains),
+          for (final id in {..._sweeps.keys, ..._saved.keys})
+            if (listed.containsKey(id) && listed[id] != _saved[id]) id,
         }),
       ),
     );

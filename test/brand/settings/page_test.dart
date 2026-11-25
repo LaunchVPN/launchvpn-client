@@ -152,7 +152,7 @@ void main() {
     final home = HomeController(
       database: db,
       coordinator: coordinator,
-      pingLocations: (_, {isCancelled}) async {},
+      pingLocations: (_, {isCancelled, onSaved}) async {},
       dismissAnnounce: db.subscriptionDao.dismissAnnounce,
       platform: platform,
       installedApps: () async => apps,
