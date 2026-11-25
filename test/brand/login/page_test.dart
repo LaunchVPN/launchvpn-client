@@ -350,6 +350,19 @@ void main() {
       );
     }, variant: iOS);
 
+    testWidgets('too many attempts say so under the button', (tester) async {
+      api.refuse('/api/app/auth/apple', 429, 'rate_limited');
+      await pumpApp(tester, hasSubscription: false);
+
+      await tester.tap(find.text('Вход с Apple'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Слишком много попыток. Подождите немного'),
+        findsOneWidget,
+      );
+    }, variant: iOS);
+
     testWidgets('closing the sheet leaves the form as it was', (tester) async {
       apple.refusal = const AccountException(AccountError.cancelled);
       await pumpApp(tester, hasSubscription: false);
