@@ -563,8 +563,17 @@ class LocationCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(location.name, style: BrandText.cardTitle),
+                            // A new delay takes the old one's place.
                             if (delay != null)
-                              Text(delay!, style: BrandText.caption),
+                              BrandSwap(
+                                shift: const Offset(0, BrandMotion.nudge),
+                                alignment: AlignmentDirectional.centerStart,
+                                child: Text(
+                                  delay!,
+                                  key: ValueKey(delay),
+                                  style: BrandText.caption,
+                                ),
+                              ),
                           ],
                         ),
                       ),
