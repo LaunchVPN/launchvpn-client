@@ -67,6 +67,7 @@ final class AccountService {
         session: session,
         data: data,
         device: device,
+        language: languageCode,
         authorize: appleSheet,
       ),
     );

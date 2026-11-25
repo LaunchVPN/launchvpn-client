@@ -249,7 +249,8 @@ upstream pages kept for merging. They are not reachable in this build.
   iOS «Вход с Apple» above it (App Store guideline 4.8 asks for it next to Telegram's). Apple's button
   is white with Apple's logo, as Apple's guidelines ask. A tap shows Apple's sheet for the email
   scope with the SHA-256 of a fresh random nonce, then posts the identity token, the authorization
-  code, the raw nonce and the device to `/api/app/auth/apple` while the button shows progress.
+  code, the raw nonce, the App's language and the device to `/api/app/auth/apple` while the button
+  shows progress.
   Closing the sheet changes nothing; a blocked account or a closed App sign-in shows the form's
   text for it under the button, and any other failure «Не получилось войти через Apple.
   Попробуйте ещё раз». Tapping Telegram makes a PKCE verifier for this

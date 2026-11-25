@@ -21,6 +21,7 @@ final class AppleAuth {
     required this._session,
     required this._data,
     required this._device,
+    required this._language,
     AppleAuthorize? authorize,
     String Function()? nonce,
   }) : _authorize = authorize ?? _appleSheet,
@@ -31,6 +32,9 @@ final class AppleAuth {
   /// Finishes a sign-in with the account's subscription.
   final AccountData _data;
   final Future<DeviceClaim> Function() _device;
+
+  /// The App's language, `ru` or `en`, for the emails of a new account.
+  final String Function() _language;
   final AppleAuthorize _authorize;
   final String Function() _nonce;
 
@@ -50,6 +54,7 @@ final class AppleAuth {
           'identityToken': credential.identityToken,
           'authorizationCode': credential.authorizationCode,
           'nonce': nonce,
+          'language': _language(),
           ...device.toJson(),
         },
       ),

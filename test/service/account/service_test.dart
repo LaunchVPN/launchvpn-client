@@ -515,6 +515,7 @@ void main() {
         'identityToken': 'apple-token',
         'authorizationCode': 'apple-code',
         'nonce': body['nonce'],
+        'language': 'ru',
         'hwid': 'device-hwid',
         'platform': 'android',
       });
