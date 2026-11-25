@@ -88,7 +88,11 @@ void showBrandToast(
 }) {
   final toaster = ShadToaster.of(context);
   final screen = toaster.context;
-  final width = (MediaQuery.sizeOf(screen).width - 2 * BrandSpacing.page).clamp(
+  final inset = MediaQuery.viewPaddingOf(screen);
+  // Centered on the screen, so clear of the wider side's inset on both, such
+  // as iPhone Duo's vertical bar.
+  final side = math.max(inset.left, inset.right) + BrandSpacing.page;
+  final width = (MediaQuery.sizeOf(screen).width - 2 * side).clamp(
     0.0,
     _wideWidth,
   );
@@ -102,7 +106,6 @@ void showBrandToast(
   // toast away. So the exit fades in [leave] but both last [arrive], and both
   // keep one shape, so the toast is not rebuilt as it starts to leave.
   final span = CustomEffect(duration: arrive, builder: (_, _, child) => child);
-  final inset = MediaQuery.viewPaddingOf(screen);
   toaster.show(
     ShadToast(
       title: compact
