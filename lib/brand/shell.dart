@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,9 @@ import 'package:onexray/brand/permission/vpn_permission_page.dart';
 import 'package:onexray/brand/router.dart';
 import 'package:onexray/brand/subscription_link_flow.dart';
 import 'package:onexray/brand/toast.dart';
+import 'package:onexray/brand/vertical_bar.dart';
+import 'package:onexray/brand/vertical_tabs.dart';
+import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
 import 'package:onexray/pages/main/modal_route_observer.dart';
@@ -44,6 +49,7 @@ class BrandShell extends StatefulWidget {
     this.openLink,
     this.account,
     this.watchSubscription,
+    this.verticalBar,
   });
 
   final StatefulNavigationShell navigationShell;
@@ -55,6 +61,9 @@ class BrandShell extends StatefulWidget {
 
   /// Whether the device has a subscription; the database when null.
   final Stream<bool> Function()? watchSubscription;
+
+  /// Where iOS puts its vertical bar; the App's iOS side when null.
+  final ValueListenable<VerticalBar?>? verticalBar;
 
   @override
   State<BrandShell> createState() => _BrandShellState();
@@ -284,35 +293,75 @@ class _BrandShellState extends State<BrandShell> {
     );
   }
 
-  Widget _tabs(AppLocalizations l) {
-    final shell = widget.navigationShell;
-    return ToastArea(
-      bottom: _tabBarHeight,
-      child: Scaffold(
-        body: shell,
-        bottomNavigationBar: NavigationBar(
-          height: _tabBarHeight,
-          selectedIndex: shell.currentIndex,
-          onDestinationSelected: (index) => shell.goBranch(
-            index,
-            initialLocation: index == shell.currentIndex,
-          ),
-          destinations: [
-            NavigationDestination(
-              icon: const Icon(LucideIcons.house),
-              label: l.homeTab,
+  /// The tabs run along the bottom, or down the column where iOS puts its
+  /// vertical bar, as its own tab bars do on iPhone Duo.
+  /// The pages keep their place in the tree either way, so turning or folding
+  /// the phone keeps where they were.
+  Widget _tabs(AppLocalizations l) => ValueListenableBuilder(
+    valueListenable: widget.verticalBar ?? verticalBar,
+    builder: (context, bar, _) {
+      final shell = widget.navigationShell;
+      void go(int index) =>
+          shell.goBranch(index, initialLocation: index == shell.currentIndex);
+      final tabs = [
+        (LucideIcons.house, l.homeTab),
+        (LucideIcons.user, l.accountTab),
+        (LucideIcons.settings2, l.prototypeSettings),
+      ];
+      final padding = MediaQuery.paddingOf(context);
+      final columnWidth = switch (bar?.side) {
+        VerticalBarSide.left => padding.left,
+        VerticalBarSide.right => padding.right,
+        null => 0.0,
+      };
+      final vertical = bar != null && columnWidth > 0;
+      return ToastArea(
+        bottom: vertical ? 0 : _tabBarHeight,
+        // Over the Scaffold, which shrinks above the keyboard: the keyboard
+        // covers the vertical tabs as it covers the bar below.
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Scaffold(
+              // Without the bar below, the pages keep clear of the bottom.
+              body: SafeArea(
+                top: false,
+                left: false,
+                right: false,
+                bottom: vertical,
+                child: shell,
+              ),
+              bottomNavigationBar: vertical
+                  ? null
+                  : NavigationBar(
+                      height: _tabBarHeight,
+                      selectedIndex: shell.currentIndex,
+                      onDestinationSelected: go,
+                      destinations: [
+                        for (final (icon, label) in tabs)
+                          NavigationDestination(icon: Icon(icon), label: label),
+                      ],
+                    ),
             ),
-            NavigationDestination(
-              icon: const Icon(LucideIcons.user),
-              label: l.accountTab,
-            ),
-            NavigationDestination(
-              icon: const Icon(LucideIcons.settings2),
-              label: l.prototypeSettings,
-            ),
+            if (vertical)
+              Align(
+                alignment: bar.side == VerticalBarSide.right
+                    ? Alignment.topRight
+                    : Alignment.topLeft,
+                child: SizedBox(
+                  width: columnWidth,
+                  height: bar.bottom,
+                  child: VerticalTabs(
+                    bar: bar,
+                    tabs: tabs,
+                    selected: shell.currentIndex,
+                    onSelect: go,
+                  ),
+                ),
+              ),
           ],
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
 }

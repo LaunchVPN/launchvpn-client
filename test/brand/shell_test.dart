@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/app.dart';
 import 'package:onexray/brand/router.dart';
+import 'package:onexray/brand/vertical_tabs.dart';
+import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/constants/preferences.dart';
 import 'package:onexray/service/account/service.dart';
 import 'package:onexray/service/account/telegram_auth.dart';
@@ -57,12 +60,16 @@ void main() {
     share.startAppLinks();
   }
 
-  GoRouter router({AccountService? account}) => createBrandRouter(
+  GoRouter router({
+    AccountService? account,
+    ValueListenable<VerticalBar?>? verticalBar,
+  }) => createBrandRouter(
     home: const Text('home-body'),
     settings: const Text('settings-body'),
     account: account,
     shareService: share,
     watchSubscription: () => Stream.value(true),
+    verticalBar: verticalBar,
     initializeServices: (_) async {
       await share.init();
       await ready?.future;
@@ -99,6 +106,77 @@ void main() {
     expect(find.text('Аккаунт'), findsOneWidget);
     expect(find.text('Настройки'), findsOneWidget);
     expect(find.byType(NavigationDestination), findsNWidgets(3));
+  });
+
+  testWidgets('the tabs move down the vertical bar and back, and the pages '
+      'stay', (tester) async {
+    prepare();
+    final bar = ValueNotifier<VerticalBar?>(null);
+    addTearDown(bar.dispose);
+    // iPhone Duo's inner display on its side.
+    tester.view
+      ..physicalSize = const Size(951, 669)
+      ..devicePixelRatio = 1
+      ..padding = const FakeViewPadding(right: 84, bottom: 20);
+    addTearDown(tester.view.reset);
+    await pumpApp(tester, router(verticalBar: bar));
+    await tester.tap(find.text('Настройки'));
+    await tester.pumpAndSettle();
+    final pages = tester.state(find.byType(StatefulNavigationShell));
+
+    bar.value = VerticalBar(side: VerticalBarSide.right, bottom: 669);
+    await tester.pump();
+    expect(find.byType(NavigationBar), findsNothing);
+    // Where iOS keeps its own: low in the column, under the status items.
+    expect(
+      tester.getRect(find.bySemanticsLabel('Главная')),
+      const Rect.fromLTWH(879, 489, 48, 50),
+    );
+    expect(find.text('settings-body'), findsOneWidget);
+    expect(tester.state(find.byType(StatefulNavigationShell)), same(pages));
+
+    // The keyboard covers them, as it covers the bar below.
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pump();
+    expect(
+      tester.getRect(find.bySemanticsLabel('Главная')),
+      const Rect.fromLTWH(879, 489, 48, 50),
+    );
+    tester.view.resetViewInsets();
+    await tester.pump();
+
+    await tester.tap(find.bySemanticsLabel('Главная'));
+    await tester.pumpAndSettle();
+    expect(find.text('home-body'), findsOneWidget);
+
+    // Closed or turned upright, without the column.
+    tester.view.padding = const FakeViewPadding(bottom: 20);
+    await tester.pump();
+    expect(find.byType(VerticalTabs), findsNothing);
+    expect(find.byType(NavigationDestination), findsNWidgets(3));
+    expect(tester.state(find.byType(StatefulNavigationShell)), same(pages));
+  });
+
+  testWidgets('on the left, the vertical tabs end above the camera', (
+    tester,
+  ) async {
+    prepare();
+    // iPhone Duo closed and turned, its camera low in the column.
+    tester.view
+      ..physicalSize = const Size(678, 466)
+      ..devicePixelRatio = 1
+      ..padding = const FakeViewPadding(left: 84, bottom: 34);
+    addTearDown(tester.view.reset);
+    final bar = ValueNotifier<VerticalBar?>(
+      VerticalBar(side: VerticalBarSide.left, bottom: 384),
+    );
+    addTearDown(bar.dispose);
+    await pumpApp(tester, router(verticalBar: bar));
+
+    expect(
+      tester.getRect(find.bySemanticsLabel('Настройки')),
+      const Rect.fromLTWH(24, 328, 48, 50),
+    );
   });
 
   testWidgets('the first launch says once what crash reports hold', (

@@ -59,17 +59,23 @@ upstream pages kept for merging. They are not reachable in this build.
   with their title, the code from the end and the form from the start, in 250 ms. `BrandReveal`
   opens and closes room for the update banner, the announcement and error text below a field in
   250 ms while what sits below moves along. The toggle's track pulses every two seconds while the
-  connection changes and the knob lands on with a small overshoot. The preset highlight slides and
-  the chosen location card changes color in 250 ms, and the pull indicators fade out in 150 ms as
-  the refresh ends. A wrong email code shakes its field 6 px and back. Nothing blurs, which costs too much on weaker Android phones.
+  connection changes and the knob lands on with a small overshoot. The preset highlight and iPhone
+  Duo's tab highlight slide and the chosen location card changes color in 250 ms, and the pull
+  indicators fade out in 150 ms as the refresh ends. A wrong email code shakes its field 6 px and back. Nothing blurs, which costs too much on weaker Android phones.
 - Our screens tell outcomes with `showBrandToast`: a success, error or info icon on a tinted
   tile, at the bottom and above the tab bar while the tabs show (`ToastArea`). One line centres
   on the tile; a longer text starts at its top. A toast rises 8 px into place as it fades in over
   400 ms and fades back down in 350 ms; the compact one at the top drops from above the same way.
   When the tabs come or go, a toast on screen glides to its new height instead of showing again.
+  A toast keeps clear of the wider side inset on both sides.
   Questions and waits are bottom sheets from `lib/brand/sheet.dart`, never centred dialogs: a
   confirmation with a red action, a notice, a one-field prompt above the keyboard, and a progress
   sheet that cannot be closed.
+- Where iOS puts its vertical bar, the column on iPhone Duo that holds the status bar and the
+  camera, the tabs move into that column as icons in a capsule, low in the column where system
+  tab bars sit, and no bar takes the bottom. `VerticalBarHostApi` tells Dart the bar's side and
+  where the tabs end, above the camera when it sits low in the column. The pages keep their place
+  when the tabs move, so turning or folding the phone keeps the open tab and its screen.
 - Home's toggle follows `ConnectionCoordinator`. A tap connects, cancels our own connection in
   progress, or disconnects, which also stops a start from outside the app.
 - A session falling from connected to connecting reads as a reconnect. No platform emits that
