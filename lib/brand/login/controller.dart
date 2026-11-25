@@ -29,7 +29,7 @@ final class LoginState {
   const LoginState({
     this.mode = LoginMode.create,
     this.submitting = false,
-    this.redeeming,
+    this.signingIn,
     this.error,
     this.signedOut,
     this.providerError,
@@ -40,9 +40,9 @@ final class LoginState {
   final bool submitting;
 
   /// Signing in with Apple's sheet, or with the code Telegram brought back.
-  final LoginProvider? redeeming;
+  final LoginProvider? signingIn;
 
-  bool get busy => submitting || redeeming != null;
+  bool get busy => submitting || signingIn != null;
 
   /// Why the last attempt failed, shown under the fields until the next one.
   final AccountError? error;
@@ -125,8 +125,8 @@ final class LoginController extends PageCubit<LoginState> {
     if (state.busy) return;
     switch (provider) {
       case LoginProvider.apple:
-        emit(LoginState(mode: state.mode, redeeming: provider));
-        await _failingUnder(provider, () async {
+        emit(LoginState(mode: state.mode, signingIn: provider));
+        await _reportingFailure(provider, () async {
           await _account.apple.login();
           emit(LoginState(mode: state.mode));
         });
@@ -138,19 +138,19 @@ final class LoginController extends PageCubit<LoginState> {
 
   /// Signs in with the code [pending] brings back from Telegram.
   Future<void> _redeemTelegram(Future<TelegramCode> pending) =>
-      _failingUnder(LoginProvider.telegram, () async {
+      _reportingFailure(LoginProvider.telegram, () async {
         final code = await pending;
         // Signed in by email meanwhile, or doing so: the code would switch
         // accounts.
         if (state.submitting || _account.session.signedIn.value) return;
-        emit(LoginState(mode: state.mode, redeeming: LoginProvider.telegram));
+        emit(LoginState(mode: state.mode, signingIn: LoginProvider.telegram));
         await _account.telegram.exchangeLogin(code);
         emit(LoginState(mode: state.mode));
       });
 
   /// Runs [signIn] and shows why it failed under [provider]'s button. Turning
   /// the provider down only ends its progress.
-  Future<void> _failingUnder(
+  Future<void> _reportingFailure(
     LoginProvider provider,
     Future<void> Function() signIn,
   ) async {
@@ -158,7 +158,7 @@ final class LoginController extends PageCubit<LoginState> {
       await signIn();
     } on AccountException catch (error) {
       if (error.error == AccountError.cancelled) {
-        if (state.redeeming == provider) emit(LoginState(mode: state.mode));
+        if (state.signingIn == provider) emit(LoginState(mode: state.mode));
         return;
       }
       _failed(provider, switch (error.error) {

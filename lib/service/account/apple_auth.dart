@@ -23,9 +23,7 @@ final class AppleAuth {
     required this._device,
     required this._language,
     AppleAuthorize? authorize,
-    String Function()? nonce,
-  }) : _authorize = authorize ?? _appleSheet,
-       _nonce = nonce ?? generateNonce;
+  }) : _authorize = authorize ?? _appleSheet;
 
   final AccountSession _session;
 
@@ -36,13 +34,12 @@ final class AppleAuth {
   /// The App's language, `ru` or `en`, for the emails of a new account.
   final String Function() _language;
   final AppleAuthorize _authorize;
-  final String Function() _nonce;
 
   /// Signs in or up through Apple's sheet and adds the account's
   /// subscription as an email sign-in does. Throws [AccountException]:
   /// [AccountError.cancelled] when the person closes the sheet.
   Future<void> login() async {
-    final nonce = _nonce();
+    final nonce = generateNonce();
     final credential = await _authorize(
       sha256.convert(utf8.encode(nonce)).toString(),
     );

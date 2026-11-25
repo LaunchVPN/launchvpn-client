@@ -259,17 +259,16 @@ final class FakeBrowser {
   }
 }
 
-/// Apple's sheet: signs [token] for the nonce hash it is shown, or throws
+/// Apple's sheet: signs a token for the nonce hash it is shown, or throws
 /// [refusal] as the closed or failed sheet does.
 final class FakeAppleSheet {
   final hashedNonces = <String>[];
-  String token = 'apple-token';
   AccountException? refusal;
 
   Future<AppleCredential> authorize(String hashedNonce) async {
     hashedNonces.add(hashedNonce);
     if (refusal case final refusal?) throw refusal;
-    return (identityToken: token, authorizationCode: 'apple-code');
+    return (identityToken: 'apple-token', authorizationCode: 'apple-code');
   }
 }
 

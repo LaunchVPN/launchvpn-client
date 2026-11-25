@@ -266,7 +266,7 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 16),
               _ProviderButton(
                 provider,
-                busy: state.redeeming == provider,
+                busy: state.signingIn == provider,
                 onPressed: state.busy
                     ? null
                     : () => unawaited(_login.signInWith(provider)),

@@ -100,7 +100,7 @@ final class AccountDetails {
   const AccountDetails({
     required this.email,
     required this.telegramLinked,
-    this.appleLinked = false,
+    required this.appleLinked,
   });
 
   /// Null for an account that has only Telegram. Signing in with Apple may
