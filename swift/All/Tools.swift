@@ -13,7 +13,9 @@ enum LibXrayInvoker {
 
     /// A cgo call blocks its thread for the length of a measurement. GCD adds
     /// threads for that; the cooperative pool is only as wide as the cores.
-    private static let queue = DispatchQueue(label: "com.launchvpn.libxray", attributes: .concurrent)
+    private static let queue = DispatchQueue(
+        label: "com.launchvpn.libxray", qos: .userInitiated, attributes: .concurrent
+    )
 
     static func invoke(_ requestJson: String) async throws -> String {
         let shared = isMeasurement(requestJson)
