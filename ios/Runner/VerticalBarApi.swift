@@ -25,7 +25,13 @@ final class VerticalBarApi: @preconcurrency VerticalBarHostApi {
     }
 
     private func send(_ bar: VerticalBar?) {
-        Task { try? await flutterApi.verticalBarChanged(bar: bar) }
+        Task {
+            do {
+                try await flutterApi.verticalBarChanged(bar: bar)
+            } catch {
+                NSLog("Send vertical bar failed: %@", String(describing: error))
+            }
+        }
     }
 
     private static func appView() -> UIView? {

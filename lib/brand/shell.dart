@@ -309,12 +309,12 @@ class _BrandShellState extends State<BrandShell> {
         (LucideIcons.settings2, l.prototypeSettings),
       ];
       final padding = MediaQuery.paddingOf(context);
-      final column = switch (bar?.side) {
+      final columnWidth = switch (bar?.side) {
         VerticalBarSide.left => padding.left,
         VerticalBarSide.right => padding.right,
         null => 0.0,
       };
-      final vertical = bar != null && column > 0;
+      final vertical = bar != null && columnWidth > 0;
       return ToastArea(
         bottom: vertical ? 0 : _tabBarHeight,
         child: Scaffold(
@@ -331,35 +331,18 @@ class _BrandShellState extends State<BrandShell> {
                 ),
               ),
               if (vertical)
-                Positioned(
-                  left: bar.side == VerticalBarSide.left ? 0 : null,
-                  right: bar.side == VerticalBarSide.right ? 0 : null,
-                  top: 0,
-                  height: bar.bottom,
-                  width: column,
-                  // Low in the column, under the middle of the status items,
-                  // where iOS keeps its own tab bar.
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: bar.side == VerticalBarSide.right
-                          ? VerticalTabs.pagesGap
-                          : 0,
-                      right: bar.side == VerticalBarSide.left
-                          ? VerticalTabs.pagesGap
-                          : 0,
-                      bottom: bar.bottom < MediaQuery.sizeOf(context).height
-                          ? 0
-                          : VerticalTabs.lift,
-                    ),
-                    child: Align(
-                      alignment: bar.side == VerticalBarSide.right
-                          ? Alignment.bottomLeft
-                          : Alignment.bottomRight,
-                      child: VerticalTabs(
-                        tabs: tabs,
-                        selected: shell.currentIndex,
-                        onSelect: go,
-                      ),
+                Align(
+                  alignment: bar.side == VerticalBarSide.right
+                      ? Alignment.topRight
+                      : Alignment.topLeft,
+                  child: SizedBox(
+                    width: columnWidth,
+                    height: bar.bottom,
+                    child: VerticalTabs(
+                      bar: bar,
+                      tabs: tabs,
+                      selected: shell.currentIndex,
+                      onSelect: go,
                     ),
                   ),
                 ),

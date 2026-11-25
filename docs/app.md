@@ -59,9 +59,9 @@ upstream pages kept for merging. They are not reachable in this build.
   with their title, the code from the end and the form from the start, in 250 ms. `BrandReveal`
   opens and closes room for the update banner, the announcement and error text below a field in
   250 ms while what sits below moves along. The toggle's track pulses every two seconds while the
-  connection changes and the knob lands on with a small overshoot. The preset highlight slides and
-  the chosen location card changes color in 250 ms, and the pull indicators fade out in 150 ms as
-  the refresh ends. A wrong email code shakes its field 6 px and back. Nothing blurs, which costs too much on weaker Android phones.
+  connection changes and the knob lands on with a small overshoot. The preset highlight and iPhone
+  Duo's tab highlight slide and the chosen location card changes color in 250 ms, and the pull
+  indicators fade out in 150 ms as the refresh ends. A wrong email code shakes its field 6 px and back. Nothing blurs, which costs too much on weaker Android phones.
 - Our screens tell outcomes with `showBrandToast`: a success, error or info icon on a tinted
   tile, at the bottom and above the tab bar while the tabs show (`ToastArea`). One line centres
   on the tile; a longer text starts at its top. A toast rises 8 px into place as it fades in over

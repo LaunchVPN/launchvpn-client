@@ -129,8 +129,8 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
     // Where iOS keeps its own: low in the column, under the status items.
     expect(
-      tester.getRect(find.byType(VerticalTabs)),
-      const Rect.fromLTWH(879, 483, 48, 162),
+      tester.getRect(find.bySemanticsLabel('Главная')),
+      const Rect.fromLTWH(879, 489, 48, 50),
     );
     expect(find.text('settings-body'), findsOneWidget);
     expect(tester.state(find.byType(StatefulNavigationShell)), same(pages));
@@ -145,6 +145,28 @@ void main() {
     expect(find.byType(VerticalTabs), findsNothing);
     expect(find.byType(NavigationDestination), findsNWidgets(3));
     expect(tester.state(find.byType(StatefulNavigationShell)), same(pages));
+  });
+
+  testWidgets('on the left, the vertical tabs end above the camera', (
+    tester,
+  ) async {
+    prepare();
+    // iPhone Duo closed and turned, its camera low in the column.
+    tester.view
+      ..physicalSize = const Size(678, 466)
+      ..devicePixelRatio = 1
+      ..padding = const FakeViewPadding(left: 84, bottom: 34);
+    addTearDown(tester.view.reset);
+    final bar = ValueNotifier<VerticalBar?>(
+      VerticalBar(side: VerticalBarSide.left, bottom: 384),
+    );
+    addTearDown(bar.dispose);
+    await pumpApp(tester, router(verticalBar: bar));
+
+    expect(
+      tester.getRect(find.bySemanticsLabel('Настройки')),
+      const Rect.fromLTWH(24, 328, 48, 50),
+    );
   });
 
   testWidgets('the first launch says once what crash reports hold', (
