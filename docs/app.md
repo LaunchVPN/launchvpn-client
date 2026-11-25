@@ -67,6 +67,12 @@ upstream pages kept for merging. They are not reachable in this build.
   on the tile; a longer text starts at its top. A toast rises 8 px into place as it fades in over
   400 ms and fades back down in 350 ms; the compact one at the top drops from above the same way.
   When the tabs come or go, a toast on screen glides to its new height instead of showing again.
+  A toast keeps clear of the wider side inset on both sides.
+- Where iOS puts its vertical bar, the column on iPhone Duo that holds the status bar and the
+  camera, the tabs run down that column under the status bar, as system tab bars do there, and no
+  bar takes the bottom. `VerticalBarHostApi` tells Dart the bar's side and the part of the column
+  free of the status bar and camera. The pages keep their place when the tabs move, so turning or
+  folding the phone keeps the open tab and its screen.
   Questions and waits are bottom sheets from `lib/brand/sheet.dart`, never centred dialogs: a
   confirmation with a red action, a notice, a one-field prompt above the keyboard, and a progress
   sheet that cannot be closed.
