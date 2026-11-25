@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:onexray/brand/app.dart';
 import 'package:onexray/brand/router.dart';
+import 'package:onexray/brand/vertical_tabs.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/constants/preferences.dart';
 import 'package:onexray/service/account/service.dart';
@@ -126,21 +127,22 @@ void main() {
     bar.value = VerticalBar(side: VerticalBarSide.right, top: 120, bottom: 669);
     await tester.pump();
     expect(find.byType(NavigationBar), findsNothing);
+    // Where iOS keeps its own: low in the column, under the status items.
     expect(
-      tester.getRect(find.byType(NavigationRail)),
-      const Rect.fromLTWH(867, 120, 84, 549),
+      tester.getRect(find.byType(VerticalTabs)),
+      const Rect.fromLTWH(879, 483, 48, 162),
     );
     expect(find.text('settings-body'), findsOneWidget);
     expect(tester.state(find.byType(StatefulNavigationShell)), same(pages));
 
-    await tester.tap(find.text('Главная'));
+    await tester.tap(find.bySemanticsLabel('Главная'));
     await tester.pumpAndSettle();
     expect(find.text('home-body'), findsOneWidget);
 
     // Closed or turned upright, without the column.
     tester.view.padding = const FakeViewPadding(bottom: 20);
     await tester.pump();
-    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byType(VerticalTabs), findsNothing);
     expect(find.byType(NavigationDestination), findsNWidgets(3));
     expect(tester.state(find.byType(StatefulNavigationShell)), same(pages));
   });

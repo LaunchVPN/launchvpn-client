@@ -15,6 +15,7 @@ import 'package:onexray/brand/router.dart';
 import 'package:onexray/brand/subscription_link_flow.dart';
 import 'package:onexray/brand/toast.dart';
 import 'package:onexray/brand/vertical_bar.dart';
+import 'package:onexray/brand/vertical_tabs.dart';
 import 'package:onexray/core/pigeon/messages.g.dart';
 import 'package:onexray/core/tools/logger.dart';
 import 'package:onexray/l10n/localizations/app_localizations.dart';
@@ -80,6 +81,13 @@ class _BrandShellState extends State<BrandShell> {
   bool _drainScheduled = false;
 
   static const _tabBarHeight = 80.0;
+
+  /// Between the vertical tabs and the pages.
+  static const _railInset = 12.0;
+
+  /// Above the screen's bottom edge; a reserved region below them already
+  /// keeps its own margin.
+  static const _railLift = 24.0;
 
   @override
   void didChangeDependencies() {
@@ -293,7 +301,7 @@ class _BrandShellState extends State<BrandShell> {
   }
 
   /// The tabs run along the bottom, or down the column where iOS puts its
-  /// vertical bar, under the status bar, as its own tab bars do on iPhone Duo.
+  /// vertical bar, as its own tab bars do on iPhone Duo.
   /// The pages keep their place in the tree either way, so turning or folding
   /// the phone keeps where they were.
   Widget _tabs(AppLocalizations l) => ValueListenableBuilder(
@@ -336,23 +344,25 @@ class _BrandShellState extends State<BrandShell> {
                   top: bar.top,
                   height: bar.bottom - bar.top,
                   width: column,
-                  child: MediaQuery.removePadding(
-                    context: context,
-                    removeLeft: true,
-                    removeTop: true,
-                    removeRight: true,
-                    removeBottom: true,
-                    child: NavigationRail(
-                      minWidth: column,
-                      selectedIndex: shell.currentIndex,
-                      onDestinationSelected: go,
-                      destinations: [
-                        for (final (icon, label) in tabs)
-                          NavigationRailDestination(
-                            icon: Icon(icon),
-                            label: Text(label),
-                          ),
-                      ],
+                  // Low in the column, under the middle of the status items,
+                  // where iOS keeps its own tab bar.
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: bar.side == VerticalBarSide.right ? _railInset : 0,
+                      right: bar.side == VerticalBarSide.left ? _railInset : 0,
+                      bottom: bar.bottom < MediaQuery.sizeOf(context).height
+                          ? 0
+                          : _railLift,
+                    ),
+                    child: Align(
+                      alignment: bar.side == VerticalBarSide.right
+                          ? Alignment.bottomLeft
+                          : Alignment.bottomRight,
+                      child: VerticalTabs(
+                        tabs: tabs,
+                        selected: shell.currentIndex,
+                        onSelect: go,
+                      ),
                     ),
                   ),
                 ),
