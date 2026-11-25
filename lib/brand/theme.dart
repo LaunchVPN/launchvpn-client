@@ -404,6 +404,9 @@ abstract final class BrandTheme {
     FilledButton.styleFrom(
       backgroundColor: Colors.white,
       foregroundColor: appleInk,
+      // Busy, it stays Apple's white and black, only the ink fades.
+      disabledBackgroundColor: Colors.white,
+      disabledForegroundColor: appleInk.withValues(alpha: 0.4),
     ),
   );
 
