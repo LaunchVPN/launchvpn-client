@@ -275,9 +275,8 @@ class _LoginPageState extends State<LoginPage> {
                 onPressed: state.busy ? null : () => _signInWith(provider),
               ),
               ErrorText(switch (state.providerError) {
-                (provider: final failed, :final error)
-                    when failed == provider =>
-                  _errorMessage(l, error),
+                final failure? when failure.provider == provider =>
+                  _providerMessage(l, failure),
                 _ => null,
               }),
             ],
@@ -310,6 +309,16 @@ String? _formMessage(AppLocalizations l, LoginState state) => switch (state) {
     l.loginErrorSignInToDelete,
   LoginState() => null,
 };
+
+/// Why a sign-in through another service failed. An Apple email someone
+/// else's Telegram account claimed unconfirmed stays theirs; support sorts
+/// it out.
+String _providerMessage(AppLocalizations l, ProviderFailure failure) =>
+    switch (failure) {
+      (provider: LoginProvider.apple, error: AccountError.emailTaken) =>
+        l.loginErrorAppleEmailTaken,
+      (:final error, provider: _) => _errorMessage(l, error),
+    };
 
 String _errorMessage(AppLocalizations l, AccountError error) => switch (error) {
   AccountError.invalidCredentials => l.loginErrorInvalidCredentials,

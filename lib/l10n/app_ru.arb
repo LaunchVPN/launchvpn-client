@@ -1077,6 +1077,7 @@
   "loginTelegram": "Войти через Telegram",
   "loginErrorTelegram": "Не получилось войти через Telegram. Попробуйте ещё раз",
   "loginErrorApple": "Не получилось войти через Apple. Попробуйте ещё раз",
+  "loginErrorAppleEmailTaken": "Этот email занят другим аккаунтом. Напишите в поддержку",
   "loginErrorInvalidCredentials": "Неверная почта или пароль",
   "loginErrorEmailNotVerified": "Почта не подтверждена. Попробуйте войти ещё раз",
   "loginErrorAccountBlocked": "Аккаунт заблокирован. Напишите в поддержку",

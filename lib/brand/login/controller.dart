@@ -164,7 +164,8 @@ final class LoginController extends PageCubit<LoginState> {
       }
       _failed(provider, switch (error.error) {
         AccountError.accountBlocked ||
-        AccountError.appNotAvailable => error.error,
+        AccountError.appNotAvailable ||
+        AccountError.emailTaken => error.error,
         _ => provider.failure,
       });
     } catch (error) {

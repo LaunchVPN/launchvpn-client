@@ -335,6 +335,21 @@ void main() {
       expect(find.text('home-body'), findsNothing);
     }, variant: iOS);
 
+    testWidgets('an email another account holds asks to contact support', (
+      tester,
+    ) async {
+      api.refuse('/api/app/auth/apple', 409, 'email_taken');
+      await pumpApp(tester, hasSubscription: false);
+
+      await tester.tap(find.text('Вход с Apple'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Этот email занят другим аккаунтом. Напишите в поддержку'),
+        findsOneWidget,
+      );
+    }, variant: iOS);
+
     testWidgets('closing the sheet leaves the form as it was', (tester) async {
       apple.refusal = const AccountException(AccountError.cancelled);
       await pumpApp(tester, hasSubscription: false);
