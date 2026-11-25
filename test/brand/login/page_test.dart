@@ -385,6 +385,19 @@ void main() {
       );
     }, variant: iOS);
 
+    testWidgets('no connection says so under the button', (tester) async {
+      api.unreachable('/api/app/auth/apple');
+      await pumpApp(tester, hasSubscription: false);
+
+      await tester.tap(find.text('Вход с Apple'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Нет связи с сервером. Попробуйте ещё раз'),
+        findsOneWidget,
+      );
+    }, variant: iOS);
+
     testWidgets('closing the sheet leaves the form as it was', (tester) async {
       apple.refusal = const AccountException(AccountError.cancelled);
       await pumpApp(tester, hasSubscription: false);
