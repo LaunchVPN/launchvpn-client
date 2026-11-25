@@ -259,10 +259,9 @@ void main() {
         },
       );
 
-      final sweep = service.pingLocations(
-        [germany],
-        isCancelled: () => stopped,
-      );
+      final sweep = service.pingLocations([
+        germany,
+      ], isCancelled: () => stopped);
       await pumpEventQueue();
       stopped = true;
       held.complete(const [PingBatchResult(true, 80, '')]);

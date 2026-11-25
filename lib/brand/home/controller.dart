@@ -805,8 +805,8 @@ class HomeController extends PageCubit<HomeState> {
     try {
       await _pingLocations(
         state.catalog.servers.where((row) => ids.contains(row.id)).toList(),
-        isCancelled: () => stopped =
-            stopped || isClosed || _readinessLost != readinessLost,
+        isCancelled: () =>
+            stopped = stopped || isClosed || _readinessLost != readinessLost,
       );
     } catch (error) {
       ygLogger('measure locations failed (${error.runtimeType})');
